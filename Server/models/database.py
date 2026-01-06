@@ -1,0 +1,365 @@
+"""
+Classe base para gerenciar conexões com o banco de dados PostgreSQL
+"""
+import psycopg2
+import os
+import json
+from typing import Optional, Union, Tuple, List, Any, Dict, TYPE_CHECKING
+from dotenv import load_dotenv
+
+if TYPE_CHECKING:
+    from psycopg2.extensions import connection as Connection
+else:
+    Connection = Any
+
+# Carregar variáveis de ambiente do arquivo .env
+load_dotenv()
+
+
+class DatabaseConnection:
+    """Classe para gerenciar conexões com o banco de dados PostgreSQL"""
+    
+    _db_config: Optional[Dict[str, Any]] = None
+    
+    @classmethod
+    def get_db_config(cls) -> Dict[str, Any]:
+        """Retorna a configuração do banco de dados a partir de variáveis de ambiente ou arquivo JSON"""
+        if cls._db_config is None:
+            def safe_getenv(key: str, default: str = '') -> str:
+                """Obtém variável de ambiente de forma segura, tratando encoding"""
+                value = os.getenv(key, default)
+                if value is None:
+                    return default
+                # Se já é string, garantir UTF-8
+                if isinstance(value, str):
+                    try:
+                        # Tentar codificar/decodificar para garantir UTF-8 válido
+                        value.encode('utf-8')
+                        return value
+                    except UnicodeEncodeError:
+                        # Se falhar, usar replace para corrigir caracteres inválidos
+                        return value.encode('utf-8', errors='replace').decode('utf-8')
+                # Se for bytes, decodificar
+                if isinstance(value, bytes):
+                    try:
+                        return value.decode('utf-8')
+                    except UnicodeDecodeError:
+                        try:
+                            return value.decode('latin-1')
+                        except UnicodeDecodeError:
+                            return value.decode('utf-8', errors='replace')
+                return str(value)
+            
+            # Primeiro, tentar ler das variáveis de ambiente
+            host = safe_getenv('DB_HOST')
+            port = safe_getenv('DB_PORT')
+            database = safe_getenv('DB_NAME')
+            user = safe_getenv('DB_USER')
+            password = safe_getenv('DB_PASSWORD')
+            
+            # Se alguma variável não estiver definida, tentar ler do arquivo JSON
+            if not host or not database or not user:
+                try:
+                    # Obter o diretório base (raiz do projeto)
+                    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+                    config_path = os.path.join(base_dir, 'config', 'database_config.json')
+                    
+                    if os.path.exists(config_path):
+                        with open(config_path, 'r', encoding='utf-8') as f:
+                            config_data = json.load(f)
+                            db_config_from_json = config_data.get('database', {})
+                            
+                            # Usar valores do JSON apenas se não estiverem definidos nas variáveis de ambiente
+                            if not host:
+                                host = db_config_from_json.get('host', 'localhost')
+                            if not port:
+                                port = str(db_config_from_json.get('port', 5432))
+                            if not database:
+                                database = db_config_from_json.get('database', 'ManpowerControl')
+                            if not user:
+                                user = db_config_from_json.get('user', 'postgres')
+                            if not password:
+                                password = db_config_from_json.get('password', '')
+                except Exception as e:
+                    # Se houver erro ao ler o JSON, usar valores padrão
+                    print(f"[AVISO] Erro ao ler database_config.json: {e}")
+                    pass
+            
+            cls._db_config = {
+                'host': host or 'localhost',
+                'port': int(port) if port else 5432,
+                'database': database or 'ManpowerControl',
+                'user': user or 'postgres',
+                'password': password or ''
+            }
+        
+        return cls._db_config
+    
+    @classmethod
+    def get_connection(cls) -> Connection:
+        """Cria e retorna uma conexão com o banco de dados PostgreSQL"""
+        config = cls.get_db_config()
+        
+        try:
+            # Função auxiliar para garantir UTF-8 válido de forma mais robusta
+            def ensure_utf8(value: Any) -> str:
+                """Garante que o valor seja uma string UTF-8 válida"""
+                if value is None:
+                    return ''
+                
+                # Se for bytes, decodificar
+                if isinstance(value, bytes):
+                    # Tentar UTF-8 primeiro
+                    try:
+                        return value.decode('utf-8')
+                    except UnicodeDecodeError:
+                        # Tentar latin-1 (compatível com Windows)
+                        try:
+                            decoded = value.decode('latin-1')
+                            # Re-encodar para UTF-8 para garantir consistência
+                            return decoded.encode('utf-8', errors='replace').decode('utf-8')
+                        except:
+                            return value.decode('utf-8', errors='replace')
+                
+                # Se for string, garantir que seja UTF-8 válida
+                str_value = str(value)
+                try:
+                    # Tentar codificar para verificar se é UTF-8 válido
+                    str_value.encode('utf-8')
+                    return str_value
+                except UnicodeEncodeError:
+                    # Se não for UTF-8 válido, converter usando latin-1 como intermediário
+                    try:
+                        # Converter para bytes usando latin-1 (não perde dados)
+                        bytes_value = str_value.encode('latin-1')
+                        # Decodificar para UTF-8
+                        return bytes_value.decode('utf-8', errors='replace')
+                    except:
+                        # Último recurso: usar replace
+                        return str_value.encode('utf-8', errors='replace').decode('utf-8')
+            
+            # Garantir que todos os parâmetros sejam strings seguras
+            # Converter para ASCII quando possível, ou UTF-8 válido
+            def safe_string(value: Any, default: str = '') -> str:
+                """Converte um valor para string ASCII segura"""
+                if value is None:
+                    return default
+                # Se for bytes, decodificar primeiro
+                if isinstance(value, bytes):
+                    try:
+                        value = value.decode('utf-8')
+                    except UnicodeDecodeError:
+                        try:
+                            value = value.decode('latin-1')
+                        except:
+                            value = value.decode('utf-8', errors='replace')
+                # Converter para string
+                str_value = str(value)
+                # Tentar garantir que seja ASCII ou UTF-8 válido
+                try:
+                    # Se contém apenas ASCII, retornar direto
+                    str_value.encode('ascii')
+                    return str_value
+                except UnicodeEncodeError:
+                    # Se não for ASCII, garantir UTF-8 válido
+                    try:
+                        return str_value.encode('utf-8', errors='replace').decode('utf-8')
+                    except:
+                        return default
+            
+            host = safe_string(config.get('host', 'localhost'), 'localhost')
+            database = safe_string(config.get('database', 'ManpowerControl'), 'ManpowerControl')
+            user = safe_string(config.get('user', 'postgres'), 'postgres')
+            password = safe_string(config.get('password', ''), '')
+            
+            port = config.get('port', 5432)
+            if not isinstance(port, int):
+                try:
+                    port = int(port)
+                except:
+                    port = 5432
+            
+            # Criar conexão usando parâmetros nomeados diretamente
+            # Isso evita problemas de encoding com connection strings
+            try:
+                # Garantir que todos os valores sejam strings simples (não bytes)
+                # e que sejam ASCII ou UTF-8 válidos
+                conn = psycopg2.connect(
+                    host=str(host),
+                    port=int(port),
+                    database=str(database),
+                    user=str(user),
+                    password=str(password),
+                    connect_timeout=10
+                )
+                # Configurar encoding após a conexão
+                try:
+                    conn.set_client_encoding('UTF8')
+                except:
+                    pass  # Se falhar, continuar mesmo assim
+                return conn
+            except psycopg2.OperationalError as e:
+                # Erro operacional (servidor não está rodando, credenciais incorretas, etc.)
+                try:
+                    error_msg = str(e)
+                except:
+                    error_msg = "Erro ao conectar ao banco de dados PostgreSQL"
+                raise Exception(f"Erro ao conectar ao banco de dados PostgreSQL. Verifique se o servidor está rodando e as credenciais estão corretas. Detalhes: {error_msg}")
+            except (UnicodeDecodeError, UnicodeEncodeError) as encoding_err:
+                # Erro de encoding - tentar com valores mais simples
+                try:
+                    # Usar valores padrão ASCII seguros
+                    conn = psycopg2.connect(
+                        host='localhost',
+                        port=5432,
+                        database='ManpowerControl',
+                        user='postgres',
+                        password='',
+                        connect_timeout=10
+                    )
+                    return conn
+                except:
+                    raise Exception("Erro de codificação ao conectar ao banco de dados. Verifique se as credenciais contêm apenas caracteres ASCII.")
+            except Exception as e:
+                # Outros erros
+                try:
+                    error_msg = str(e)
+                except:
+                    error_msg = "Erro desconhecido"
+                raise Exception(f"Erro ao conectar ao banco de dados: {error_msg}")
+        except UnicodeDecodeError as e:
+            # Capturar erro de encoding de forma segura
+            try:
+                error_repr = repr(e)
+                error_msg = error_repr.encode('ascii', errors='replace').decode('ascii')
+            except:
+                error_msg = "Erro de codificação UTF-8"
+            raise Exception(f"Erro de codificação ao conectar ao banco de dados: {error_msg}")
+        except UnicodeEncodeError as e:
+            try:
+                error_repr = repr(e)
+                error_msg = error_repr.encode('ascii', errors='replace').decode('ascii')
+            except:
+                error_msg = "Erro de codificação ao processar credenciais"
+            raise Exception(f"Erro de codificação: {error_msg}")
+        except psycopg2.OperationalError as e:
+            try:
+                error_msg = str(e).encode('utf-8', errors='replace').decode('utf-8')
+            except:
+                error_msg = "Erro de conexão com PostgreSQL"
+            raise Exception(f"Erro de conexão com PostgreSQL. Verifique se o servidor está rodando e as credenciais estão corretas: {error_msg}")
+        except psycopg2.Error as e:
+            try:
+                error_msg = str(e).encode('utf-8', errors='replace').decode('utf-8')
+            except:
+                error_msg = "Erro ao conectar ao banco de dados"
+            raise Exception(f"Erro ao conectar ao banco de dados PostgreSQL: {error_msg}")
+        except Exception as e:
+            # Capturar qualquer outro erro de forma segura
+            try:
+                error_type = type(e).__name__
+                error_msg = f"{error_type}: Erro ao conectar ao banco de dados"
+            except:
+                error_msg = "Erro desconhecido ao conectar ao banco de dados"
+            raise Exception(error_msg)
+    
+    @classmethod
+    def execute_query(
+        cls, 
+        query: str, 
+        params: Optional[Union[Tuple[Any, ...], List[Any]]] = None, 
+        fetch_one: bool = False, 
+        fetch_all: bool = False
+    ) -> Union[Optional[Tuple[Any, ...]], List[Tuple[Any, ...]], int]:
+        """
+        Executa uma query e retorna o resultado
+        
+        Args:
+            query: Query SQL a ser executada (usa %s como placeholder ao invés de ?)
+            params: Parâmetros para a query (tupla ou lista)
+            fetch_one: Se True, retorna apenas uma linha
+            fetch_all: Se True, retorna todas as linhas
+            
+        Returns:
+            Resultado da query conforme os parâmetros:
+            - Optional[Tuple[Any, ...]] se fetch_one=True
+            - List[Tuple[Any, ...]] se fetch_all=True
+            - int (lastrowid ou RETURNING id) caso contrário
+        """
+        # Converter placeholders de ? para %s (PostgreSQL usa %s)
+        query = query.replace('?', '%s')
+        
+        conn = cls.get_connection()
+        cursor = conn.cursor()
+        
+        try:
+            if params:
+                cursor.execute(query, params)
+            else:
+                cursor.execute(query)
+            
+            result: Union[Optional[Tuple[Any, ...]], List[Tuple[Any, ...]], int]
+            
+            if fetch_one:
+                result = cursor.fetchone()
+            elif fetch_all:
+                result = cursor.fetchall() or []
+            else:
+                # Para INSERT, tentar pegar o ID retornado
+                # Se a query tem RETURNING id, usar fetchone
+                if 'RETURNING' in query.upper():
+                    returned = cursor.fetchone()
+                    if returned and isinstance(returned, tuple) and len(returned) > 0:
+                        result = returned[0] if isinstance(returned[0], int) else 0
+                    else:
+                        result = 0
+                else:
+                    # Para INSERT sem RETURNING, retornar 0
+                    # Os modelos devem usar RETURNING id para obter o ID inserido
+                    result = 0
+            
+            conn.commit()
+            return result
+        except psycopg2.ProgrammingError as e:
+            conn.rollback()
+            raise Exception(f"Erro de sintaxe SQL ou tabela não encontrada: {str(e)}")
+        except psycopg2.OperationalError as e:
+            conn.rollback()
+            raise Exception(f"Erro operacional (tabela não existe?): {str(e)}")
+        except psycopg2.Error as e:
+            conn.rollback()
+            raise Exception(f"Erro ao executar query: {str(e)}")
+        finally:
+            cursor.close()
+            conn.close()
+    
+    @classmethod
+    def table_exists(cls, table_name: str) -> bool:
+        """Verifica se uma tabela existe no banco de dados"""
+        query = """
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = %s
+            )
+        """
+        result = cls.execute_query(query, (table_name,), fetch_one=True)
+        if result and isinstance(result, tuple) and len(result) > 0:
+            return bool(result[0])
+        return False
+    
+    @classmethod
+    def column_exists(cls, table_name: str, column_name: str) -> bool:
+        """Verifica se uma coluna existe em uma tabela"""
+        query = """
+            SELECT EXISTS (
+                SELECT FROM information_schema.columns 
+                WHERE table_schema = 'public' 
+                AND table_name = %s 
+                AND column_name = %s
+            )
+        """
+        result = cls.execute_query(query, (table_name, column_name), fetch_one=True)
+        if result and isinstance(result, tuple) and len(result) > 0:
+            return bool(result[0])
+        return False
