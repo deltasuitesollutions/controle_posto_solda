@@ -17,25 +17,30 @@ interface ModalModeloProps {
     isOpen: boolean
     onClose: () => void
     onSave: (modelo: Omit<Modelo, 'id'>) => void
+    modeloEditando?: Modelo | null
 }
 
-const ModalModelo: React.FC<ModalModeloProps> = ({ isOpen, onClose, onSave }) => {
+const ModalModelo: React.FC<ModalModeloProps> = ({ isOpen, onClose, onSave, modeloEditando }) => {
     const [codigo, setCodigo] = useState('')
     const [descricao, setDescricao] = useState('')
     const [subprodutosTemp, setSubprodutosTemp] = useState<Subproduto[]>([])
     const [subprodutoCodigo, setSubprodutoCodigo] = useState('')
     const [subprodutoDescricao, setSubprodutoDescricao] = useState('')
 
-    // Resetar campos quando o modal abrir/fechar
+    // Carregar dados do modelo quando estiver editando
     useEffect(() => {
-        if (!isOpen) {
+        if (modeloEditando) {
+            setCodigo(modeloEditando.codigo)
+            setDescricao(modeloEditando.descricao)
+            setSubprodutosTemp(modeloEditando.subprodutos)
+        } else {
             setCodigo('')
             setDescricao('')
             setSubprodutosTemp([])
-            setSubprodutoCodigo('')
-            setSubprodutoDescricao('')
         }
-    }, [isOpen])
+        setSubprodutoCodigo('')
+        setSubprodutoDescricao('')
+    }, [modeloEditando, isOpen])
 
     const adicionarSubprodutoTemp = () => {
         if (!subprodutoCodigo.trim() || !subprodutoDescricao.trim()) {
@@ -76,20 +81,21 @@ const ModalModelo: React.FC<ModalModeloProps> = ({ isOpen, onClose, onSave }) =>
 
     return (
         <div 
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ backgroundColor: 'rgba(156, 163, 175, 0.2)' }}
             onClick={(e) => {
                 if (e.target === e.currentTarget) {
                     onClose()
                 }
             }}
         >
-            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
                 {/* Header do Modal */}
                 <div className="text-white px-6 py-4 flex shrink-0" style={{ backgroundColor: 'var(--bg-azul)' }}>
                     <div className="flex items-center justify-between">
                         <h3 className="text-lg font-semibold flex items-center gap-2">
                             <i className="bi bi-box-seam"></i>
-                            Novo Modelo
+                            {modeloEditando ? 'Editar Modelo' : 'Novo Modelo'}
                         </h3>
                         <button
                             onClick={onClose}
@@ -109,7 +115,7 @@ const ModalModelo: React.FC<ModalModeloProps> = ({ isOpen, onClose, onSave }) =>
                             <i className="bi bi-info-circle"></i>
                             Informações do Modelo
                         </h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     Código do Produto *
@@ -155,7 +161,7 @@ const ModalModelo: React.FC<ModalModeloProps> = ({ isOpen, onClose, onSave }) =>
                                 e.preventDefault()
                                 adicionarSubprodutoTemp()
                             }}>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                                     <div>
                                         <label className="block text-xs font-medium text-gray-600 mb-1">
                                             Código do Subproduto
@@ -210,19 +216,14 @@ const ModalModelo: React.FC<ModalModeloProps> = ({ isOpen, onClose, onSave }) =>
                         </div>
 
                         {/* Lista de Subprodutos Temporários */}
-                        {subprodutosTemp.length === 0 ? (
-                            <div className="text-center py-6 text-gray-400 bg-gray-50 rounded-lg">
-                                <i className="bi bi-inbox text-2xl mb-2"></i>
-                                <p className="text-sm">Nenhum subproduto adicionado ainda</p>
-                            </div>
-                        ) : (
+                        {subprodutosTemp.length > 0 && (
                             <div className="space-y-2 max-h-60 overflow-y-auto">
                                 {subprodutosTemp.map((subproduto) => (
                                     <div 
                                         key={subproduto.id} 
                                         className="flex items-center justify-between p-3 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors"
                                     >
-                                        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div>
                                                 <span className="text-xs text-gray-500">Código:</span>
                                                 <p className="font-medium text-gray-900">{subproduto.codigo}</p>

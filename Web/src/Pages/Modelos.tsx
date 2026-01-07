@@ -1,162 +1,181 @@
-import React, { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import TopBar from '../Components/topBar/TopBar'
 import MenuLateral from '../Components/MenuLateral/MenuLateral'
+import CardModelo from '../Components/Modelos/CardModelo'
+import ModalModelo from '../Components/Modelos/AdicionarModelo'
+import { Paginacao } from '../Components/Compartilhados/paginacao'
 
-const Funcionarios = () => {
-    const [menuAberto, setMenuAberto] = useState(false);
-    const [matricula, setMatricula] = useState('')
-    const [nome, setNome] = useState('')
-    const [tagRfid, setTagRfid] = useState('')
-    const [ativo, setAtivo] = useState(true)
-    const rfidInputRef = useRef<HTMLInputElement>(null)
+interface Subproduto {
+    id: string
+    codigo: string
+    descricao: string
+}
 
-    // Detecta quando o crachá é passado e move o foco para o campo RFID
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            const activeElement = document.activeElement
-            const isInputField = activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA'
-            
-            
-            if (!isInputField && rfidInputRef.current && (e.key.length === 1 || e.key === 'Enter')) {
-                rfidInputRef.current.focus()
+interface Modelo {
+    id: string
+    codigo: string
+    descricao: string
+    subprodutos: Subproduto[]
+}
+
+const Modelos = () => {
+    const [menuAberto, setMenuAberto] = useState(false)
+    const [modelos, setModelos] = useState<Modelo[]>([])
+    const [modeloExpandido, setModeloExpandido] = useState<string | null>(null)
+    const [modalAberto, setModalAberto] = useState(false)
+    const [modeloEditando, setModeloEditando] = useState<Modelo | null>(null)
+    const [paginaAtual, setPaginaAtual] = useState(1)
+    const [itensPorPagina] = useState(10)
+
+    const handleAdicionarModelo = (novoModelo: Omit<Modelo, 'id'>) => {
+        if (modeloEditando) {
+            // Modo edição - atualiza o modelo existente
+            setModelos(modelos.map(m => 
+                m.id === modeloEditando.id 
+                    ? { ...novoModelo, id: modeloEditando.id }
+                    : m
+            ))
+            setModeloEditando(null)
+        } else {
+            // Modo criação - adiciona novo modelo
+            const modeloComId: Modelo = {
+                ...novoModelo,
+                id: Date.now().toString()
             }
+            setModelos([...modelos, modeloComId])
         }
-
-        window.addEventListener('keydown', handleKeyDown)
-        return () => window.removeEventListener('keydown', handleKeyDown)
-    }, [])
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault()
-        console.log({ matricula, nome, tagRfid, ativo })
-        // Aqui você faria a chamada API para salvar o funcionário
-        
-        // Limpa os campos após salvar
-        setMatricula('')
-        setNome('')
-        setTagRfid('')
-        setAtivo(true)
-        
-        // Volta o foco para o campo RFID para o próximo funcionário
-        setTimeout(() => {
-            rfidInputRef.current?.focus()
-        }, 100)
+        setModalAberto(false)
     }
+
+    const handleEditarModelo = (modelo: Modelo) => {
+        setModeloEditando(modelo)
+        setModalAberto(true)
+    }
+
+    const handleFecharModal = () => {
+        setModalAberto(false)
+        setModeloEditando(null)
+    }
+
+    const handleAbrirModalNovo = () => {
+        setModeloEditando(null)
+        setModalAberto(true)
+    }
+
+    const handleRemoverModelo = (modeloId: string) => {
+        setModelos(modelos.filter(m => m.id !== modeloId))
+        if (modeloExpandido === modeloId) {
+            setModeloExpandido(null)
+        }
+    }
+
+    const handleToggleExpandir = (modeloId: string) => {
+        setModeloExpandido(modeloExpandido === modeloId ? null : modeloId)
+    }
+
+    const handleRemoverSubproduto = (modeloId: string, subprodutoId: string): void => {
+        setModelos(modelos.map(modelo => {
+            if (modelo.id === modeloId) {
+                return {
+                    ...modelo,
+                    subprodutos: modelo.subprodutos.filter(s => s.id !== subprodutoId)
+                }
+            }
+            return modelo
+        }))
+    }
+
+    // Calcular modelos da página atual
+    const indiceInicio = (paginaAtual - 1) * itensPorPagina
+    const indiceFim = indiceInicio + itensPorPagina
+    const modelosPaginaAtual = modelos.slice(indiceInicio, indiceFim)
+
+    // Resetar página quando necessário
+    useEffect(() => {
+        const totalPaginas = Math.ceil(modelos.length / itensPorPagina)
+        if (paginaAtual > totalPaginas && totalPaginas > 0) {
+            setPaginaAtual(totalPaginas)
+        }
+    }, [modelos.length, itensPorPagina, paginaAtual])
 
     return (
         <div className="flex min-h-screen bg-gray-50">
             <MenuLateral menuAberto={menuAberto} onClose={() => setMenuAberto(false)} />
             <div className="flex-1 flex flex-col">
                 <TopBar menuAberto={menuAberto} onToggleMenu={() => setMenuAberto(!menuAberto)} />
-                <div className="flex-1 p-6 pt-32">
-                    <div className="max-w-7xl mx-auto">
+                <div className="flex-1 p-6 pt-32 pb-20 md:pb-24 md:pl-20 transition-all duration-300">
+                    <div className="max-w-[95%] mx-auto">
                         <div className="flex flex-col gap-6">
-                            
-                            {/* Card Novo Funcionário */}
+                            {/* Cabeçalho com botão de adicionar */}
                             <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                                <div className="text-white px-6 py-4" style={{ backgroundColor: 'var(--bg-azul)' }}>
+                                <div className="text-white px-6 py-4 flex items-center justify-between" style={{ backgroundColor: 'var(--bg-azul)' }}>
                                     <h3 className="text-lg font-semibold flex items-center gap-2">
-                                        <i className="bi bi-person-plus-fill"></i>
-                                        Adicionar Colaborador
+                                        <i className="bi bi-box-seam"></i>
+                                        Modelos de Produtos
                                     </h3>
-                                </div>
-                                
-                                <div className="p-6">
-                                    <form id="form-funcionario" onSubmit={handleSubmit}>
-                                        {/* Tag RFID */}
-                                        <div className="mb-4">
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                Tag RFID
-                                            </label>
-                                            <input
-                                                ref={rfidInputRef}
-                                                type="text"
-                                                id='funcionario-tag-rfid'
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                placeholder='Passe o crachá RFID aqui'
-                                                value={tagRfid}
-                                                onChange={(e) => setTagRfid(e.target.value)}
-                                                autoFocus
-                                                autoComplete="off"
-                                            />
-                                        </div>
-                                        
-                                        {/* Matrícula e Nome na mesma linha */}
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                            {/* Matrícula */}
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                    Matrícula
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    id='funcionario-matricula'
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                    required
-                                                    placeholder='Ex: 12345'
-                                                    value={matricula}
-                                                    onChange={(e) => setMatricula(e.target.value)}
-                                                />
-                                            </div>
-                                            
-                                            {/* Nome */}
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                    Nome
-                                                </label>
-                                                <input
-                                                    type='text'
-                                                    id='funcionario-nome'
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                    required
-                                                    placeholder='Ex: João Silva'
-                                                    value={nome}
-                                                    onChange={(e) => setNome(e.target.value)}
-                                                />
-                                            </div>
-                                        </div>
-                                        
-                                        {/* Botões de Ação */}
-                                        <div className="flex gap-3">
-                                            <button 
-                                                type='submit' 
-                                                className="flex items-center gap-2 px-4 py-2 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
-                                                style={{ backgroundColor: 'var(--bg-azul)' }}
-                                                onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
-                                                onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-                                            >
-                                                <i className="bi bi-check-circle-fill"></i>
-                                                <span>Adicionar Modelo</span>
-                                            </button>
-                                        </div>
-                                    </form>
+                                    <button
+                                        onClick={handleAbrirModalNovo}
+                                        className="flex items-center gap-2 px-4 py-2 bg-white rounded-md hover:bg-gray-100 transition-colors"
+                                        style={{ color: 'var(--bg-azul)' }}
+                                    >
+                                        <i className="bi bi-plus-circle-fill"></i>
+                                        <span>Novo Modelo</span>
+                                    </button>
                                 </div>
                             </div>
 
-                            {/* Card Funcionários Cadastrados */}
-                            <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                                <div className="text-white px-6 py-4" style={{ backgroundColor: 'var(--bg-azul)' }}>
-                                    <h3 className="text-lg font-semibold flex items-center gap-2">
-                                        <i className="bi bi-list-ul"></i>
-                                        Modelos Cadastrados
-                                    </h3>
-                                </div>
-                                
-                                <div className="p-6">
-                                    <div id='funcionarios-list' className="flex flex-col items-center justify-center py-12">
-                                        <i className="bi bi-info-circle text-gray-300 text-5xl mb-4"></i>
+                            {/* Lista de Modelos */}
+                            {modelos.length === 0 ? (
+                                <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                                    <div className="p-12 flex flex-col items-center justify-center">
+                                        <i className="bi bi-inbox text-gray-300 text-5xl mb-4"></i>
                                         <p className="text-gray-500 text-lg font-medium">
-                                            Nenhum Modelo cadastrado
+                                            Nenhum modelo cadastrado
+                                        </p>
+                                        <p className="text-gray-400 text-sm mt-2">
+                                            Clique em "Novo Modelo" para começar
                                         </p>
                                     </div>
                                 </div>
-                            </div>
+                            ) : (
+                                <>
+                                    <div className="space-y-4">
+                                        {modelosPaginaAtual.map((modelo) => (
+                                            <CardModelo
+                                                key={modelo.id}
+                                                modelo={modelo}
+                                                estaExpandido={modeloExpandido === modelo.id}
+                                                onToggleExpandir={() => handleToggleExpandir(modelo.id)}
+                                                onRemoverModelo={() => handleRemoverModelo(modelo.id)}
+                                                onEditarModelo={() => handleEditarModelo(modelo)}
+                                                onRemoverSubproduto={(subprodutoId) => handleRemoverSubproduto(modelo.id, subprodutoId)}
+                                            />
+                                        ))}
+                                    </div>
+                                    {modelos.length > itensPorPagina && (
+                                        <Paginacao
+                                            totalItens={modelos.length}
+                                            itensPorPagina={itensPorPagina}
+                                            paginaAtual={paginaAtual}
+                                            onPageChange={setPaginaAtual}
+                                        />
+                                    )}
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
             </div>
+
+            {/* Modal para adicionar/editar modelo */}
+            <ModalModelo
+                isOpen={modalAberto}
+                onClose={handleFecharModal}
+                onSave={handleAdicionarModelo}
+                modeloEditando={modeloEditando}
+            />
         </div>
     )
 }
 
-export default Funcionarios
+export default Modelos
