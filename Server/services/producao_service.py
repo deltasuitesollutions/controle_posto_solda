@@ -3,7 +3,7 @@ Service para lógica de negócio de produção
 """
 from typing import Dict, Any, Optional
 from datetime import datetime
-from backend.models import ProducaoRegistro, DatabaseConnection
+from Server.models import ProducaoRegistro, DatabaseConnection
 
 
 def determinar_turno(hora_atual: str) -> int:
@@ -33,7 +33,7 @@ def registrar_entrada(posto: str, funcionario_matricula: Optional[str] = None, p
     Aceita 'modelo_codigo' para compatibilidade, mas usa 'produto' internamente.
     """
     try:
-        from backend.models import PostoConfiguracao
+        from Server.models import PostoConfiguracao
         
         data_atual = datetime.now().strftime('%Y-%m-%d')
         hora_atual = datetime.now().strftime('%H:%M')
@@ -219,7 +219,7 @@ def listar_registros(
         registros_formatados = []
         for registro in registros:
             # Buscar dados relacionados
-            from backend.models import Funcionario, Modelo
+            from Server.models import Funcionario, Modelo
             
             funcionario = Funcionario.buscar_por_matricula(registro.funcionario_matricula)
             modelo = Modelo.buscar_por_codigo(registro.produto) if registro.produto else None

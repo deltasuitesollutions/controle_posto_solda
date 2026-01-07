@@ -60,7 +60,8 @@ def criar_banco_dados(force_recreate=False):
                 id SERIAL PRIMARY KEY,
                 matricula TEXT UNIQUE NOT NULL,
                 nome TEXT NOT NULL,
-                ativo BOOLEAN DEFAULT TRUE
+                ativo BOOLEAN DEFAULT TRUE,
+                tag TEXT UNIQUE
             )
         ''')
         
@@ -302,21 +303,21 @@ def criar_banco_dados(force_recreate=False):
         )
         print(f"{len(postos)} postos inseridos.")
         
-        # Inserir tags RFID já associadas aos funcionários
-        print("Inserindo tags RFID associadas aos funcionários...")
-        tags_rfid = [
-            ('TAG001', '1001', True, 'Tag do funcionário CARLOS SILVA'),
-            ('TAG002', '1002', True, 'Tag do funcionário MARIA SANTOS'),
-            ('TAG003', '1003', True, 'Tag do funcionário JOSÉ OLIVEIRA'),
-            ('TAG004', '1004', True, 'Tag do funcionário ANA COSTA'),
-            ('TAG005', '1005', True, 'Tag do funcionário PEDRO ALMEIDA')
+        # Atualizar funcionários com suas tags RFID diretamente na coluna tag
+        print("Associando tags RFID aos funcionários...")
+        tags_funcionarios = [
+            ('TAG001', '1001'),
+            ('TAG002', '1002'),
+            ('TAG003', '1003'),
+            ('TAG004', '1004'),
+            ('TAG005', '1005')
         ]
         
         cursor.executemany(
-            "INSERT INTO tags_rfid (tag_id, funcionario_matricula, ativo, observacoes) VALUES (%s, %s, %s, %s)",
-            tags_rfid
+            "UPDATE funcionarios SET tag = %s WHERE matricula = %s",
+            tags_funcionarios
         )
-        print(f"{len(tags_rfid)} tags RFID inseridas e associadas aos funcionários.")
+        print(f"{len(tags_funcionarios)} tags RFID associadas aos funcionários.")
         
         # Criar índices para melhor performance
         cursor.execute('''

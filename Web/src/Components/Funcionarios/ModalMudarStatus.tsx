@@ -2,7 +2,7 @@ interface Funcionario {
     id: string
     matricula: string
     nome: string
-    tagRfid: string
+    tag: string
     ativo: boolean
 }
 

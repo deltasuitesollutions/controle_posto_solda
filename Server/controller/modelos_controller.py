@@ -1,9 +1,6 @@
-"""
-Controller para rotas de modelos/produtos
-"""
 from typing import Tuple, Union
 from flask import Blueprint, jsonify, Response, request
-from backend.services import modelos_service
+from Server.services import modelos_service
 
 modelos_bp = Blueprint('modelos', __name__, url_prefix='/api/modelos')
 

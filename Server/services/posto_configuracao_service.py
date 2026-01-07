@@ -2,7 +2,7 @@
 Service para lógica de negócio de configuração de postos
 """
 from typing import Dict, Any, Optional, List
-from backend.models import PostoConfiguracao
+from Server.models import PostoConfiguracao
 
 
 def obter_configuracao_posto(posto: str) -> Optional[Dict[str, Any]]:

@@ -1,13 +1,9 @@
 import { useState } from "react"
 import TopBar from '../Components/topBar/TopBar'
 import MenuLateral from '../Components/MenuLateral/MenuLateral'
+import { tagsAPI } from '../api/api'
 
 type StatusAcesso = 'idle' | 'success' | 'error'
-
-const MOCK_COLABORADORES = [
-    { rfid: '123456', nome: 'Juliana Pereira' },
-    { rfid: '654321', nome: 'Carlos Silva' },
-]
 
 const LeitorRfid = () => {
     const [menuAberto, setMenuAberto] = useState(false)
@@ -19,15 +15,20 @@ const LeitorRfid = () => {
         setRfidInput(e.target.value)
     }
 
-    const validarRfidMock = (codigo: string) => {
-        const colaboradorEncontrado = MOCK_COLABORADORES.find(
-            (c) => c.rfid === codigo
-        )
-
-        if (colaboradorEncontrado) {
-            setColaborador(colaboradorEncontrado.nome)
-            setStatus('success')
-        } else {
+    const processarRfid = async (codigo: string) => {
+        try {
+            // Chamada API para processar RFID - tags_controller.py POST /api/tags/processar
+            const resposta = await tagsAPI.processar({ tag_id: codigo.trim() })
+            
+            if (resposta.status === 'success') {
+                setColaborador(resposta.funcionario_nome || 'Colaborador')
+                setStatus('success')
+            } else {
+                setColaborador(null)
+                setStatus('error')
+            }
+        } catch (error: any) {
+            console.error('Erro ao processar RFID:', error)
             setColaborador(null)
             setStatus('error')
         }
@@ -41,7 +42,7 @@ const LeitorRfid = () => {
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter' && rfidInput.trim()) {
-            validarRfidMock(rfidInput.trim())
+            processarRfid(rfidInput.trim())
         }
     }
 

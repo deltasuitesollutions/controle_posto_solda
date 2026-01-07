@@ -2,7 +2,7 @@
 Modelo para a entidade PostoConfiguracao
 """
 from typing import Dict, Any, Optional, List, Tuple
-from backend.models.database import DatabaseConnection
+from Server.models.database import DatabaseConnection
 from datetime import datetime
 
 
@@ -37,8 +37,8 @@ class PostoConfiguracao:
         }
         
         if include_relations:
-            from backend.models.funcionario import Funcionario
-            from backend.models.modelo import Modelo
+            from Server.models.funcionario import Funcionario
+            from Server.models.modelo import Modelo
             
             if self.funcionario_matricula:
                 funcionario = Funcionario.buscar_por_matricula(self.funcionario_matricula)

@@ -1,6 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import TopBar from '../Components/topBar/TopBar';
 import MenuLateral from '../Components/MenuLateral/MenuLateral';
+import { postosAPI } from '../api/api';
+import { funcionariosAPI } from '../api/api';
+import { modelosAPI } from '../api/api';
 
 const Postos = () => {
   const [menuAberto, setMenuAberto] = useState(false);
@@ -10,18 +13,57 @@ const Postos = () => {
     { id: 'P3', operador: '', peca: '', turno: '' },
     { id: 'P4', operador: '', peca: '', turno: '' }
   ]);
+  const [operadores, setOperadores] = useState<{ id: string; nome: string }[]>([]);
+  const [modelos, setModelos] = useState<{ id: string; nome: string }[]>([]);
+  const [carregando, setCarregando] = useState(false);
 
-  const operadores = [
-    { id: '1', nome: 'João Silva' },
-    { id: '2', nome: 'Maria Santos' },
-    { id: '3', nome: 'Pedro Oliveira' }
-  ];
+  // Carrega funcionários e modelos ao montar - chamadas para funcionarios_controller.py e modelos_controller.py
+  useEffect(() => {
+    const carregarDados = async () => {
+      try {
+        setCarregando(true)
+        const [funcionariosData, modelosData, configuracoesData] = await Promise.all([
+          funcionariosAPI.listar(),
+          modelosAPI.listar(),
+          postosAPI.listar()
+        ])
 
-  const modelos = [
-    { id: '1', nome: 'Peça A' },
-    { id: '2', nome: 'Peça B' },
-    { id: '3', nome: 'Peça C' }
-  ];
+        // Mapeia funcionários para o formato esperado
+        setOperadores((funcionariosData || []).map((f: any) => ({
+          id: f.matricula,
+          nome: f.nome
+        })))
+
+        // Mapeia modelos para o formato esperado
+        setModelos((modelosData || []).map((m: any) => ({
+          id: m.codigo,
+          nome: m.descricao || m.codigo
+        })))
+
+        // Carrega configurações dos postos se existirem
+        if (configuracoesData?.configuracoes) {
+          const configs = configuracoesData.configuracoes
+          setPostos(postos.map(p => {
+            const config = configs.find((c: any) => c.posto === p.id)
+            if (config) {
+              return {
+                ...p,
+                operador: config.funcionario_matricula || '',
+                peca: config.modelo_codigo || '',
+                turno: config.turno || ''
+              }
+            }
+            return p
+          }))
+        }
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error)
+      } finally {
+        setCarregando(false)
+      }
+    }
+    carregarDados()
+  }, [])
 
   const updatePosto = (id: string, campo: string, valor: string) => {
     setPostos(postos.map(p => 
@@ -29,10 +71,26 @@ const Postos = () => {
     ));
   };
 
-  const handleSalvarConfiguracao = (id: string) => {
+  const handleSalvarConfiguracao = async (id: string) => {
     const posto = postos.find(p => p.id === id);
-    console.log('Salvando:', posto);
-    // Aqui vai a lógica de salvar
+    if (!posto) return;
+
+    try {
+      // Chamada API para salvar configuração do posto - posto_configuracao_controller.py POST /api/posto-configuracao
+      const resposta = await postosAPI.configurar({
+        posto: id,
+        funcionario_matricula: posto.operador || undefined,
+        modelo_codigo: posto.peca || undefined,
+        turno: posto.turno || undefined
+      });
+
+      if (resposta.status === 'success') {
+        alert('Configuração salva com sucesso!');
+      }
+    } catch (error) {
+      console.error('Erro ao salvar configuração:', error);
+      alert('Erro ao salvar configuração. Tente novamente.');
+    }
   };
 
   const getPostoNum = (id: string) => {
@@ -46,10 +104,12 @@ const Postos = () => {
       
       <div className="grow pt-24 px-6 pb-20 md:pb-24 md:pl-20 transition-all duration-300">
         <div className="bg-white container mx-auto px-6 py-8 rounded-lg shadow-md">
-          <p className="text-1
-          xl text-gray-600 mb-6">
+          <p className="text-xl text-gray-600 mb-6">
             Escolha a peça e turno em que irá trabalhar.
           </p>
+          {carregando && (
+            <div className="mb-4 text-gray-500">Carregando...</div>
+          )}
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
             {postos.map((posto) => (

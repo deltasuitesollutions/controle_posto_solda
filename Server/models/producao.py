@@ -2,7 +2,7 @@
 Modelo para a entidade ProducaoRegistro
 """
 from typing import Dict, Any, Optional, List, Tuple
-from backend.models.database import DatabaseConnection
+from Server.models.database import DatabaseConnection
 from datetime import datetime
 
 
@@ -52,8 +52,8 @@ class ProducaoRegistro:
         }
         
         if include_relations:
-            from backend.models.funcionario import Funcionario
-            from backend.models.modelo import Modelo
+            from Server.models.funcionario import Funcionario
+            from Server.models.modelo import Modelo
             
             funcionario = Funcionario.buscar_por_matricula(self.funcionario_matricula)
             result["operador"] = funcionario.nome if funcionario else None

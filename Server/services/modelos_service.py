@@ -2,7 +2,7 @@
 Service para lógica de negócio de modelos/produtos
 """
 from typing import Dict, Any, List
-from backend.models import Modelo
+from Server.models import Modelo
 
 
 def listar_modelos() -> List[Dict[str, Any]]:

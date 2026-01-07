@@ -3,7 +3,7 @@ Controller para rotas de registros de produção
 """
 from typing import Tuple, Union
 from flask import Blueprint, jsonify, request, Response
-from backend.services import producao_service
+from Server.services import producao_service
 
 registros_bp = Blueprint('registros', __name__, url_prefix='/api/registros')
 

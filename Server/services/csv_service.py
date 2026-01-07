@@ -2,7 +2,7 @@ import csv
 import io
 from typing import Optional
 from datetime import datetime
-from backend.services.export_service import buscar_registros, processar_linha
+from Server.services.export_service import buscar_registros, processar_linha
 
 def exportar_registros_csv(
     data_inicio: Optional[str] = None, 

@@ -4,12 +4,13 @@ import MenuLateral from '../Components/MenuLateral/MenuLateral'
 import ModalEditarFuncionario from '../Components/Funcionarios/ModalEditarFuncionario'
 import ModalExcluirFuncionario from '../Components/Funcionarios/ModalExcluirFuncionario'
 import { Paginacao } from '../Components/Compartilhados/paginacao'
+import { funcionariosAPI } from '../api/api'
 
 interface Funcionario {
-    id: string
+    id: number
     matricula: string
     nome: string
-    tagRfid: string
+    tag?: string
     ativo: boolean
 }
 
@@ -18,7 +19,7 @@ const Funcionarios = () => {
     const [abaAtiva, setAbaAtiva] = useState<'cadastrar' | 'listar'>('cadastrar')
     const [matricula, setMatricula] = useState('')
     const [nome, setNome] = useState('')
-    const [tagRfid, setTagRfid] = useState('')
+    const [tag, setTag] = useState('')
     const [ativo, setAtivo] = useState(true)
     const [funcionarios, setFuncionarios] = useState<Funcionario[]>([])
     const [modalEditarAberto, setModalEditarAberto] = useState(false)
@@ -26,7 +27,24 @@ const Funcionarios = () => {
     const [funcionarioSelecionado, setFuncionarioSelecionado] = useState<Funcionario | null>(null)
     const [paginaAtual, setPaginaAtual] = useState(1)
     const [itensPorPagina] = useState(10)
+    const [carregando, setCarregando] = useState(false)
     const rfidInputRef = useRef<HTMLInputElement>(null)
+
+    // Carrega funcionários ao montar o componente - chamada para funcionarios_controller.py
+    useEffect(() => {
+        const carregarFuncionarios = async () => {
+            try {
+                setCarregando(true)
+                const dados = await funcionariosAPI.listarTodos()
+                setFuncionarios(dados || [])
+            } catch (error) {
+                console.error('Erro ao carregar funcionários:', error)
+            } finally {
+                setCarregando(false)
+            }
+        }
+        carregarFuncionarios()
+    }, [])
 
     // Helper para fechar modais
     const fecharModal = () => {
@@ -51,32 +69,48 @@ const Funcionarios = () => {
         return () => window.removeEventListener('keydown', handleKeyDown)
     }, [])
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         
-        // Modo criação - adiciona novo funcionário
-        const novoFuncionario: Funcionario = {
-            id: Date.now().toString(),
-            matricula,
-            nome,
-            tagRfid,
-            ativo
+        try {
+            // Chamada API para criar funcionário - funcionarios_controller.py POST /api/funcionarios
+            const dadosFuncionario: { matricula: string; nome: string; ativo: boolean; tag?: string } = {
+                matricula,
+                nome,
+                ativo,
+            }
+            if (tag.trim()) {
+                dadosFuncionario.tag = tag.trim()
+            }
+            const resposta = await funcionariosAPI.criar(dadosFuncionario)
+            
+            if (resposta.status === 'success' && resposta.data) {
+                setFuncionarios([...funcionarios, resposta.data])
+            }
+            
+            // Limpa os campos após salvar
+            setMatricula('')
+            setNome('')
+            setTag('')
+            setAtivo(true)
+            
+            // Volta o foco para o campo RFID para o próximo funcionário
+            setTimeout(() => {
+                rfidInputRef.current?.focus()
+            }, 100)
+        } catch (error: any) {
+            console.error('Erro ao cadastrar funcionário:', error)
+            const errorMessage = error?.message || 'Erro ao cadastrar funcionário. Tente novamente.'
+            
+            // Verificar se é erro de tag já cadastrada
+            if (errorMessage.toLowerCase().includes('tag rfid') && 
+                (errorMessage.toLowerCase().includes('já está cadastrada') || 
+                 errorMessage.toLowerCase().includes('já está associada'))) {
+                alert(`ATENÇÃO: ${errorMessage}\n\nEssa tag RFID já está cadastrada no sistema.`)
+            } else {
+                alert(`Erro ao cadastrar funcionário: ${errorMessage}`)
+            }
         }
-        
-        setFuncionarios([...funcionarios, novoFuncionario])
-        console.log('Funcionário cadastrado:', novoFuncionario)
-        //  chamada API para salvar o funcionário
-        
-        // Limpa os campos após salvar
-        setMatricula('')
-        setNome('')
-        setTagRfid('')
-        setAtivo(true)
-        
-        // Volta o foco para o campo RFID para o próximo funcionário
-        setTimeout(() => {
-            rfidInputRef.current?.focus()
-        }, 100)
     }
 
     const handleEditarFuncionario = (funcionario: Funcionario) => {
@@ -84,16 +118,41 @@ const Funcionarios = () => {
         setModalEditarAberto(true)
     }
 
-    const handleSalvarEdicao = (funcionarioAtualizado: Omit<Funcionario, 'id'>) => {
+    const handleSalvarEdicao = async (funcionarioAtualizado: Omit<Funcionario, 'id'>) => {
         if (!funcionarioSelecionado) return
-        setFuncionarios(funcionarios.map(f => 
-            f.id === funcionarioSelecionado.id 
-                ? { ...funcionarioAtualizado, id: funcionarioSelecionado.id }
-                : f
-        ))
-        console.log('Funcionário atualizado:', { id: funcionarioSelecionado.id, ...funcionarioAtualizado })
-        //  chamada API para atualizar o funcionário
-        fecharModal()
+        
+        try {
+            // Chamada API para atualizar funcionário - funcionarios_controller.py PUT /api/funcionarios/:id
+            const dadosAtualizacao: { nome: string; ativo: boolean; tag?: string } = {
+                nome: funcionarioAtualizado.nome,
+                ativo: funcionarioAtualizado.ativo,
+            }
+            if (funcionarioAtualizado.tag !== undefined) {
+                dadosAtualizacao.tag = funcionarioAtualizado.tag || ''
+            }
+            const resposta = await funcionariosAPI.atualizar(funcionarioSelecionado.id, dadosAtualizacao)
+            
+            if (resposta.status === 'success' && resposta.data) {
+                setFuncionarios(funcionarios.map(f => 
+                    f.id === funcionarioSelecionado.id 
+                        ? resposta.data
+                        : f
+                ))
+            }
+            fecharModal()
+        } catch (error: any) {
+            console.error('Erro ao atualizar funcionário:', error)
+            const errorMessage = error?.message || 'Erro ao atualizar funcionário. Tente novamente.'
+            
+            // Verificar se é erro de tag já cadastrada
+            if (errorMessage.toLowerCase().includes('tag rfid') && 
+                (errorMessage.toLowerCase().includes('já está cadastrada') || 
+                 errorMessage.toLowerCase().includes('já está associada'))) {
+                alert(`ATENÇÃO: ${errorMessage}\n\nEssa tag RFID já está cadastrada no sistema.`)
+            } else {
+                alert(`Erro ao atualizar funcionário: ${errorMessage}`)
+            }
+        }
     }
 
     const handleExcluirFuncionario = (funcionario: Funcionario) => {
@@ -101,23 +160,40 @@ const Funcionarios = () => {
         setModalExcluirAberto(true)
     }
 
-    const handleConfirmarExclusao = () => {
+    const handleConfirmarExclusao = async () => {
         if (!funcionarioSelecionado) return
-        setFuncionarios(funcionarios.filter(f => f.id !== funcionarioSelecionado.id))
-        console.log('Funcionário excluído:', funcionarioSelecionado.id)
-        //  chamada API para excluir o funcionário
-        fecharModal()
+        
+        try {
+            // Chamada API para deletar funcionário - funcionarios_controller.py DELETE /api/funcionarios/:id
+            await funcionariosAPI.deletar(funcionarioSelecionado.id)
+            setFuncionarios(funcionarios.filter(f => f.id !== funcionarioSelecionado.id))
+            fecharModal()
+        } catch (error) {
+            console.error('Erro ao excluir funcionário:', error)
+            alert('Erro ao excluir funcionário. Tente novamente.')
+        }
     }
 
-    const handleMudarStatus = (funcionario: Funcionario) => {
-        // Muda o status diretamente sem abrir modal
-        setFuncionarios(funcionarios.map(f => 
-            f.id === funcionario.id 
-                ? { ...f, ativo: !f.ativo }
-                : f
-        ))
-        console.log('Status alterado:', funcionario.id, 'Novo status:', !funcionario.ativo)
-        //  chamada API para atualizar o status
+    const handleMudarStatus = async (funcionario: Funcionario) => {
+        try {
+            // Chamada API para atualizar status - funcionarios_controller.py PUT /api/funcionarios/:id
+            const novoStatus = !funcionario.ativo
+            const resposta = await funcionariosAPI.atualizar(funcionario.id, {
+                nome: funcionario.nome,
+                ativo: novoStatus
+            })
+            
+            if (resposta.status === 'success' && resposta.data) {
+                setFuncionarios(funcionarios.map(f => 
+                    f.id === funcionario.id 
+                        ? resposta.data
+                        : f
+                ))
+            }
+        } catch (error) {
+            console.error('Erro ao alterar status:', error)
+            alert('Erro ao alterar status. Tente novamente.')
+        }
     }
 
     // Calcular funcionários da página atual
@@ -185,8 +261,8 @@ const Funcionarios = () => {
                                                 id='funcionario-tag-rfid'
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                 placeholder='Passe o crachá na marcação abaixo'
-                                                value={tagRfid}
-                                                onChange={(e) => setTagRfid(e.target.value)}
+                                                value={tag}
+                                                onChange={(e) => setTag(e.target.value)}
                                                 autoFocus
                                                 autoComplete="off"
                                             />
@@ -258,7 +334,11 @@ const Funcionarios = () => {
                                 ) : (
                                     /* Aba de Listagem */
                                     <div>
-                                        {funcionarios.length > 0 ? (
+                                        {carregando ? (
+                                            <div className="flex flex-col items-center justify-center py-12">
+                                                <p className="text-gray-500 text-lg font-medium">Carregando...</p>
+                                            </div>
+                                        ) : funcionarios.length > 0 ? (
                                             <div className="overflow-x-auto">
                                                 <table className="w-full">
                                                     <thead className="bg-gray-50">
@@ -290,7 +370,7 @@ const Funcionarios = () => {
                                                                     {funcionario.nome}
                                                                 </td>
                                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                                    {funcionario.tagRfid}
+                                                                    {funcionario.tag || '-'}
                                                                 </td>
                                                                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                                                                     <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${

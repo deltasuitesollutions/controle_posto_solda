@@ -2,7 +2,7 @@
 Services package - Lógica de negócio
 """
 
-from backend.services import (
+from Server.services import (
     producao_service,
     rfid_service,
     csv_service,
@@ -14,7 +14,7 @@ from backend.services import (
 
 
 try:
-    from backend.services import excel_service
+    from Server.services import excel_service
 except ImportError:
     excel_service = None
     print("Aviso: openpyxl não instalado. Exportação Excel não estará disponível.")

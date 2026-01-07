@@ -3,7 +3,7 @@ Controller para rotas de configuração de postos
 """
 from typing import Dict, Any, Tuple, Optional, Union
 from flask import Blueprint, jsonify, request, Response
-from backend.services import posto_configuracao_service
+from Server.services import posto_configuracao_service
 
 posto_configuracao_bp = Blueprint('posto_configuracao', __name__, url_prefix='/api/posto-configuracao')
 

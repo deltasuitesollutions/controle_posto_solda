@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 
 interface Subproduto {
     id: string
@@ -17,88 +17,58 @@ interface ModalModeloProps {
     isOpen: boolean
     onClose: () => void
     onSave: (modelo: Omit<Modelo, 'id'>) => void
-    modeloEditando?: Modelo | null
 }
 
-const ModalModelo = ({ isOpen, onClose, onSave, modeloEditando }: ModalModeloProps) => {
+const ModalModelo: React.FC<ModalModeloProps> = ({ isOpen, onClose, onSave }) => {
     const [codigo, setCodigo] = useState('')
     const [descricao, setDescricao] = useState('')
-    const [subprodutos, setSubprodutos] = useState<Subproduto[]>([])
-    const [subCodigo, setSubCodigo] = useState('')
-    const [subDescricao, setSubDescricao] = useState('')
-    const [subprodutoEditando, setSubprodutoEditando] = useState<string | null>(null)
+    const [subprodutosTemp, setSubprodutosTemp] = useState<Subproduto[]>([])
+    const [subprodutoCodigo, setSubprodutoCodigo] = useState('')
+    const [subprodutoDescricao, setSubprodutoDescricao] = useState('')
 
+    // Resetar campos quando o modal abrir/fechar
     useEffect(() => {
-        if (isOpen && modeloEditando) {
-            // Modo edição - carrega os dados do modelo
-            setCodigo(modeloEditando.codigo)
-            setDescricao(modeloEditando.descricao)
-            setSubprodutos([...modeloEditando.subprodutos])
-            setSubCodigo('')
-            setSubDescricao('')
-        } else if (!isOpen) {
-            // Fecha o modal - limpa os campos
+        if (!isOpen) {
             setCodigo('')
             setDescricao('')
-            setSubprodutos([])
-            setSubCodigo('')
-            setSubDescricao('')
-            setSubprodutoEditando(null)
+            setSubprodutosTemp([])
+            setSubprodutoCodigo('')
+            setSubprodutoDescricao('')
         }
-    }, [isOpen, modeloEditando])
+    }, [isOpen])
 
-    const addSub = () => {
-        if (!subCodigo.trim() || !subDescricao.trim()) return
-        
-        if (subprodutoEditando) {
-            // Modo edição - atualiza o subproduto
-            setSubprodutos(subprodutos.map(s => 
-                s.id === subprodutoEditando 
-                    ? { ...s, codigo: subCodigo.trim(), descricao: subDescricao.trim() }
-                    : s
-            ))
-            setSubprodutoEditando(null)
-        } else {
-            // Modo criação - adiciona novo subproduto
-            setSubprodutos([...subprodutos, {
-                id: Date.now().toString(),
-                codigo: subCodigo.trim(),
-                descricao: subDescricao.trim()
-            }])
+    const adicionarSubprodutoTemp = () => {
+        if (!subprodutoCodigo.trim() || !subprodutoDescricao.trim()) {
+            return
         }
-        setSubCodigo('')
-        setSubDescricao('')
-    }
 
-    const editarSub = (sub: Subproduto) => {
-        setSubCodigo(sub.codigo)
-        setSubDescricao(sub.descricao)
-        setSubprodutoEditando(sub.id)
-    }
-
-    const cancelarEdicaoSub = () => {
-        setSubCodigo('')
-        setSubDescricao('')
-        setSubprodutoEditando(null)
-    }
-
-    const removeSub = (id: string) => {
-        setSubprodutos(subprodutos.filter(s => s.id !== id))
-        if (subprodutoEditando === id) {
-            setSubprodutoEditando(null)
-            setSubCodigo('')
-            setSubDescricao('')
+        const novoSubproduto: Subproduto = {
+            id: Date.now().toString(),
+            codigo: subprodutoCodigo.trim(),
+            descricao: subprodutoDescricao.trim()
         }
+
+        setSubprodutosTemp([...subprodutosTemp, novoSubproduto])
+        setSubprodutoCodigo('')
+        setSubprodutoDescricao('')
     }
 
-    const salvar = () => {
-        if (!codigo.trim() || !descricao.trim()) return
-        
-        onSave({
+    const removerSubprodutoTemp = (id: string) => {
+        setSubprodutosTemp(subprodutosTemp.filter(sub => sub.id !== id))
+    }
+
+    const handleSalvar = () => {
+        if (!codigo.trim() || !descricao.trim()) {
+            return
+        }
+
+        const novoModelo = {
             codigo: codigo.trim(),
             descricao: descricao.trim(),
-            subprodutos
-        })
+            subprodutos: [...subprodutosTemp]
+        }
+
+        onSave(novoModelo)
         onClose()
     }
 
@@ -106,140 +76,169 @@ const ModalModelo = ({ isOpen, onClose, onSave, modeloEditando }: ModalModeloPro
 
     return (
         <div 
-            className="fixed inset-0 flex items-center justify-center z-50 p-4"
-            style={{ backgroundColor: 'rgba(156, 163, 175, 0.2)' }}
-            onClick={(e) => e.target === e.currentTarget && onClose()}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                    onClose()
+                }
+            }}
         >
-            <div className="bg-white rounded-lg shadow-xl max-w-xl w-full max-h-[90vh] flex flex-col">
-                <div className="px-6 py-4 text-white flex items-center justify-between" style={{ backgroundColor: 'var(--bg-azul)' }}>
-                    <h3 className="text-lg font-semibold flex items-center gap-2">
-                        <i className={`bi ${modeloEditando ? 'bi-pencil-square' : 'bi-box-seam'}`}></i>
-                        {modeloEditando ? 'Editar Modelo' : 'Novo Modelo'}
-                    </h3>
-                    <button onClick={onClose} className="text-white hover:opacity-80">
-                        <i className="bi bi-x-lg text-xl"></i>
-                    </button>
+            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                {/* Header do Modal */}
+                <div className="text-white px-6 py-4 flex shrink-0" style={{ backgroundColor: 'var(--bg-azul)' }}>
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                            <i className="bi bi-box-seam"></i>
+                            Novo Modelo
+                        </h3>
+                        <button
+                            onClick={onClose}
+                            className="text-white hover:text-gray-200 transition-colors p-1 rounded hover:bg-white hover:bg-opacity-20"
+                            title="Fechar modal"
+                        >
+                            <i className="bi bi-x-lg text-xl"></i>
+                        </button>
+                    </div>
                 </div>
                 
+                {/* Conteúdo do Modal - Scrollable */}
                 <div className="flex-1 overflow-y-auto p-6">
+                    {/* Formulário do Modelo */}
                     <div className="mb-6">
-                        <h4 className="text-sm font-semibold text-gray-700 mb-4">Informações do Modelo</h4>
+                        <h4 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                            <i className="bi bi-info-circle"></i>
+                            Informações do Modelo
+                        </h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Código *</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Código do Produto *
+                                </label>
                                 <input
                                     type="text"
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4C79AF]"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     placeholder="Ex: PROD001"
                                     value={codigo}
                                     onChange={(e) => setCodigo(e.target.value)}
+                                    required
                                     autoFocus
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Descrição *</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Descrição *
+                                </label>
                                 <input
                                     type="text"
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4C79AF]"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     placeholder="Ex: Modelo de Produto A"
                                     value={descricao}
                                     onChange={(e) => setDescricao(e.target.value)}
+                                    required
                                 />
                             </div>
                         </div>
                     </div>
 
+                    {/* Seção de Subprodutos */}
                     <div className="border-t border-gray-200 pt-6">
-                        <h4 className="text-sm font-semibold text-gray-700 mb-4">
-                            Subprodutos ({subprodutos.length})
-                        </h4>
+                        <div className="flex items-center justify-between mb-4">
+                            <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                <i className="bi bi-boxes"></i>
+                                Subprodutos ({subprodutosTemp.length})
+                            </h4>
+                        </div>
 
-                        <div className={`mb-4 p-4 rounded-lg border ${!modeloEditando ? 'bg-blue-50' : 'bg-white'}`} style={!modeloEditando ? { borderColor: 'rgba(76, 121, 175, 0.2)' } : { borderColor: '#e5e7eb' }}>
-                            <form onSubmit={(e) => { e.preventDefault(); addSub() }}>
+                        {/* Formulário para adicionar subproduto */}
+                        <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                            <form onSubmit={(e) => {
+                                e.preventDefault()
+                                adicionarSubprodutoTemp()
+                            }}>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                                     <div>
-                                        <label className="block text-xs font-medium text-gray-600 mb-1">Código</label>
+                                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                                            Código do Subproduto
+                                        </label>
                                         <input
                                             type="text"
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4C79AF]"
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                             placeholder="Ex: SUB001"
-                                            value={subCodigo}
-                                            onChange={(e) => setSubCodigo(e.target.value)}
+                                            value={subprodutoCodigo}
+                                            onChange={(e) => setSubprodutoCodigo(e.target.value)}
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-medium text-gray-600 mb-1">Descrição</label>
+                                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                                            Descrição do Subproduto
+                                        </label>
                                         <input
                                             type="text"
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4C79AF]"
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                             placeholder="Ex: Subproduto A"
-                                            value={subDescricao}
-                                            onChange={(e) => setSubDescricao(e.target.value)}
+                                            value={subprodutoDescricao}
+                                            onChange={(e) => setSubprodutoDescricao(e.target.value)}
                                             onKeyDown={(e) => {
-                                                if (e.key === 'Enter' && subCodigo.trim() && subDescricao.trim()) {
+                                                if (e.key === 'Enter' && subprodutoCodigo.trim() && subprodutoDescricao.trim()) {
                                                     e.preventDefault()
-                                                    addSub()
+                                                    adicionarSubprodutoTemp()
                                                 }
                                             }}
                                         />
                                     </div>
                                 </div>
-                                <div className="flex gap-2">
-                                    <button
-                                        type="submit"
-                                        className="flex items-center gap-2 px-4 py-2 text-white rounded-md text-sm hover:opacity-90 disabled:opacity-50"
-                                        style={{ backgroundColor: 'var(--bg-azul)' }}
-                                        disabled={!subCodigo.trim() || !subDescricao.trim()}
-                                    >
-                                        <i className={`bi ${subprodutoEditando ? 'bi-check-circle-fill' : 'bi-plus-circle-fill'}`}></i>
-                                        {subprodutoEditando ? 'Salvar Alterações' : 'Adicionar Subproduto'}
-                                    </button>
-                                    {subprodutoEditando && (
-                                        <button
-                                            type="button"
-                                            onClick={cancelarEdicaoSub}
-                                            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md text-sm hover:bg-gray-100"
-                                        >
-                                            Cancelar
-                                        </button>
-                                    )}
-                                </div>
+                                <button
+                                    type="submit"
+                                    className="flex items-center gap-2 px-4 py-2 text-white rounded-md text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    style={{ backgroundColor: 'var(--bg-azul)' }}
+                                    onMouseEnter={(e) => {
+                                        if (!e.currentTarget.disabled) {
+                                            e.currentTarget.style.opacity = '0.9'
+                                        }
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        if (!e.currentTarget.disabled) {
+                                            e.currentTarget.style.opacity = '1'
+                                        }
+                                    }}
+                                    disabled={!subprodutoCodigo.trim() || !subprodutoDescricao.trim()}
+                                >
+                                    <i className="bi bi-plus-circle-fill"></i>
+                                    <span>Adicionar Subproduto</span>
+                                </button>
                             </form>
                         </div>
 
-                        {subprodutos.length > 0 && (
+                        {/* Lista de Subprodutos Temporários */}
+                        {subprodutosTemp.length === 0 ? (
+                            <div className="text-center py-6 text-gray-400 bg-gray-50 rounded-lg">
+                                <i className="bi bi-inbox text-2xl mb-2"></i>
+                                <p className="text-sm">Nenhum subproduto adicionado ainda</p>
+                            </div>
+                        ) : (
                             <div className="space-y-2 max-h-60 overflow-y-auto">
-                                {subprodutos.map((sub) => (
-                                    <div key={sub.id} className={`flex items-center justify-between p-3 rounded-md transition-colors ${subprodutoEditando === sub.id ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50 hover:bg-gray-100'}`}>
+                                {subprodutosTemp.map((subproduto) => (
+                                    <div 
+                                        key={subproduto.id} 
+                                        className="flex items-center justify-between p-3 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors"
+                                    >
                                         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div>
                                                 <span className="text-xs text-gray-500">Código:</span>
-                                                <p className="font-medium text-gray-900">{sub.codigo}</p>
+                                                <p className="font-medium text-gray-900">{subproduto.codigo}</p>
                                             </div>
                                             <div>
                                                 <span className="text-xs text-gray-500">Descrição:</span>
-                                                <p className="font-medium text-gray-900">{sub.descricao}</p>
+                                                <p className="font-medium text-gray-900">{subproduto.descricao}</p>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-2 ml-4">
-                                            <button
-                                                onClick={() => editarSub(sub)}
-                                                className="p-2 rounded transition-colors hover:opacity-80"
-                                                style={{ color: 'var(--bg-azul)' }}
-                                                title="Editar subproduto"
-                                                disabled={subprodutoEditando !== null && subprodutoEditando !== sub.id}
-                                            >
-                                                <i className="bi bi-pencil-square"></i>
-                                            </button>
-                                            <button
-                                                onClick={() => removeSub(sub.id)}
-                                                className="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded transition-colors"
-                                                title="Remover subproduto"
-                                                disabled={subprodutoEditando !== null && subprodutoEditando !== sub.id}
-                                            >
-                                                <i className="bi bi-trash"></i>
-                                            </button>
-                                        </div>
+                                        <button
+                                            onClick={() => removerSubprodutoTemp(subproduto.id)}
+                                            className="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded transition-colors ml-4"
+                                            title="Remover subproduto"
+                                        >
+                                            <i className="bi bi-trash"></i>
+                                        </button>
                                     </div>
                                 ))}
                             </div>
@@ -247,21 +246,32 @@ const ModalModelo = ({ isOpen, onClose, onSave, modeloEditando }: ModalModeloPro
                     </div>
                 </div>
 
-                <div className="flex justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
+                {/* Botões do Modal - Fixed Footer */}
+                <div className="flex justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50 shrink-0">
                     <button
                         onClick={onClose}
-                        className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100"
+                        className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 transition-colors"
                     >
                         Cancelar
                     </button>
                     <button
-                        onClick={salvar}
-                        className="flex items-center gap-2 px-4 py-2 text-white rounded-md hover:opacity-90 disabled:opacity-50"
+                        onClick={handleSalvar}
+                        className="flex items-center gap-2 px-4 py-2 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         style={{ backgroundColor: 'var(--bg-azul)' }}
+                        onMouseEnter={(e) => {
+                            if (!e.currentTarget.disabled) {
+                                e.currentTarget.style.opacity = '0.9'
+                            }
+                        }}
+                        onMouseLeave={(e) => {
+                            if (!e.currentTarget.disabled) {
+                                e.currentTarget.style.opacity = '1'
+                            }
+                        }}
                         disabled={!codigo.trim() || !descricao.trim()}
                     >
                         <i className="bi bi-check-circle-fill"></i>
-                        Salvar
+                        <span>Salvar Modelo</span>
                     </button>
                 </div>
             </div>

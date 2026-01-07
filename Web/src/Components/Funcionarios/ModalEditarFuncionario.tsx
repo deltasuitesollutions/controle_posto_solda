@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 
 interface Funcionario {
-    id: string
+    id: number
     matricula: string
     nome: string
-    tagRfid: string
+    tag?: string
     ativo: boolean
 }
 
@@ -18,26 +18,26 @@ interface ModalEditarFuncionarioProps {
 const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }: ModalEditarFuncionarioProps) => {
     const [matricula, setMatricula] = useState('')
     const [nome, setNome] = useState('')
-    const [tagRfid, setTagRfid] = useState('')
+    const [tag, setTag] = useState('')
     const [ativo, setAtivo] = useState(true)
 
     useEffect(() => {
         if (funcionarioEditando) {
             setMatricula(funcionarioEditando.matricula)
             setNome(funcionarioEditando.nome)
-            setTagRfid(funcionarioEditando.tagRfid)
+            setTag(funcionarioEditando.tag || '')
             setAtivo(funcionarioEditando.ativo)
         } else {
             setMatricula('')
             setNome('')
-            setTagRfid('')
+            setTag('')
             setAtivo(true)
         }
     }, [funcionarioEditando])
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
-        onSave({ matricula, nome, tagRfid, ativo })
+        onSave({ matricula, nome, tag, ativo })
         onClose()
     }
 
@@ -57,8 +57,8 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
                         <input
                             type="text"
                             className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={tagRfid}
-                            onChange={(e) => setTagRfid(e.target.value)}
+                            value={tag}
+                            onChange={(e) => setTag(e.target.value)}
                         />
                     </div>
                     

@@ -1,7 +1,7 @@
 from datetime import datetime
 from io import BytesIO
 from typing import Optional
-from backend.services.export_service import buscar_registros, processar_linha
+from Server.services.export_service import buscar_registros, processar_linha
 
 def exportar_registros_excel(
     data_inicio: Optional[str] = None, 

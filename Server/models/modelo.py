@@ -2,7 +2,7 @@
 Modelo para a entidade Modelo (Produto)
 """
 from typing import Dict, Any, Optional, List, Tuple
-from backend.models.database import DatabaseConnection
+from Server.models.database import DatabaseConnection
 
 
 class Modelo:
