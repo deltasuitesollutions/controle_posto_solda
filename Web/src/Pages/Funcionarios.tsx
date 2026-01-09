@@ -15,7 +15,6 @@ interface Funcionario {
 }
 
 const Funcionarios = () => {
-    const [menuAberto, setMenuAberto] = useState(false);
     const [abaAtiva, setAbaAtiva] = useState<'cadastrar' | 'listar'>('cadastrar')
     const [matricula, setMatricula] = useState('')
     const [nome, setNome] = useState('')
@@ -211,9 +210,9 @@ const Funcionarios = () => {
 
     return (
         <div className="flex min-h-screen bg-gray-50">
-            <MenuLateral menuAberto={menuAberto} onClose={() => setMenuAberto(false)} />
+            <MenuLateral />
             <div className="flex-1 flex flex-col">
-                <TopBar menuAberto={menuAberto} onToggleMenu={() => setMenuAberto(!menuAberto)} />
+                <TopBar />
                 <div className="flex-1 p-6 pt-32 pb-20 md:pb-24 md:pl-20 transition-all duration-300">
                     <div className="max-w-[95%] mx-auto">
                         <div className="bg-white rounded-lg shadow-md overflow-hidden">

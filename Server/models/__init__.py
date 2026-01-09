@@ -7,7 +7,7 @@ from Server.models.modelo import Modelo
 from Server.models.posto import Posto
 from Server.models.producao import ProducaoRegistro
 from Server.models.posto_configuracao import PostoConfiguracao
-from Server.models.usuario import Usuario
+from Server.models.subproduto import Subproduto
 __all__ = [
     'DatabaseConnection',
     'Funcionario',
@@ -15,6 +15,7 @@ __all__ = [
     'Posto',
     'ProducaoRegistro',
     'PostoConfiguracao',
+    'Subproduto',
     'Usuario'
 ]
 

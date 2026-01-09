@@ -9,6 +9,9 @@ export default {
       colors: {
         'button-danger': '#dc2626', // vermelho para botão de sair
       },
+      minWidth: {
+        '100': '400px',
+      }
     },
   },
   plugins: [],

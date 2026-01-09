@@ -10,3 +10,13 @@ html, body, #root {
   --bg-azul: #4C79AF;
   --bg-laranja: #D66B1A;
 }
+
+/* Ajusta z-index do TopBar quando menu está aberto */
+body.menu-open .menu-topbar {
+  z-index: 40;
+}
+
+/* Ajusta padding do conteúdo quando menu está aberto (para páginas IHM se necessário) */
+body.menu-open .menu-content {
+  /* Se precisar de padding diferente quando menu aberto, adicione aqui */
+}

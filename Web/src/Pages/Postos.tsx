@@ -6,7 +6,6 @@ import { funcionariosAPI } from '../api/api';
 import { modelosAPI } from '../api/api';
 
 const Postos = () => {
-  const [menuAberto, setMenuAberto] = useState(false);
   const [postos, setPostos] = useState([
     { id: 'P1', operador: '', peca: '', turno: '' },
     { id: 'P2', operador: '', peca: '', turno: '' },
@@ -99,8 +98,8 @@ const Postos = () => {
 
   return (
     <div className="bg-gray-100 min-h-screen flex flex-col">
-      <TopBar menuAberto={menuAberto} onToggleMenu={() => setMenuAberto(!menuAberto)} />
-      <MenuLateral menuAberto={menuAberto} onClose={() => setMenuAberto(false)} />
+      <TopBar />
+      <MenuLateral />
       
       <div className="grow pt-24 px-6 pb-20 md:pb-24 md:pl-20 transition-all duration-300">
         <div className="bg-white container mx-auto px-6 py-8 rounded-lg shadow-md">

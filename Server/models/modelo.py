@@ -13,13 +13,22 @@ class Modelo:
         self.codigo: str = codigo
         self.descricao: str = descricao or codigo
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self, incluir_subprodutos: bool = False) -> Dict[str, Any]:
         """Converte o objeto para dicionário"""
-        return {
+        resultado = {
             "id": self.id,
             "codigo": self.codigo,
             "descricao": self.descricao
         }
+        
+        if incluir_subprodutos and self.id:
+            from Server.models.subproduto import Subproduto
+            subprodutos = Subproduto.buscar_por_modelo_id(self.id)
+            resultado["subprodutos"] = [s.to_dict() for s in subprodutos]
+        else:
+            resultado["subprodutos"] = []
+        
+        return resultado
     
     @staticmethod
     def from_dict(data: Dict[str, Any]) -> 'Modelo':
@@ -48,12 +57,12 @@ class Modelo:
         """Salva o modelo no banco de dados"""
         if self.id:
             # Atualizar
-            query = "UPDATE modelos SET codigo = ?, descricao = ? WHERE id = ?"
+            query = "UPDATE modelos SET codigo = %s, descricao = %s WHERE id = %s"
             params: Tuple[Any, ...] = (self.codigo, self.descricao, self.id)
             DatabaseConnection.execute_query(query, params)
         else:
             # Inserir com RETURNING id para PostgreSQL
-            query = "INSERT INTO modelos (codigo, descricao) VALUES (?, ?) RETURNING id"
+            query = "INSERT INTO modelos (codigo, descricao) VALUES (%s, %s) RETURNING id"
             params = (self.codigo, self.descricao)
             result = DatabaseConnection.execute_query(query, params)
             if isinstance(result, int):
@@ -63,7 +72,7 @@ class Modelo:
     @staticmethod
     def buscar_por_id(id: int) -> Optional['Modelo']:
         """Busca um modelo pelo ID"""
-        query = "SELECT id, codigo, descricao FROM modelos WHERE id = ?"
+        query = "SELECT id, codigo, descricao FROM modelos WHERE id = %s"
         row = DatabaseConnection.execute_query(query, (id,), fetch_one=True)
         if not row:
             return None
@@ -72,14 +81,14 @@ class Modelo:
     @staticmethod
     def buscar_por_codigo(codigo: str) -> Optional['Modelo']:
         """Busca um modelo pelo código"""
-        query = "SELECT id, codigo, descricao FROM modelos WHERE codigo = ?"
+        query = "SELECT id, codigo, descricao FROM modelos WHERE codigo = %s"
         row = DatabaseConnection.execute_query(query, (codigo,), fetch_one=True)
         if not row:
             return None
         return Modelo.from_row(row)
     
     @staticmethod
-    def listar_todos() -> List['Modelo']:
+    def listar_todos(incluir_subprodutos: bool = False) -> List['Modelo']:
         """Lista todos os modelos"""
         query = "SELECT id, codigo, descricao FROM modelos ORDER BY codigo"
         rows = DatabaseConnection.execute_query(query, fetch_all=True)
@@ -91,7 +100,10 @@ class Modelo:
         """Remove o modelo do banco de dados"""
         if not self.id:
             raise Exception("Modelo não possui ID")
-        query = "DELETE FROM modelos WHERE id = ?"
+        # Deletar subprodutos primeiro (CASCADE deve fazer isso automaticamente, mas vamos garantir)
+        from Server.models.subproduto import Subproduto
+        Subproduto.deletar_por_modelo_id(self.id)
+        query = "DELETE FROM modelos WHERE id = %s"
         DatabaseConnection.execute_query(query, (self.id,))
         self.id = None
     

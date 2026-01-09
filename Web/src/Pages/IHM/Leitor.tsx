@@ -1,6 +1,6 @@
 import { useState } from "react"
-import TopBar from '../Components/topBar/TopBar'
-import MenuLateral from '../Components/MenuLateral/MenuLateral'
+import TopBar from '../../Components/topBar/TopBar'
+import MenuLateral from '../../Components/MenuLateral/MenuLateral'
 
 type StatusAcesso = 'idle' | 'success' | 'error'
 
@@ -10,7 +10,6 @@ const MOCK_COLABORADORES = [
 ]
 
 const LeitorRfid = () => {
-    const [menuAberto, setMenuAberto] = useState(false)
     const [rfidInput, setRfidInput] = useState('')
     const [status, setStatus] = useState<StatusAcesso>('idle')
     const [colaborador, setColaborador] = useState<string | null>(null)
@@ -72,30 +71,17 @@ const LeitorRfid = () => {
                 </div>
             )}
 
-            <TopBar
-                menuAberto={menuAberto}
-                onToggleMenu={() => setMenuAberto(!menuAberto)}
-            />
+            <TopBar />
 
-            <MenuLateral
-                menuAberto={menuAberto}
-                onClose={() => setMenuAberto(false)}
-            />
+            <MenuLateral />
 
-            <div
-                className={`pt-20 px-6 pb-6 transition-all duration-300
-                ${menuAberto ? 'md:pl-72' : ''}`}
-            >
+            <div className="pt-20 px-6 pb-6 md:pl-20 transition-all duration-300 menu-content">
                 <span className="text-gray-700 font-sans text-2xl py-6 flex items-center justify-center">
                     Seja Bem Vindo, colaborador!
                 </span>
             </div>
 
-            <div
-                className={`pt-8 px-6 pb-20 md:pb-24 transition-all duration-300
-                ${menuAberto ? 'md:pl-72' : ''}
-                flex items-center justify-center`}
-            >
+            <div className="pt-8 px-6 pb-20 md:pb-24 md:pl-20 transition-all duration-300 flex items-center justify-center menu-content">
                 <div className="w-full max-w-2xl">
                     <div className="bg-white rounded-lg shadow-lg p-8">
                         <div

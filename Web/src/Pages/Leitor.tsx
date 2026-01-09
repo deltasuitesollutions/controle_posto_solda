@@ -6,7 +6,6 @@ import { tagsAPI } from '../api/api'
 type StatusAcesso = 'idle' | 'success' | 'error'
 
 const LeitorRfid = () => {
-    const [menuAberto, setMenuAberto] = useState(false)
     const [rfidInput, setRfidInput] = useState('')
     const [status, setStatus] = useState<StatusAcesso>('idle')
     const [colaborador, setColaborador] = useState<string | null>(null)
@@ -73,15 +72,9 @@ const LeitorRfid = () => {
                 </div>
             )}
 
-            <TopBar
-                menuAberto={menuAberto}
-                onToggleMenu={() => setMenuAberto(!menuAberto)}
-            />
+            <TopBar />
 
-            <MenuLateral
-                menuAberto={menuAberto}
-                onClose={() => setMenuAberto(false)}
-            />
+            <MenuLateral />
 
             <div className="pt-20 px-6 pb-6 md:pl-20 transition-all duration-300">
                 <span className="text-gray-700 font-sans text-2xl py-6 flex items-center justify-center">

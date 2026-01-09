@@ -59,14 +59,14 @@ export const modelosAPI = {
   listarTodos: () => fetchAPI('/modelos/todos'),
   
   // POST /api/modelos - cria novo modelo
-  criar: (data: { codigo: string; descricao: string }) =>
+  criar: (data: { codigo: string; descricao: string; subprodutos?: Array<{ codigo: string; descricao: string }> }) =>
     fetchAPI('/modelos', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
   
   // PUT /api/modelos/:id - atualiza modelo
-  atualizar: (id: number, data: { codigo: string; descricao: string }) =>
+  atualizar: (id: number, data: { codigo: string; descricao: string; subprodutos?: Array<{ codigo: string; descricao: string }> }) =>
     fetchAPI(`/modelos/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -75,33 +75,6 @@ export const modelosAPI = {
   // DELETE /api/modelos/:id - deleta modelo
   deletar: (id: number) =>
     fetchAPI(`/modelos/${id}`, {
-      method: 'DELETE',
-    }),
-}
-
-// API de Postos - chamada para posto_configuracao_controller.py
-export const postosAPI = {
-  // GET /api/posto-configuracao - lista todas as configurações
-  listar: () => fetchAPI('/posto-configuracao'),
-  
-  // GET /api/posto-configuracao/:posto - obtém configuração de um posto
-  obter: (posto: string) => fetchAPI(`/posto-configuracao/${posto}`),
-  
-  // POST /api/posto-configuracao - configura ou atualiza posto
-  configurar: (data: {
-    posto: string
-    funcionario_matricula?: string
-    modelo_codigo?: string
-    turno?: string
-  }) =>
-    fetchAPI('/posto-configuracao', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-  
-  // DELETE /api/posto-configuracao/:posto - remove configuração
-  remover: (posto: string) =>
-    fetchAPI(`/posto-configuracao/${posto}`, {
       method: 'DELETE',
     }),
 }
@@ -128,32 +101,6 @@ export const registrosAPI = {
   },
 }
 
-// API de Produção - chamada para producao_controller.py
-export const producaoAPI = {
-  // POST /api/producao/entrada - registra entrada do operador
-  registrarEntrada: (data: {
-    posto: string
-    funcionario_matricula?: string
-    produto?: string
-    modelo_codigo?: string
-  }) =>
-    fetchAPI('/producao/entrada', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-  
-  // POST /api/producao/saida - registra saída do operador
-  registrarSaida: (data: {
-    registro_id?: number
-    posto?: string
-    funcionario_matricula?: string
-  }) =>
-    fetchAPI('/producao/saida', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-}
-
 // API de Tags RFID - chamada para tags_controller.py
 export const tagsAPI = {
   // POST /api/tags/processar - processa leitura RFID e registra entrada/saída
@@ -161,6 +108,28 @@ export const tagsAPI = {
     fetchAPI('/tags/processar', {
       method: 'POST',
       body: JSON.stringify(data),
+    }),
+}
+
+// API de Postos - chamada para posto_configuracao_controller.py
+export const postosAPI = {
+  // GET /api/posto-configuracao - lista configurações dos postos
+  listar: () => fetchAPI('/posto-configuracao'),
+  
+  // POST /api/posto-configuracao - configura ou atualiza um posto
+  configurar: (data: { posto: string; funcionario_matricula?: string; modelo_codigo?: string; turno?: string }) =>
+    fetchAPI('/posto-configuracao', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  
+  // GET /api/posto-configuracao/:posto - obtém configuração de um posto
+  obter: (posto: string) => fetchAPI(`/posto-configuracao/${posto}`),
+  
+  // DELETE /api/posto-configuracao/:posto - remove configuração de um posto
+  remover: (posto: string) =>
+    fetchAPI(`/posto-configuracao/${posto}`, {
+      method: 'DELETE',
     }),
 }
 

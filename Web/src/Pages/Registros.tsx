@@ -17,7 +17,6 @@ interface Registro {
 }
 
 const Registros = () => {
-    const [menuAberto, setMenuAberto] = useState(false)
     const [paginaAtual, setPaginaAtual] = useState(1)
     const [itensPorPagina, setItensPorPagina] = useState(10)
     const [modalAberto, setModalAberto] = useState<string | null>(null)
@@ -189,9 +188,9 @@ const Registros = () => {
 
     return (
         <div className="flex min-h-screen bg-gray-50">
-            <MenuLateral menuAberto={menuAberto} onClose={() => setMenuAberto(false)} />
+            <MenuLateral />
             <div className="flex-1 flex flex-col">
-                <TopBar menuAberto={menuAberto} onToggleMenu={() => setMenuAberto(!menuAberto)} />
+                <TopBar />
                 <div className="flex-1 p-6 pt-32 md:pl-20">
                     <div className="w-full mx-auto">
                         <div className="bg-white rounded-lg shadow-md overflow-hidden">

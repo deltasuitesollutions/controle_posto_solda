@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import TopBar from '../Components/topBar/TopBar';
-import MenuLateral from '../Components/MenuLateral/MenuLateral';
+import TopBar from '../../Components/topBar/TopBar';
+import MenuLateral from '../../Components/MenuLateral/MenuLateral';
 
 const Postos = () => {
-  const [menuAberto, setMenuAberto] = useState(false);
   const [postos, setPostos] = useState([
     { id: 'P1', operador: '', peca: '', turno: '' },
     { id: 'P2', operador: '', peca: '', turno: '' },
@@ -41,10 +40,10 @@ const Postos = () => {
 
   return (
     <div className="bg-gray-100 min-h-screen flex flex-col">
-      <TopBar menuAberto={menuAberto} onToggleMenu={() => setMenuAberto(!menuAberto)} />
-      <MenuLateral menuAberto={menuAberto} onClose={() => setMenuAberto(false)} />
+      <TopBar />
+      <MenuLateral />
       
-      <div className={`flex-grow pt-24 px-6 pb-20 md:pb-24 transition-all duration-300 ${menuAberto ? 'md:pl-72' : ''}`}>
+      <div className="flex-grow pt-24 px-6 pb-20 md:pb-24 md:pl-20 transition-all duration-300 menu-content">
         <div className="bg-white container mx-auto px-6 py-8 rounded-lg shadow-md">
           <p className="text-1
           xl text-gray-600 mb-6">

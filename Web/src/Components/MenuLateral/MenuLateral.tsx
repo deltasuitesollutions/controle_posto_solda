@@ -1,17 +1,44 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 
-interface MenuLateralProps {
-    menuAberto: boolean;
-    onClose?: () => void;
-}
+const MenuLateral = () => {
+    const [menuAberto, setMenuAberto] = useState(false);
 
-const MenuLateral = ({ menuAberto, onClose }: MenuLateralProps) => {
+    // Escuta evento de toggle do menu
+    useEffect(() => {
+        const handleMenuToggle = () => {
+            setMenuAberto(prev => !prev);
+        };
+
+        window.addEventListener('menu-toggle', handleMenuToggle);
+        return () => {
+            window.removeEventListener('menu-toggle', handleMenuToggle);
+        };
+    }, []);
+
+    // Adiciona/remove classe no body quando menu abre/fecha
+    useEffect(() => {
+        if (menuAberto) {
+            document.body.classList.add('menu-open');
+        } else {
+            document.body.classList.remove('menu-open');
+        }
+
+        // Cleanup ao desmontar
+        return () => {
+            document.body.classList.remove('menu-open');
+        };
+    }, [menuAberto]);
+
+    const handleClose = () => {
+        setMenuAberto(false);
+    };
     // Menu vertical para tablets e desktop (apenas ícones) - lateral esquerda
     const menuHorizontal = (
         <div className="hidden md:flex fixed top-0 left-0 z-100 w-16 h-screen flex-col items-center justify-start gap-4 pt-4 shadow-lg" style={{ backgroundColor: 'var(--bg-azul)' }}>
             <Link 
                 to="/" 
-                title="Postos"
+                title="Dashboard"
                 className="flex items-center justify-center p-2 rounded-md transition-colors text-white min-w-12"
                 onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = 'var(--bg-laranja)';
@@ -83,7 +110,7 @@ const MenuLateral = ({ menuAberto, onClose }: MenuLateralProps) => {
             {/* Backdrop para mobile */}
             <div 
                 className="fixed inset-0 bg-black bg-opacity-50 z-55 md:hidden top-0"
-                onClick={onClose}
+                onClick={handleClose}
             ></div>
             
             {/* Menu */}
@@ -91,7 +118,7 @@ const MenuLateral = ({ menuAberto, onClose }: MenuLateralProps) => {
                 <div className="shadow-lg h-full w-64 flex flex-col transition-all duration-300 rounded-tr-lg rounded-br-lg overflow-hidden relative" style={{ backgroundColor: 'var(--bg-azul)' }}>
                     {/* Botão de fechar */}
                     <button
-                        onClick={onClose}
+                        onClick={handleClose}
                         className="absolute top-4 right-4 p-2 rounded-md transition-colors text-white flex items-center justify-center z-10"
                         title="Fechar menu"
                         type="button"
@@ -111,9 +138,9 @@ const MenuLateral = ({ menuAberto, onClose }: MenuLateralProps) => {
                                 <li>
                                     <Link 
                                         to="/" 
-                                        title="Postos"
+                                        title="Dashboard"
                                         className="flex items-center gap-3 p-3 rounded-md transition-colors text-white"
-                                        onClick={onClose}
+                                        onClick={handleClose}
                                         onMouseEnter={(e) => {
                                             e.currentTarget.style.backgroundColor = 'var(--bg-laranja)';
                                         }}
@@ -122,7 +149,7 @@ const MenuLateral = ({ menuAberto, onClose }: MenuLateralProps) => {
                                         }}
                                     >
                                         <i className="bi bi-building text-xl"></i>
-                                        <p className="font-medium">Postos</p>
+                                        <p className="font-medium">Dashboard</p>
                                     </Link>
                                 </li>
                                 <li>
@@ -130,7 +157,7 @@ const MenuLateral = ({ menuAberto, onClose }: MenuLateralProps) => {
                                         to="/leitor" 
                                         title="Leitor"
                                         className="flex items-center gap-3 p-3 rounded-md transition-colors text-white"
-                                        onClick={onClose}
+                                        onClick={handleClose}
                                         onMouseEnter={(e) => {
                                             e.currentTarget.style.backgroundColor = 'var(--bg-laranja)';
                                         }}
@@ -147,7 +174,7 @@ const MenuLateral = ({ menuAberto, onClose }: MenuLateralProps) => {
                                         to="/registros" 
                                         title="Registros"
                                         className="flex items-center gap-3 p-3 rounded-md transition-colors text-white"
-                                        onClick={onClose}
+                                        onClick={handleClose}
                                         onMouseEnter={(e) => {
                                             e.currentTarget.style.backgroundColor = 'var(--bg-laranja)';
                                         }}
@@ -164,7 +191,7 @@ const MenuLateral = ({ menuAberto, onClose }: MenuLateralProps) => {
                                         to="/funcionarios" 
                                         title="Funcionarios"
                                         className="flex items-center gap-3 p-3 rounded-md transition-colors text-white"
-                                        onClick={onClose}
+                                        onClick={handleClose}
                                         onMouseEnter={(e) => {
                                             e.currentTarget.style.backgroundColor = 'var(--bg-laranja)';
                                         }}
@@ -181,7 +208,7 @@ const MenuLateral = ({ menuAberto, onClose }: MenuLateralProps) => {
                                         to="/modelos" 
                                         title="Modelos"
                                         className="flex items-center gap-3 p-3 rounded-md transition-colors text-white"
-                                        onClick={onClose}
+                                        onClick={handleClose}
                                         onMouseEnter={(e) => {
                                             e.currentTarget.style.backgroundColor = 'var(--bg-laranja)';
                                         }}

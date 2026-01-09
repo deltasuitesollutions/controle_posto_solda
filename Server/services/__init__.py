@@ -8,8 +8,6 @@ from Server.services import (
     csv_service,
     funcionarios_service,
     modelos_service,
-    limpeza_service,
-    auth_service
 )
 
 
