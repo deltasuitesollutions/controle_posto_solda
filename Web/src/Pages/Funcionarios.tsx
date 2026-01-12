@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import TopBar from '../Components/topBar/TopBar'
 import MenuLateral from '../Components/MenuLateral/MenuLateral'
 import ModalEditarFuncionario from '../Components/Funcionarios/ModalEditarFuncionario'
-import ModalExcluirFuncionario from '../Components/Funcionarios/ModalExcluirFuncionario'
+import ModalConfirmacao from '../Components/Compartilhados/ModalConfirmacao'
 import { Paginacao } from '../Components/Compartilhados/paginacao'
 import { funcionariosAPI } from '../api/api'
 
@@ -12,6 +12,8 @@ interface Funcionario {
     nome: string
     tag?: string
     ativo: boolean
+    habilitado_operacao?: boolean
+    operacao?: string
 }
 
 const Funcionarios = () => {
@@ -20,9 +22,11 @@ const Funcionarios = () => {
     const [nome, setNome] = useState('')
     const [tag, setTag] = useState('')
     const [ativo, setAtivo] = useState(true)
+    const [operacao, setOperacao] = useState('')
     const [funcionarios, setFuncionarios] = useState<Funcionario[]>([])
     const [modalEditarAberto, setModalEditarAberto] = useState(false)
     const [modalExcluirAberto, setModalExcluirAberto] = useState(false)
+    const [modalStatusAberto, setModalStatusAberto] = useState(false)
     const [funcionarioSelecionado, setFuncionarioSelecionado] = useState<Funcionario | null>(null)
     const [paginaAtual, setPaginaAtual] = useState(1)
     const [itensPorPagina] = useState(10)
@@ -49,6 +53,7 @@ const Funcionarios = () => {
     const fecharModal = () => {
         setModalEditarAberto(false)
         setModalExcluirAberto(false)
+        setModalStatusAberto(false)
         setFuncionarioSelecionado(null)
     }
 
@@ -73,13 +78,17 @@ const Funcionarios = () => {
         
         try {
             // Chamada API para criar funcionário - funcionarios_controller.py POST /api/funcionarios
-            const dadosFuncionario: { matricula: string; nome: string; ativo: boolean; tag?: string } = {
+            const dadosFuncionario: { matricula: string; nome: string; ativo: boolean; tag?: string; habilitado_operacao?: boolean; operacao?: string } = {
                 matricula,
                 nome,
                 ativo,
+                habilitado_operacao: !!operacao, // Se tiver operação selecionada, está habilitado
             }
             if (tag.trim()) {
                 dadosFuncionario.tag = tag.trim()
+            }
+            if (operacao) {
+                dadosFuncionario.operacao = operacao
             }
             const resposta = await funcionariosAPI.criar(dadosFuncionario)
             
@@ -92,6 +101,7 @@ const Funcionarios = () => {
             setNome('')
             setTag('')
             setAtivo(true)
+            setOperacao('')
             
             // Volta o foco para o campo RFID para o próximo funcionário
             setTimeout(() => {
@@ -122,12 +132,18 @@ const Funcionarios = () => {
         
         try {
             // Chamada API para atualizar funcionário - funcionarios_controller.py PUT /api/funcionarios/:id
-            const dadosAtualizacao: { nome: string; ativo: boolean; tag?: string } = {
+            const dadosAtualizacao: { nome: string; ativo: boolean; tag?: string; habilitado_operacao?: boolean; operacao?: string } = {
                 nome: funcionarioAtualizado.nome,
                 ativo: funcionarioAtualizado.ativo,
             }
             if (funcionarioAtualizado.tag !== undefined) {
                 dadosAtualizacao.tag = funcionarioAtualizado.tag || ''
+            }
+            if (funcionarioAtualizado.habilitado_operacao !== undefined) {
+                dadosAtualizacao.habilitado_operacao = funcionarioAtualizado.habilitado_operacao
+            }
+            if (funcionarioAtualizado.operacao !== undefined) {
+                dadosAtualizacao.operacao = funcionarioAtualizado.operacao || ''
             }
             const resposta = await funcionariosAPI.atualizar(funcionarioSelecionado.id, dadosAtualizacao)
             
@@ -173,22 +189,30 @@ const Funcionarios = () => {
         }
     }
 
-    const handleMudarStatus = async (funcionario: Funcionario) => {
+    const handleAbrirModalStatus = (funcionario: Funcionario) => {
+        setFuncionarioSelecionado(funcionario)
+        setModalStatusAberto(true)
+    }
+
+    const handleConfirmarMudancaStatus = async () => {
+        if (!funcionarioSelecionado) return
+        
         try {
             // Chamada API para atualizar status - funcionarios_controller.py PUT /api/funcionarios/:id
-            const novoStatus = !funcionario.ativo
-            const resposta = await funcionariosAPI.atualizar(funcionario.id, {
-                nome: funcionario.nome,
+            const novoStatus = !funcionarioSelecionado.ativo
+            const resposta = await funcionariosAPI.atualizar(funcionarioSelecionado.id, {
+                nome: funcionarioSelecionado.nome,
                 ativo: novoStatus
             })
             
             if (resposta.status === 'success' && resposta.data) {
                 setFuncionarios(funcionarios.map(f => 
-                    f.id === funcionario.id 
+                    f.id === funcionarioSelecionado.id 
                         ? resposta.data
                         : f
                 ))
             }
+            fecharModal()
         } catch (error) {
             console.error('Erro ao alterar status:', error)
             alert('Erro ao alterar status. Tente novamente.')
@@ -303,7 +327,7 @@ const Funcionarios = () => {
                                         </div>
                                         
                                         {/* Funcionário Ativo */}
-                                        <div className="mb-6">
+                                        <div className="mb-4">
                                             <label className="flex items-center gap-2 cursor-pointer">
                                                 <input
                                                     type='checkbox'
@@ -314,6 +338,25 @@ const Funcionarios = () => {
                                                 />
                                                 <span className="text-sm font-medium text-gray-700">Funcionário Ativo</span>
                                             </label>
+                                        </div>
+
+                                        {/* Habilitado na Operação (Select) */}
+                                        <div className="mb-6">
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                Habilitado na Operação
+                                            </label>
+                                            <select
+                                                id='funcionario-operacao'
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                value={operacao}
+                                                onChange={(e) => setOperacao(e.target.value)}
+                                            >
+                                                <option value="">Não habilitado</option>
+                                                <option value="P1">P1</option>
+                                                <option value="P2">P2</option>
+                                                <option value="P3">P3</option>
+                                                <option value="P4">P4</option>
+                                            </select>
                                         </div>
                                         
                                         {/* Botões de Ação */}
@@ -355,6 +398,9 @@ const Funcionarios = () => {
                                                                 Status
                                                             </th>
                                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                                Operação
+                                                            </th>
+                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                                 Ações
                                                             </th>
                                                         </tr>
@@ -380,6 +426,17 @@ const Funcionarios = () => {
                                                                         {funcionario.ativo ? 'Ativo' : 'Inativo'}
                                                                     </span>
                                                                 </td>
+                                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                                    {funcionario.operacao ? (
+                                                                        <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                                                            {funcionario.operacao}
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                                                                            Não habilitado
+                                                                        </span>
+                                                                    )}
+                                                                </td>
                                                                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                                                                     <div className="flex items-center gap-2">
                                                                         <button
@@ -391,7 +448,7 @@ const Funcionarios = () => {
                                                                             <i className="bi bi-pencil-square"></i>
                                                                         </button>
                                                                         <button
-                                                                            onClick={() => handleMudarStatus(funcionario)}
+                                                                            onClick={() => handleAbrirModalStatus(funcionario)}
                                                                             className={`p-2 rounded transition-colors hover:opacity-80 ${
                                                                                 funcionario.ativo 
                                                                                     ? 'text-orange-600 hover:text-orange-800' 
@@ -447,10 +504,34 @@ const Funcionarios = () => {
                 funcionarioEditando={funcionarioSelecionado}
             />
 
-            <ModalExcluirFuncionario
+            <ModalConfirmacao
                 isOpen={modalExcluirAberto}
                 onClose={fecharModal}
                 onConfirm={handleConfirmarExclusao}
+                titulo="Excluir Funcionário"
+                mensagem="Tem certeza que deseja excluir este funcionário?"
+                textoConfirmar="Excluir"
+                textoCancelar="Cancelar"
+                corHeader="laranja"
+            />
+
+            <ModalConfirmacao
+                isOpen={modalStatusAberto}
+                onClose={fecharModal}
+                onConfirm={handleConfirmarMudancaStatus}
+                titulo="Alterar Status"
+                mensagem="Deseja alterar o status deste funcionário?"
+                textoConfirmar="Confirmar"
+                textoCancelar="Cancelar"
+                corHeader={funcionarioSelecionado?.ativo ? 'laranja' : 'azul'}
+                item={funcionarioSelecionado ? {
+                    matricula: funcionarioSelecionado.matricula,
+                    nome: funcionarioSelecionado.nome,
+                    status: funcionarioSelecionado.ativo ? 'Ativo' : 'Inativo',
+                    novoStatus: funcionarioSelecionado.ativo ? 'Inativo' : 'Ativo'
+                } : undefined}
+                camposItem={['matricula', 'nome']}
+                mostrarDetalhes={true}
             />
 
         </div>

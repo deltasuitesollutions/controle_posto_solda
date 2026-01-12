@@ -6,6 +6,8 @@ interface Funcionario {
     nome: string
     tag?: string
     ativo: boolean
+    habilitado_operacao?: boolean
+    operacao?: string
 }
 
 interface ModalEditarFuncionarioProps {
@@ -20,6 +22,7 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
     const [nome, setNome] = useState('')
     const [tag, setTag] = useState('')
     const [ativo, setAtivo] = useState(true)
+    const [operacao, setOperacao] = useState('')
 
     useEffect(() => {
         if (funcionarioEditando) {
@@ -27,17 +30,19 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
             setNome(funcionarioEditando.nome)
             setTag(funcionarioEditando.tag || '')
             setAtivo(funcionarioEditando.ativo)
+            setOperacao(funcionarioEditando.operacao || '')
         } else {
             setMatricula('')
             setNome('')
             setTag('')
             setAtivo(true)
+            setOperacao('')
         }
     }, [funcionarioEditando])
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
-        onSave({ matricula, nome, tag, ativo })
+        onSave({ matricula, nome, tag, ativo, habilitado_operacao: !!operacao, operacao })
         onClose()
     }
 
@@ -84,7 +89,7 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
                         />
                     </div>
                     
-                    <div className="mb-4">
+                    <div className="mb-3">
                         <label className="flex items-center gap-2 cursor-pointer">
                             <input
                                 type="checkbox"
@@ -94,6 +99,23 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
                             />
                             <span className="text-sm text-gray-700">Ativo</span>
                         </label>
+                    </div>
+
+                    <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Habilitado na Operação
+                        </label>
+                        <select
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            value={operacao}
+                            onChange={(e) => setOperacao(e.target.value)}
+                        >
+                            <option value="">Não habilitado</option>
+                            <option value="P1">P1</option>
+                            <option value="P2">P2</option>
+                            <option value="P3">P3</option>
+                            <option value="P4">P4</option>
+                        </select>
                     </div>
 
                     <div className="flex justify-end gap-2">

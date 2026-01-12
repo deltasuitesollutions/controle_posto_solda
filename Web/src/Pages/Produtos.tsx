@@ -1,73 +1,79 @@
 import { useState, useEffect } from 'react'
 import TopBar from '../Components/topBar/TopBar'
 import MenuLateral from '../Components/MenuLateral/MenuLateral'
-import CardPosto from '../Components/Postos/CardPosto'
-import ModalFormularioSimples from '../Components/Compartilhados/ModalFormularioSimples'
+import CardProduto from '../Components/Produtos/CardProduto'
+import ModalFormulario from '../Components/Compartilhados/ModalFormulario'
 import { Paginacao } from '../Components/Compartilhados/paginacao'
 
-interface Posto {
+interface Produto {
     id: string
     nome: string
+    codigo: string
 }
 
-const Postos = () => {
-    const [postos, setPostos] = useState<Posto[]>([])
+const Produtos = () => {
+    const [produtos, setProdutos] = useState<Produto[]>([])
     const [modalAberto, setModalAberto] = useState(false)
-    const [postoEditando, setPostoEditando] = useState<Posto | null>(null)
+    const [produtoEditando, setProdutoEditando] = useState<Produto | null>(null)
     const [paginaAtual, setPaginaAtual] = useState(1)
     const [itensPorPagina] = useState(10)
 
-    const handleAdicionarPosto = (novoPosto: Omit<Posto, 'id'>) => {
-        if (postoEditando) {
-            // Modo edição - atualiza o posto existente
-            setPostos(postos.map(p => 
-                p.id === postoEditando.id 
-                    ? { ...novoPosto, id: postoEditando.id }
+    const handleAdicionarProduto = (dados: Record<string, any>) => {
+        const novoProduto: Omit<Produto, 'id'> = {
+            nome: dados.nome as string,
+            codigo: dados.codigo as string
+        }
+        
+        if (produtoEditando) {
+            // Modo edição - atualiza o produto existente
+            setProdutos(produtos.map(p => 
+                p.id === produtoEditando.id 
+                    ? { ...novoProduto, id: produtoEditando.id }
                     : p
             ))
-            setPostoEditando(null)
+            setProdutoEditando(null)
         } else {
-            // Modo criação - adiciona novo posto
-            const postoComId: Posto = {
-                ...novoPosto,
+            // Modo criação - adiciona novo produto
+            const produtoComId: Produto = {
+                ...novoProduto,
                 id: Date.now().toString()
             }
-            setPostos([...postos, postoComId])
+            setProdutos([...produtos, produtoComId])
         }
         setModalAberto(false)
     }
 
-    const handleEditarPosto = (posto: Posto) => {
-        setPostoEditando(posto)
+    const handleEditarProduto = (produto: Produto) => {
+        setProdutoEditando(produto)
         setModalAberto(true)
     }
 
     const handleFecharModal = () => {
         setModalAberto(false)
-        setPostoEditando(null)
+        setProdutoEditando(null)
     }
 
     const handleAbrirModalNovo = () => {
-        setPostoEditando(null)
+        setProdutoEditando(null)
         setModalAberto(true)
     }
 
-    const handleRemoverPosto = (postoId: string) => {
-        setPostos(postos.filter(p => p.id !== postoId))
+    const handleRemoverProduto = (produtoId: string) => {
+        setProdutos(produtos.filter(p => p.id !== produtoId))
     }
 
-    // Calcular postos da página atual
+    // Calcular produtos da página atual
     const indiceInicio = (paginaAtual - 1) * itensPorPagina
     const indiceFim = indiceInicio + itensPorPagina
-    const postosPaginaAtual = postos.slice(indiceInicio, indiceFim)
+    const produtosPaginaAtual = produtos.slice(indiceInicio, indiceFim)
 
     // Resetar página quando necessário
     useEffect(() => {
-        const totalPaginas = Math.ceil(postos.length / itensPorPagina)
+        const totalPaginas = Math.ceil(produtos.length / itensPorPagina)
         if (paginaAtual > totalPaginas && totalPaginas > 0) {
             setPaginaAtual(totalPaginas)
         }
-    }, [postos.length, itensPorPagina, paginaAtual])
+    }, [produtos.length, itensPorPagina, paginaAtual])
 
     return (
         <div className="flex min-h-screen bg-gray-50">
@@ -81,8 +87,8 @@ const Postos = () => {
                             <div className="bg-white rounded-lg shadow-md overflow-hidden">
                                 <div className="text-white px-6 py-4 flex items-center justify-between" style={{ backgroundColor: 'var(--bg-azul)' }}>
                                     <h3 className="text-lg font-semibold flex items-center gap-2">
-                                        <i className="bi bi-geo-alt"></i>
-                                        Postos
+                                        <i className="bi bi-box"></i>
+                                        Produtos
                                     </h3>
                                     <button
                                         onClick={handleAbrirModalNovo}
@@ -90,39 +96,39 @@ const Postos = () => {
                                         style={{ color: 'var(--bg-azul)' }}
                                     >
                                         <i className="bi bi-plus-circle-fill"></i>
-                                        <span>Novo Posto</span>
+                                        <span>Novo Produto</span>
                                     </button>
                                 </div>
                             </div>
 
-                            {/* Lista de Postos */}
-                            {postos.length === 0 ? (
+                            {/* Lista de Produtos */}
+                            {produtos.length === 0 ? (
                                 <div className="bg-white rounded-lg shadow-md overflow-hidden">
                                     <div className="p-12 flex flex-col items-center justify-center">
                                         <i className="bi bi-inbox text-gray-300 text-5xl mb-4"></i>
                                         <p className="text-gray-500 text-lg font-medium">
-                                            Nenhum posto cadastrado
+                                            Nenhum produto cadastrado
                                         </p>
                                         <p className="text-gray-400 text-sm mt-2">
-                                            Clique em "Novo Posto" para começar
+                                            Clique em "Novo Produto" para começar
                                         </p>
                                     </div>
                                 </div>
                             ) : (
                                 <>
                                     <div className="space-y-4">
-                                        {postosPaginaAtual.map((posto) => (
-                                            <CardPosto
-                                                key={posto.id}
-                                                posto={posto}
-                                                onRemoverPosto={() => handleRemoverPosto(posto.id)}
-                                                onEditarPosto={() => handleEditarPosto(posto)}
+                                        {produtosPaginaAtual.map((produto) => (
+                                            <CardProduto
+                                                key={produto.id}
+                                                produto={produto}
+                                                onRemoverProduto={() => handleRemoverProduto(produto.id)}
+                                                onEditarProduto={() => handleEditarProduto(produto)}
                                             />
                                         ))}
                                     </div>
-                                    {postos.length > itensPorPagina && (
+                                    {produtos.length > itensPorPagina && (
                                         <Paginacao
-                                            totalItens={postos.length}
+                                            totalItens={produtos.length}
                                             itensPorPagina={itensPorPagina}
                                             paginaAtual={paginaAtual}
                                             onPageChange={setPaginaAtual}
@@ -135,21 +141,37 @@ const Postos = () => {
                 </div>
             </div>
 
-            {/* Modal para adicionar/editar posto */}
-            <ModalFormularioSimples
+            {/* Modal para adicionar/editar produto */}
+            <ModalFormulario
                 isOpen={modalAberto}
                 onClose={handleFecharModal}
-                onSave={handleAdicionarPosto}
-                itemEditando={postoEditando}
-                tituloNovo="Novo Posto"
-                tituloEditar="Editar Posto"
-                labelCampo="Nome do Posto"
-                placeholder="Ex: Posto 1"
-                textoBotao="Salvar Posto"
-                icone="bi bi-geo-alt"
+                onSave={handleAdicionarProduto}
+                itemEditando={produtoEditando}
+                tituloNovo="Novo Produto"
+                tituloEditar="Editar Produto"
+                campos={[
+                    {
+                        nome: 'nome',
+                        label: 'Nome do Produto',
+                        tipo: 'text',
+                        placeholder: 'Ex: Produto A',
+                        required: true
+                    },
+                    {
+                        nome: 'codigo',
+                        label: 'Código',
+                        tipo: 'text',
+                        placeholder: 'Ex: PROD001',
+                        required: true
+                    }
+                ]}
+                textoBotao="Salvar Produto"
+                icone="bi bi-box"
+                secaoTitulo="Informações do Produto"
             />
         </div>
     )
 }
 
-export default Postos
+export default Produtos
+

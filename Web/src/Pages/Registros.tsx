@@ -12,11 +12,36 @@ interface Registro {
     matricula?: string
     posto?: string
     produto?: string
+    modelo?: string
+    modelo_codigo?: string
     quantidade?: number
     turno?: string | number
+    hora_inicio?: string
+    hora_fim?: string
+    operacao?: string
+    comentarios?: string
 }
 
 const Registros = () => {
+    // Registro mockado para visualização
+    const registroMockado: Registro = {
+        id: 1,
+        data: new Date().toISOString().split('T')[0],
+        hora: '08:30',
+        hora_inicio: '08:30',
+        hora_fim: '17:00',
+        operador: 'João Silva',
+        matricula: '12345',
+        posto: 'P1',
+        produto: 'Produto A',
+        modelo: 'Produto A',
+        modelo_codigo: 'PROD_A',
+        quantidade: 150,
+        turno: 'Turno 1',
+        operacao: '-',
+        comentarios: '-'
+    }
+
     const [paginaAtual, setPaginaAtual] = useState(1)
     const [itensPorPagina, setItensPorPagina] = useState(10)
     const [modalAberto, setModalAberto] = useState<string | null>(null)
@@ -31,6 +56,8 @@ const Registros = () => {
         matricula: [] as string[],
         operador: [] as string[]
     })
+
+    const [registros, setRegistros] = useState<Registro[]>([registroMockado])
 
     // Carrega registros ao montar e quando filtros mudam - chamada para registros_controller.py
     useEffect(() => {
@@ -51,25 +78,36 @@ const Registros = () => {
                     id: r.id,
                     data: r.data_raw || r.data || '',
                     hora: r.hora_inicio || '',
+                    hora_inicio: r.hora_inicio || '',
+                    hora_fim: r.hora_fim || '',
                     operador: r.funcionario?.nome || '',
                     matricula: r.funcionario?.matricula || '',
                     posto: r.posto || '',
                     produto: r.modelo?.descricao || r.modelo?.codigo || '',
+                    modelo: r.modelo?.descricao || '',
+                    modelo_codigo: r.modelo?.codigo || '',
                     quantidade: undefined,
-                    turno: r.turno ? `Turno ${r.turno}` : ''
+                    turno: r.turno ? `Turno ${r.turno}` : r.turno || '',
+                    operacao: r.operacao || '-',
+                    comentarios: r.comentarios || '-'
                 }))
-                setRegistros(registrosMapeados)
+                // Se não houver registros, manter o mockado
+                if (registrosMapeados.length > 0) {
+                    setRegistros(registrosMapeados)
+                } else {
+                    // Manter o registro mockado se não houver dados da API
+                    setRegistros([registroMockado])
+                }
             } catch (error) {
                 console.error('Erro ao carregar registros:', error)
-                setRegistros([])
+                // Em caso de erro, manter o registro mockado
+                setRegistros([registroMockado])
             } finally {
                 setCarregando(false)
             }
         }
         carregarRegistros()
     }, [paginaAtual, itensPorPagina, filtros.data, filtros.posto, filtros.turno])
-
-    const [registros, setRegistros] = useState<Registro[]>([])
     const [opcoesPosto, setOpcoesPosto] = useState<{ id: string; label: string }[]>([])
     const [opcoesTurno, setOpcoesTurno] = useState<{ id: string; label: string }[]>([])
     const [opcoesProduto, setOpcoesProduto] = useState<{ id: string; label: string }[]>([])
@@ -355,22 +393,37 @@ const Registros = () => {
                                             <thead className="bg-gray-50">
                                                 <tr>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Data/Hora
+                                                        Toten/ID Posto
                                                     </th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                         Operador
                                                     </th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Posto
+                                                        Operação
                                                     </th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Produto
-                                                    </th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Quantidade
+                                                        Modelo
                                                     </th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                         Turno
+                                                    </th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Início
+                                                    </th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Fim
+                                                    </th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Comentários
+                                                    </th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Peça
+                                                    </th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Código
+                                                    </th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Qtde
                                                     </th>
                                                 </tr>
                                             </thead>
@@ -378,22 +431,37 @@ const Registros = () => {
                                                 {registrosPagina.map((registro) => (
                                                     <tr key={registro.id} className="hover:bg-gray-50">
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {formatarData(registro.data)} {registro.hora || ''}
+                                                            {registro.posto || '-'}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                             {registro.operador || '-'}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {registro.posto || '-'}
+                                                            {registro.operacao || '-'}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {registro.produto || '-'}
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {registro.quantidade || '-'}
+                                                            {registro.modelo || registro.produto || '-'}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                             {registro.turno || '-'}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {registro.hora_inicio || registro.hora || '-'}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {registro.hora_fim || '-'}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {registro.comentarios || '-'}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {registro.modelo || registro.produto || '-'}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {registro.modelo_codigo || '-'}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {registro.quantidade || '-'}
                                                         </td>
                                                     </tr>
                                                 ))}

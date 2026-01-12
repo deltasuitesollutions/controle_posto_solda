@@ -1,8 +1,11 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
 
 const MenuLateral = () => {
+    // Menu começa fechado no desktop, mas pode ser aberto
     const [menuAberto, setMenuAberto] = useState(false);
+    const { isOperador, isAdmin, user } = useAuth();
 
     // Escuta evento de toggle do menu
     useEffect(() => {
@@ -18,28 +21,72 @@ const MenuLateral = () => {
 
     // Adiciona/remove classe no body quando menu abre/fecha
     useEffect(() => {
+        const isDesktop = window.innerWidth >= 768; // md breakpoint do Tailwind
+        
         if (menuAberto) {
             document.body.classList.add('menu-open');
+            // Só adiciona menu-desktop-open se estiver em desktop
+            if (isDesktop) {
+                document.body.classList.add('menu-desktop-open');
+            }
         } else {
             document.body.classList.remove('menu-open');
+            document.body.classList.remove('menu-desktop-open');
         }
 
         // Cleanup ao desmontar
         return () => {
             document.body.classList.remove('menu-open');
+            document.body.classList.remove('menu-desktop-open');
         };
     }, [menuAberto]);
 
     const handleClose = () => {
         setMenuAberto(false);
     };
+
+    // Menu items baseado no role
+    const menuItems = [];
+    
+    // Dashboard - sempre visível
+    menuItems.push({ to: '/', title: 'Dashboard', icon: 'bi-building', label: 'Dashboard' });
+    
+    // Se não há usuário logado, mostra apenas dashboard
+    if (!user) {
+        // Menu vazio além do dashboard
+    } else if (isOperador) {
+        // Rotas IHM apenas para operadores - apenas leitor (fluxo sequencial)
+        menuItems.push(
+            { to: '/ihm/leitor', title: 'Leitor IHM', icon: 'bi-person-badge', label: 'Leitor IHM' }
+        );
+    } else if (isAdmin) {
+        // Rotas admin
+        menuItems.push(
+            { to: '/registros', title: 'Registros', icon: 'bi-clipboard-data', label: 'Registro de Produção' },
+            { to: '/funcionarios', title: 'Funcionarios', icon: 'bi-people', label: 'Cadastrar Funcionário' },
+            { to: '/modelos', title: 'Modelos', icon: 'bi-puzzle', label: 'Cadastro de Modelos' },
+            { to: '/produtos', title: 'Produtos', icon: 'bi-building-gear', label: 'Cadastro de Produtos' },
+            { to: '/linhas', title: 'Linhas', icon: 'bi-layers', label: 'Cadastro de Linhas' },
+            { to: '/postos', title: 'Postos', icon: 'bi-pin-map-fill', label: 'Cadastro de Postos' },
+            { to: '/totens', title: 'Totens', icon: 'bi-display-fill', label: 'Cadastro de ID/Totens' },
+            { to: '/operacoes', title: 'Operacoes', icon: 'bi-gear', label: 'Cadastro de Operações' }
+        );
+    }
+
     // Menu vertical para tablets e desktop (apenas ícones) - lateral esquerda
     const menuHorizontal = (
-        <div className="hidden md:flex fixed top-0 left-0 z-100 w-16 h-screen flex-col items-center justify-start gap-4 pt-4 shadow-lg" style={{ backgroundColor: 'var(--bg-azul)' }}>
-            <Link 
-                to="/" 
-                title="Dashboard"
-                className="flex items-center justify-center p-2 rounded-md transition-colors text-white min-w-12"
+        <div 
+            className={`hidden md:flex fixed top-0 left-0 z-100 h-screen flex-col items-center justify-start gap-4 pt-4 shadow-lg transition-all duration-300 overflow-hidden ${
+                menuAberto ? 'w-64' : 'w-16'
+            }`}
+            style={{ backgroundColor: 'var(--bg-azul)' }}
+        >
+            {/* Botão de toggle no desktop */}
+            <button
+                onClick={() => setMenuAberto(!menuAberto)}
+                className="p-2 rounded-md transition-colors text-white flex items-center justify-center min-w-12 mb-2"
+                title={menuAberto ? "Fechar menu" : "Abrir menu"}
+                type="button"
                 onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = 'var(--bg-laranja)';
                 }}
@@ -47,60 +94,32 @@ const MenuLateral = () => {
                     e.currentTarget.style.backgroundColor = 'transparent';
                 }}
             >
-                <i className="bi bi-building text-4xl"></i>
-            </Link>
-            <Link 
-                to="/leitor" 
-                title="Leitor"
-                className="flex items-center justify-center p-2 rounded-md transition-colors text-white min-w-12"
-                onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--bg-laranja)';
-                }}
-                onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                }}
-            >
-                <i className="bi bi-person-badge text-4xl"></i>
-            </Link>
-            <Link 
-                to="/registros" 
-                title="Registros"
-                className="flex items-center justify-center p-2 rounded-md transition-colors text-white min-w-12"
-                onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--bg-laranja)';
-                }}
-                onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                }}
-            >
-                <i className="bi bi-clipboard-data text-4xl"></i>
-            </Link>
-            <Link 
-                to="/funcionarios" 
-                title="Funcionarios"
-                className="flex items-center justify-center p-2 rounded-md transition-colors text-white min-w-12"
-                onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--bg-laranja)';
-                }}
-                onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                }}
-            >
-                <i className="bi bi-people text-4xl"></i>
-            </Link>
-            <Link 
-                to="/modelos" 
-                title="Modelos"
-                className="flex items-center justify-center p-2 rounded-md transition-colors text-white min-w-12"
-                onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--bg-laranja)';
-                }}
-                onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                }}
-            >
-                <i className="bi bi-puzzle text-4xl"></i>
-            </Link>
+                <i className={`bi ${menuAberto ? 'bi-chevron-left' : 'bi-chevron-right'} text-2xl`}></i>
+            </button>
+
+            <div className="flex flex-col gap-2 w-full px-2">
+                {menuItems.map((item) => (
+                    <Link 
+                        key={item.to}
+                        to={item.to} 
+                        title={item.title}
+                        className={`flex items-center gap-3 p-2 rounded-md transition-colors text-white ${
+                            menuAberto ? 'justify-start' : 'justify-center'
+                        }`}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'var(--bg-laranja)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                    >
+                        <i className={`bi ${item.icon} ${menuAberto ? 'text-2xl' : 'text-4xl'} flex-shrink-0`}></i>
+                        {menuAberto && (
+                            <span className="font-medium text-sm whitespace-nowrap">{item.label}</span>
+                        )}
+                    </Link>
+                ))}
+            </div>
         </div>
     );
 
@@ -109,7 +128,8 @@ const MenuLateral = () => {
         <>
             {/* Backdrop para mobile */}
             <div 
-                className="fixed inset-0 bg-black bg-opacity-50 z-55 md:hidden top-0"
+                className="fixed inset-0 z-55 md:hidden top-0"
+                style={{ backgroundColor: 'rgba(156, 163, 175, 0.2)' }}
                 onClick={handleClose}
             ></div>
             
@@ -135,91 +155,25 @@ const MenuLateral = () => {
                     <section className="flex-1 flex flex-col overflow-y-auto">
                         <nav className="flex flex-col h-full">
                             <ul className="flex-1 flex flex-col gap-2 p-4 pt-14">
-                                <li>
-                                    <Link 
-                                        to="/" 
-                                        title="Dashboard"
-                                        className="flex items-center gap-3 p-3 rounded-md transition-colors text-white"
-                                        onClick={handleClose}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.backgroundColor = 'var(--bg-laranja)';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.backgroundColor = 'transparent';
-                                        }}
-                                    >
-                                        <i className="bi bi-building text-xl"></i>
-                                        <p className="font-medium">Dashboard</p>
-                                    </Link>
-                                </li>
-                                <li>
-                                    <Link 
-                                        to="/leitor" 
-                                        title="Leitor"
-                                        className="flex items-center gap-3 p-3 rounded-md transition-colors text-white"
-                                        onClick={handleClose}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.backgroundColor = 'var(--bg-laranja)';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.backgroundColor = 'transparent';
-                                        }}
-                                    >
-                                        <i className="bi bi-person-badge text-xl"></i>
-                                        <p className="font-medium">Leitor Rfid</p>
-                                    </Link>
-                                </li>
-                                <li>
-                                    <Link 
-                                        to="/registros" 
-                                        title="Registros"
-                                        className="flex items-center gap-3 p-3 rounded-md transition-colors text-white"
-                                        onClick={handleClose}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.backgroundColor = 'var(--bg-laranja)';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.backgroundColor = 'transparent';
-                                        }}
-                                    >
-                                        <i className="bi bi-clipboard-data text-xl"></i>
-                                        <p className="font-medium">Registro de Produção</p>
-                                    </Link>
-                                </li>
-                                <li>
-                                    <Link 
-                                        to="/funcionarios" 
-                                        title="Funcionarios"
-                                        className="flex items-center gap-3 p-3 rounded-md transition-colors text-white"
-                                        onClick={handleClose}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.backgroundColor = 'var(--bg-laranja)';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.backgroundColor = 'transparent';
-                                        }}
-                                    >
-                                        <i className="bi bi-people text-xl"></i>
-                                        <p className="font-medium">Cadastrar Funcionário</p>
-                                    </Link>
-                                </li>
-                                <li>
-                                    <Link 
-                                        to="/modelos" 
-                                        title="Modelos"
-                                        className="flex items-center gap-3 p-3 rounded-md transition-colors text-white"
-                                        onClick={handleClose}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.backgroundColor = 'var(--bg-laranja)';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.backgroundColor = 'transparent';
-                                        }}
-                                    >
-                                        <i className="bi bi-puzzle text-xl"></i>
-                                        <p className="font-medium">Cadastro de Modelos</p>
-                                    </Link>
-                                </li>
+                                {menuItems.map((item) => (
+                                    <li key={item.to}>
+                                        <Link 
+                                            to={item.to} 
+                                            title={item.title}
+                                            className="flex items-center gap-3 p-3 rounded-md transition-colors text-white"
+                                            onClick={handleClose}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.backgroundColor = 'var(--bg-laranja)';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.backgroundColor = 'transparent';
+                                            }}
+                                        >
+                                            <i className={`bi ${item.icon} text-xl`}></i>
+                                            <p className="font-medium">{item.label}</p>
+                                        </Link>
+                                    </li>
+                                ))}
                             </ul>
                         </nav>
                     </section>

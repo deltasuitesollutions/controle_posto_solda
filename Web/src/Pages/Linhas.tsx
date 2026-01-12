@@ -1,73 +1,73 @@
 import { useState, useEffect } from 'react'
 import TopBar from '../Components/topBar/TopBar'
 import MenuLateral from '../Components/MenuLateral/MenuLateral'
-import CardPosto from '../Components/Postos/CardPosto'
+import CardLinha from '../Components/Linhas/CardLinha'
 import ModalFormularioSimples from '../Components/Compartilhados/ModalFormularioSimples'
 import { Paginacao } from '../Components/Compartilhados/paginacao'
 
-interface Posto {
+interface Linha {
     id: string
     nome: string
 }
 
-const Postos = () => {
-    const [postos, setPostos] = useState<Posto[]>([])
+const Linhas = () => {
+    const [linhas, setLinhas] = useState<Linha[]>([])
     const [modalAberto, setModalAberto] = useState(false)
-    const [postoEditando, setPostoEditando] = useState<Posto | null>(null)
+    const [linhaEditando, setLinhaEditando] = useState<Linha | null>(null)
     const [paginaAtual, setPaginaAtual] = useState(1)
     const [itensPorPagina] = useState(10)
 
-    const handleAdicionarPosto = (novoPosto: Omit<Posto, 'id'>) => {
-        if (postoEditando) {
-            // Modo edição - atualiza o posto existente
-            setPostos(postos.map(p => 
-                p.id === postoEditando.id 
-                    ? { ...novoPosto, id: postoEditando.id }
-                    : p
+    const handleAdicionarLinha = (novaLinha: Omit<Linha, 'id'>) => {
+        if (linhaEditando) {
+            // Modo edição - atualiza a linha existente
+            setLinhas(linhas.map(l => 
+                l.id === linhaEditando.id 
+                    ? { ...novaLinha, id: linhaEditando.id }
+                    : l
             ))
-            setPostoEditando(null)
+            setLinhaEditando(null)
         } else {
-            // Modo criação - adiciona novo posto
-            const postoComId: Posto = {
-                ...novoPosto,
+            // Modo criação - adiciona nova linha
+            const linhaComId: Linha = {
+                ...novaLinha,
                 id: Date.now().toString()
             }
-            setPostos([...postos, postoComId])
+            setLinhas([...linhas, linhaComId])
         }
         setModalAberto(false)
     }
 
-    const handleEditarPosto = (posto: Posto) => {
-        setPostoEditando(posto)
+    const handleEditarLinha = (linha: Linha) => {
+        setLinhaEditando(linha)
         setModalAberto(true)
     }
 
     const handleFecharModal = () => {
         setModalAberto(false)
-        setPostoEditando(null)
+        setLinhaEditando(null)
     }
 
     const handleAbrirModalNovo = () => {
-        setPostoEditando(null)
+        setLinhaEditando(null)
         setModalAberto(true)
     }
 
-    const handleRemoverPosto = (postoId: string) => {
-        setPostos(postos.filter(p => p.id !== postoId))
+    const handleRemoverLinha = (linhaId: string) => {
+        setLinhas(linhas.filter(l => l.id !== linhaId))
     }
 
-    // Calcular postos da página atual
+    // Calcular linhas da página atual
     const indiceInicio = (paginaAtual - 1) * itensPorPagina
     const indiceFim = indiceInicio + itensPorPagina
-    const postosPaginaAtual = postos.slice(indiceInicio, indiceFim)
+    const linhasPaginaAtual = linhas.slice(indiceInicio, indiceFim)
 
     // Resetar página quando necessário
     useEffect(() => {
-        const totalPaginas = Math.ceil(postos.length / itensPorPagina)
+        const totalPaginas = Math.ceil(linhas.length / itensPorPagina)
         if (paginaAtual > totalPaginas && totalPaginas > 0) {
             setPaginaAtual(totalPaginas)
         }
-    }, [postos.length, itensPorPagina, paginaAtual])
+    }, [linhas.length, itensPorPagina, paginaAtual])
 
     return (
         <div className="flex min-h-screen bg-gray-50">
@@ -81,8 +81,8 @@ const Postos = () => {
                             <div className="bg-white rounded-lg shadow-md overflow-hidden">
                                 <div className="text-white px-6 py-4 flex items-center justify-between" style={{ backgroundColor: 'var(--bg-azul)' }}>
                                     <h3 className="text-lg font-semibold flex items-center gap-2">
-                                        <i className="bi bi-geo-alt"></i>
-                                        Postos
+                                        <i className="bi bi-diagram-3"></i>
+                                        Linhas
                                     </h3>
                                     <button
                                         onClick={handleAbrirModalNovo}
@@ -90,39 +90,39 @@ const Postos = () => {
                                         style={{ color: 'var(--bg-azul)' }}
                                     >
                                         <i className="bi bi-plus-circle-fill"></i>
-                                        <span>Novo Posto</span>
+                                        <span>Nova Linha</span>
                                     </button>
                                 </div>
                             </div>
 
-                            {/* Lista de Postos */}
-                            {postos.length === 0 ? (
+                            {/* Lista de Linhas */}
+                            {linhas.length === 0 ? (
                                 <div className="bg-white rounded-lg shadow-md overflow-hidden">
                                     <div className="p-12 flex flex-col items-center justify-center">
                                         <i className="bi bi-inbox text-gray-300 text-5xl mb-4"></i>
                                         <p className="text-gray-500 text-lg font-medium">
-                                            Nenhum posto cadastrado
+                                            Nenhuma linha cadastrada
                                         </p>
                                         <p className="text-gray-400 text-sm mt-2">
-                                            Clique em "Novo Posto" para começar
+                                            Clique em "Nova Linha" para começar
                                         </p>
                                     </div>
                                 </div>
                             ) : (
                                 <>
                                     <div className="space-y-4">
-                                        {postosPaginaAtual.map((posto) => (
-                                            <CardPosto
-                                                key={posto.id}
-                                                posto={posto}
-                                                onRemoverPosto={() => handleRemoverPosto(posto.id)}
-                                                onEditarPosto={() => handleEditarPosto(posto)}
+                                        {linhasPaginaAtual.map((linha) => (
+                                            <CardLinha
+                                                key={linha.id}
+                                                linha={linha}
+                                                onRemoverLinha={() => handleRemoverLinha(linha.id)}
+                                                onEditarLinha={() => handleEditarLinha(linha)}
                                             />
                                         ))}
                                     </div>
-                                    {postos.length > itensPorPagina && (
+                                    {linhas.length > itensPorPagina && (
                                         <Paginacao
-                                            totalItens={postos.length}
+                                            totalItens={linhas.length}
                                             itensPorPagina={itensPorPagina}
                                             paginaAtual={paginaAtual}
                                             onPageChange={setPaginaAtual}
@@ -135,21 +135,22 @@ const Postos = () => {
                 </div>
             </div>
 
-            {/* Modal para adicionar/editar posto */}
+            {/* Modal para adicionar/editar linha */}
             <ModalFormularioSimples
                 isOpen={modalAberto}
                 onClose={handleFecharModal}
-                onSave={handleAdicionarPosto}
-                itemEditando={postoEditando}
-                tituloNovo="Novo Posto"
-                tituloEditar="Editar Posto"
-                labelCampo="Nome do Posto"
-                placeholder="Ex: Posto 1"
-                textoBotao="Salvar Posto"
-                icone="bi bi-geo-alt"
+                onSave={handleAdicionarLinha}
+                itemEditando={linhaEditando}
+                tituloNovo="Nova Linha"
+                tituloEditar="Editar Linha"
+                labelCampo="Nome da Linha"
+                placeholder="Ex: Linha 1"
+                textoBotao="Salvar Linha"
+                icone="bi bi-diagram-3"
             />
         </div>
     )
 }
 
-export default Postos
+export default Linhas
+
