@@ -4,59 +4,75 @@ import MenuLateral from '../Components/MenuLateral/MenuLateral'
 import CardModelo from '../Components/Modelos/CardModelo'
 import ModalModelo from '../Components/Modelos/AdicionarModelo'
 import { Paginacao } from '../Components/Compartilhados/paginacao'
+import { modelosAPI, pecasAPI } from '../api/api'
 
 interface Peca {
-    id: string
-    modeloId: string
+    id: number
+    modelo_id: number
     codigo: string
     nome: string
 }
 
 interface Modelo {
-    id: string
+    id: number
+    codigo?: string
     nome: string
     pecas: Peca[]
 }
 
 const Modelos = () => {
     const [modelos, setModelos] = useState<Modelo[]>([])
-    const [modeloExpandido, setModeloExpandido] = useState<string | null>(null)
+    const [modeloExpandido, setModeloExpandido] = useState<number | null>(null)
     const [modalAberto, setModalAberto] = useState(false)
     const [modeloEditando, setModeloEditando] = useState<Modelo | null>(null)
     const [paginaAtual, setPaginaAtual] = useState(1)
     const [itensPorPagina] = useState(10)
+    const [carregando, setCarregando] = useState(true)
+    const [erro, setErro] = useState<string | null>(null)
 
-    const handleAdicionarModelo = (novoModelo: Omit<Modelo, 'id'>) => {
-        if (modeloEditando) {
-            // Modo edição - atualiza o modelo existente
-            const modeloAtualizado: Modelo = {
-                ...novoModelo,
-                id: modeloEditando.id,
-                pecas: novoModelo.pecas.map(peca => ({
-                    ...peca,
-                    modeloId: modeloEditando.id
-                }))
-            }
-            setModelos(modelos.map(m => 
-                m.id === modeloEditando.id 
-                    ? modeloAtualizado
-                    : m
-            ))
-            setModeloEditando(null)
-        } else {
-            // Modo criação - adiciona novo modelo
-            const modeloId = Date.now().toString()
-            const modeloComId: Modelo = {
-                ...novoModelo,
-                id: modeloId,
-                pecas: novoModelo.pecas.map(peca => ({
-                    ...peca,
-                    modeloId: modeloId
-                }))
-            }
-            setModelos([...modelos, modeloComId])
+    // Carregar modelos ao montar o componente
+    useEffect(() => {
+        carregarModelos()
+    }, [])
+
+    const carregarModelos = async () => {
+        try {
+            setCarregando(true)
+            setErro(null)
+            const dados = await modelosAPI.listarTodos()
+            setModelos(dados)
+        } catch (err) {
+            console.error('Erro ao carregar modelos:', err)
+            setErro(err instanceof Error ? err.message : 'Erro ao carregar modelos')
+        } finally {
+            setCarregando(false)
         }
-        setModalAberto(false)
+    }
+
+    const handleAdicionarModelo = async (novoModelo: { nome: string; pecas?: Array<{codigo: string; nome: string}> }) => {
+        try {
+            setErro(null)
+            if (modeloEditando) {
+                // Modo edição - atualiza o modelo existente
+                await modelosAPI.atualizar(modeloEditando.id, {
+                    nome: novoModelo.nome,
+                    pecas: novoModelo.pecas || []
+                })
+            } else {
+                // Modo criação - cria novo modelo
+                await modelosAPI.criar({
+                    nome: novoModelo.nome,
+                    pecas: novoModelo.pecas || []
+                })
+            }
+            // Recarregar modelos após salvar
+            await carregarModelos()
+            setModalAberto(false)
+            setModeloEditando(null)
+        } catch (err) {
+            console.error('Erro ao salvar modelo:', err)
+            setErro(err instanceof Error ? err.message : 'Erro ao salvar modelo')
+        }
     }
 
     const handleEditarModelo = (modelo: Modelo) => {
@@ -74,27 +90,41 @@ const Modelos = () => {
         setModalAberto(true)
     }
 
-    const handleRemoverModelo = (modeloId: string) => {
-        setModelos(modelos.filter(m => m.id !== modeloId))
-        if (modeloExpandido === modeloId) {
-            setModeloExpandido(null)
+    const handleRemoverModelo = async (modeloId: number) => {
+        if (!window.confirm('Tem certeza que deseja remover este modelo?')) {
+            return
+        }
+        try {
+            setErro(null)
+            await modelosAPI.deletar(modeloId)
+            // Recarregar modelos após deletar
+            await carregarModelos()
+            if (modeloExpandido === modeloId) {
+                setModeloExpandido(null)
+            }
+        } catch (err) {
+            console.error('Erro ao remover modelo:', err)
+            setErro(err instanceof Error ? err.message : 'Erro ao remover modelo')
         }
     }
 
-    const handleToggleExpandir = (modeloId: string) => {
+    const handleToggleExpandir = (modeloId: number) => {
         setModeloExpandido(modeloExpandido === modeloId ? null : modeloId)
     }
 
-    const handleRemoverPeca = (modeloId: string, pecaId: string): void => {
-        setModelos(modelos.map(modelo => {
-            if (modelo.id === modeloId) {
-                return {
-                    ...modelo,
-                    pecas: modelo.pecas.filter(p => p.id !== pecaId)
-                }
-            }
-            return modelo
-        }))
+    const handleRemoverPeca = async (_modeloId: number, pecaId: number): Promise<void> => {
+        if (!window.confirm('Tem certeza que deseja remover esta peça?')) {
+            return
+        }
+        try {
+            setErro(null)
+            await pecasAPI.deletar(pecaId)
+            // Recarregar modelos após deletar peça
+            await carregarModelos()
+        } catch (err) {
+            console.error('Erro ao remover peça:', err)
+            setErro(err instanceof Error ? err.message : 'Erro ao remover peça')
+        }
     }
 
     // Calcular modelos da página atual
@@ -136,8 +166,33 @@ const Modelos = () => {
                                 </div>
                             </div>
 
+                            {/* Mensagem de erro */}
+                            {erro && (
+                                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                                    <div className="flex items-center gap-2">
+                                        <i className="bi bi-exclamation-triangle"></i>
+                                        <span>{erro}</span>
+                                        <button
+                                            onClick={() => setErro(null)}
+                                            className="ml-auto text-red-500 hover:text-red-700"
+                                        >
+                                            <i className="bi bi-x"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Lista de Modelos */}
-                            {modelos.length === 0 ? (
+                            {carregando ? (
+                                <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                                    <div className="p-12 flex flex-col items-center justify-center">
+                                        <i className="bi bi-arrow-repeat text-gray-300 text-5xl mb-4 animate-spin"></i>
+                                        <p className="text-gray-500 text-lg font-medium">
+                                            Carregando modelos...
+                                        </p>
+                                    </div>
+                                </div>
+                            ) : modelos.length === 0 ? (
                                 <div className="bg-white rounded-lg shadow-md overflow-hidden">
                                     <div className="p-12 flex flex-col items-center justify-center">
                                         <i className="bi bi-inbox text-gray-300 text-5xl mb-4"></i>

@@ -1,21 +1,21 @@
 import os
 import sys
+from pathlib import Path
+
+# Adiciona o diretório raiz ao path ANTES das importações
+BASE_DIR = Path(__file__).parent.parent.resolve()
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
+
 import secrets
 import logging
 from datetime import timedelta
-from pathlib import Path
 from typing import Optional
 
 from flask import Flask, send_from_directory
 from flask_cors import CORS
 
-from Server.controller import pecas_controller
-
-BASE_DIR = Path(__file__).parent.parent.resolve()
 WEB_DIR = BASE_DIR / 'Web' / 'dist'
-
-if str(BASE_DIR) not in sys.path:
-    sys.path.insert(0, str(BASE_DIR))
 
 
 def setup_logging():

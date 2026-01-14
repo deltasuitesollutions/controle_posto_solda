@@ -2,7 +2,7 @@
 Modelo para a entidade Funcionario
 """
 from typing import Dict, Any, Optional, List, Tuple, Union
-from backend.models.database import DatabaseConnection
+from Server.models.database import DatabaseConnection
 
 
 class Funcionario:

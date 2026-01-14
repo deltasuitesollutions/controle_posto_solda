@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from Server.services import modelos_service
 
-modelos_bp = Blueprint('modelos', __name__, url_prefix='/modelos')
+modelos_bp = Blueprint('modelos', __name__, url_prefix='/api/modelos')
 
 @modelos_bp.route('', methods=['GET'])
 def listar_modelos():

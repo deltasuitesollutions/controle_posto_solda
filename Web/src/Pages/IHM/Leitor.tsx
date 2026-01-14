@@ -1,6 +1,5 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { tagsAPI } from '../../api/api'
 
 type StatusAcesso = 'idle' | 'success' | 'error'
 
@@ -29,25 +28,8 @@ const LeitorRfid = () => {
             return
         }
 
-        try {
-            const resposta = await tagsAPI.processar({ tag_id: codigoLimpo })
-            
-            if (resposta.status === 'success') {
-                const nome = resposta.funcionario_nome || 'Colaborador'
-                setColaborador(nome)
-                setStatus('success')
-                setTimeout(() => {
-                    navigate('/ihm/operacao', { state: { operador: nome } })
-                }, 2000)
-            } else {
-                setStatus('error')
-                setTimeout(resetarEstado, 2000)
-            }
-        } catch (error) {
-            console.error('Erro ao processar RFID:', error)
-            setStatus('error')
-            setTimeout(resetarEstado, 2000)
-        }
+        setStatus('error')
+        setTimeout(resetarEstado, 2000)
     }
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

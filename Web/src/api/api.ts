@@ -21,115 +21,83 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
   return response.json()
 }
 
-// API de Funcionários - chamada para funcionarios_controller.py
+// CHAMADA PARA MODELOS_CONTROLLER.PY
+
+export const modelosAPI = {
+  listar: () => fetchAPI('/modelos'),
+  listarTodos: () => fetchAPI('/modelos'),
+  buscarPorCodigo: (codigo: string) => fetchAPI(`/modelos/${codigo}`),
+  criar: (data: { nome: string; pecas?: Array<{codigo: string; nome: string}>}) => 
+    fetchAPI('/modelos', {
+      method: 'POST',
+      body: JSON.stringify({ ...data, codigo: data.nome }), // Envia nome como código para compatibilidade com backend
+    }),
+  atualizar: (id: number, data: {nome: string; pecas?: Array<{id?: number; codigo: string; nome: string}>}) =>
+    fetchAPI(`/modelos/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ ...data, codigo: data.nome }), // Envia nome como código para compatibilidade com backend
+    }),
+  deletar: (id: number) =>
+    fetchAPI(`/modelos/${id}`, {
+      method: 'DELETE',
+    }),
+}
+
+// CHAMADA PARA PECAS_CONTROLLER.PY
+
+export const pecasAPI = {
+  listarTodos: () => fetchAPI('/pecas'),
+  buscarPorId: (id: number) => fetchAPI(`/pecas/${id}`),
+  buscarPorModelo: (modeloId: number) => fetchAPI(`/pecas/modelo/${modeloId}`),
+  criar: (data: { modelo_id: number; codigo: string; nome: string}) => 
+    fetchAPI('/pecas', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  atualizar: (id: number, data: {modelo_id: number; codigo: string; nome: string}) =>
+    fetchAPI(`/pecas/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  deletar: (id: number) =>
+    fetchAPI(`/pecas/${id}`, {
+      method: 'DELETE',
+    }),
+}
+
+// CHAMADA PARA FUNCIONARIOS_CONTROLLER.PY
+
 export const funcionariosAPI = {
-  // GET /api/funcionarios - lista funcionários ativos
   listar: () => fetchAPI('/funcionarios'),
-  
-  // GET /api/funcionarios/todos - lista todos os funcionários
   listarTodos: () => fetchAPI('/funcionarios/todos'),
-  
-  // POST /api/funcionarios - cria novo funcionário
   criar: (data: { matricula: string; nome: string; ativo?: boolean; tag?: string }) => 
     fetchAPI('/funcionarios', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  
-  // PUT /api/funcionarios/:id - atualiza funcionário
-  atualizar: (id: number, data: { nome: string; ativo: boolean; tag?: string }) =>
+  atualizar: (id: number, data: { nome: string; ativo?: boolean; tag?: string }) =>
     fetchAPI(`/funcionarios/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
-  
-  // DELETE /api/funcionarios/:id - deleta funcionário
   deletar: (id: number) =>
     fetchAPI(`/funcionarios/${id}`, {
       method: 'DELETE',
     }),
 }
 
-// API de Modelos - chamada para modelos_controller.py
-export const modelosAPI = {
-  // GET /api/modelos - lista modelos
-  listar: () => fetchAPI('/modelos'),
-  
-  // GET /api/modelos/todos - lista todos os modelos com ID
-  listarTodos: () => fetchAPI('/modelos/todos'),
-  
-  // POST /api/modelos - cria novo modelo
-  criar: (data: { codigo: string; descricao: string; subprodutos?: Array<{ codigo: string; descricao: string }> }) =>
-    fetchAPI('/modelos', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-  
-  // PUT /api/modelos/:id - atualiza modelo
-  atualizar: (id: number, data: { codigo: string; descricao: string; subprodutos?: Array<{ codigo: string; descricao: string }> }) =>
-    fetchAPI(`/modelos/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }),
-  
-  // DELETE /api/modelos/:id - deleta modelo
-  deletar: (id: number) =>
-    fetchAPI(`/modelos/${id}`, {
-      method: 'DELETE',
-    }),
-}
+// CHAMADA PARA REGISTROS_CONTROLLER.PY
 
-// API de Registros - chamada para registros_controller.py
 export const registrosAPI = {
-  // GET /api/registros - lista registros com filtros
-  listar: (filtros?: {
-    limit?: number
-    offset?: number
-    data?: string
-    posto?: string
-    turno?: string
-  }) => {
-    const params = new URLSearchParams()
-    if (filtros?.limit) params.append('limit', filtros.limit.toString())
-    if (filtros?.offset) params.append('offset', filtros.offset.toString())
-    if (filtros?.data) params.append('data', filtros.data)
-    if (filtros?.posto) params.append('posto', filtros.posto)
-    if (filtros?.turno) params.append('turno', filtros.turno)
-    
-    const query = params.toString()
-    return fetchAPI(`/registros${query ? `?${query}` : ''}`)
+  listar: (params?: { limit?: number; offset?: number; data?: string; posto?: string; turno?: string }) => {
+    const queryParams = new URLSearchParams()
+    if (params?.limit !== undefined) queryParams.append('limit', params.limit.toString())
+    if (params?.offset !== undefined) queryParams.append('offset', params.offset.toString())
+    if (params?.data) queryParams.append('data', params.data)
+    if (params?.posto) queryParams.append('posto', params.posto)
+    if (params?.turno) queryParams.append('turno', params.turno)
+    const queryString = queryParams.toString()
+    return fetchAPI(`/registros${queryString ? `?${queryString}` : ''}`)
   },
-}
-
-// API de Tags RFID - chamada para tags_controller.py
-export const tagsAPI = {
-  // POST /api/tags/processar - processa leitura RFID e registra entrada/saída
-  processar: (data: { tag_id: string; posto?: string }) =>
-    fetchAPI('/tags/processar', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-}
-
-// API de Postos - chamada para posto_configuracao_controller.py
-export const postosAPI = {
-  // GET /api/posto-configuracao - lista configurações dos postos
-  listar: () => fetchAPI('/posto-configuracao'),
-  
-  // POST /api/posto-configuracao - configura ou atualiza um posto
-  configurar: (data: { posto: string; funcionario_matricula?: string; modelo_codigo?: string; turno?: string }) =>
-    fetchAPI('/posto-configuracao', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-  
-  // GET /api/posto-configuracao/:posto - obtém configuração de um posto
-  obter: (posto: string) => fetchAPI(`/posto-configuracao/${posto}`),
-  
-  // DELETE /api/posto-configuracao/:posto - remove configuração de um posto
-  remover: (posto: string) =>
-    fetchAPI(`/posto-configuracao/${posto}`, {
-      method: 'DELETE',
-    }),
 }
 

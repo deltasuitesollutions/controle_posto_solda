@@ -4,7 +4,6 @@ import MenuLateral from '../Components/MenuLateral/MenuLateral'
 import ModalEditarFuncionario from '../Components/Funcionarios/ModalEditarFuncionario'
 import ModalConfirmacao from '../Components/Compartilhados/ModalConfirmacao'
 import { Paginacao } from '../Components/Compartilhados/paginacao'
-import { funcionariosAPI } from '../api/api'
 
 interface Funcionario {
     id: number
@@ -32,24 +31,8 @@ const Funcionarios = () => {
     const [funcionarioSelecionado, setFuncionarioSelecionado] = useState<Funcionario | null>(null)
     const [paginaAtual, setPaginaAtual] = useState(1)
     const [itensPorPagina] = useState(10)
-    const [carregando, setCarregando] = useState(false)
     const rfidInputRef = useRef<HTMLInputElement>(null)
 
-    // Carrega funcionários ao montar o componente - chamada para funcionarios_controller.py
-    useEffect(() => {
-        const carregarFuncionarios = async () => {
-            try {
-                setCarregando(true)
-                const dados = await funcionariosAPI.listarTodos()
-                setFuncionarios(dados || [])
-            } catch (error) {
-                console.error('Erro ao carregar funcionários:', error)
-            } finally {
-                setCarregando(false)
-            }
-        }
-        carregarFuncionarios()
-    }, [])
 
     // Helper para fechar modais
     const fecharModal = () => {
@@ -79,7 +62,6 @@ const Funcionarios = () => {
         e.preventDefault()
         
         try {
-            // Chamada API para criar funcionário - funcionarios_controller.py POST /api/funcionarios
             const dadosFuncionario: { matricula: string; nome: string; ativo: boolean; tag?: string; habilitado_operacao?: boolean; operacao?: string; turno?: string } = {
                 matricula,
                 nome,
@@ -94,11 +76,6 @@ const Funcionarios = () => {
             }
             if (turno) {
                 dadosFuncionario.turno = turno
-            }
-            const resposta = await funcionariosAPI.criar(dadosFuncionario)
-            
-            if (resposta.status === 'success' && resposta.data) {
-                setFuncionarios([...funcionarios, resposta.data])
             }
             
             // Limpa os campos após salvar
@@ -137,7 +114,6 @@ const Funcionarios = () => {
         if (!funcionarioSelecionado) return
         
         try {
-            // Chamada API para atualizar funcionário - funcionarios_controller.py PUT /api/funcionarios/:id
             const dadosAtualizacao: { nome: string; ativo: boolean; tag?: string; habilitado_operacao?: boolean; operacao?: string; turno?: string } = {
                 nome: funcionarioAtualizado.nome,
                 ativo: funcionarioAtualizado.ativo,
@@ -153,15 +129,6 @@ const Funcionarios = () => {
             }
             if (funcionarioAtualizado.turno !== undefined) {
                 dadosAtualizacao.turno = funcionarioAtualizado.turno || ''
-            }
-            const resposta = await funcionariosAPI.atualizar(funcionarioSelecionado.id, dadosAtualizacao)
-            
-            if (resposta.status === 'success' && resposta.data) {
-                setFuncionarios(funcionarios.map(f => 
-                    f.id === funcionarioSelecionado.id 
-                        ? resposta.data
-                        : f
-                ))
             }
             fecharModal()
         } catch (error: any) {
@@ -184,49 +151,11 @@ const Funcionarios = () => {
         setModalExcluirAberto(true)
     }
 
-    const handleConfirmarExclusao = async () => {
-        if (!funcionarioSelecionado) return
-        
-        try {
-            // Chamada API para deletar funcionário - funcionarios_controller.py DELETE /api/funcionarios/:id
-            await funcionariosAPI.deletar(funcionarioSelecionado.id)
-            setFuncionarios(funcionarios.filter(f => f.id !== funcionarioSelecionado.id))
-            fecharModal()
-        } catch (error) {
-            console.error('Erro ao excluir funcionário:', error)
-            alert('Erro ao excluir funcionário. Tente novamente.')
-        }
-    }
-
     const handleAbrirModalStatus = (funcionario: Funcionario) => {
         setFuncionarioSelecionado(funcionario)
         setModalStatusAberto(true)
     }
 
-    const handleConfirmarMudancaStatus = async () => {
-        if (!funcionarioSelecionado) return
-        
-        try {
-            // Chamada API para atualizar status - funcionarios_controller.py PUT /api/funcionarios/:id
-            const novoStatus = !funcionarioSelecionado.ativo
-            const resposta = await funcionariosAPI.atualizar(funcionarioSelecionado.id, {
-                nome: funcionarioSelecionado.nome,
-                ativo: novoStatus
-            })
-            
-            if (resposta.status === 'success' && resposta.data) {
-                setFuncionarios(funcionarios.map(f => 
-                    f.id === funcionarioSelecionado.id 
-                        ? resposta.data
-                        : f
-                ))
-            }
-            fecharModal()
-        } catch (error) {
-            console.error('Erro ao alterar status:', error)
-            alert('Erro ao alterar status. Tente novamente.')
-        }
-    }
 
     // Calcular funcionários da página atual
     const indiceInicio = (paginaAtual - 1) * itensPorPagina

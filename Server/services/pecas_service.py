@@ -44,7 +44,7 @@ def criar_peca(modelo_id, codigo, nome):
             codigo=codigo,
             nome=nome
         )
-        nova_peca.save()
+        nova_peca.salvar()
         
         return {
             'sucesso': True,
@@ -65,7 +65,7 @@ def atualizar_peca(peca_id, modelo_id, codigo, nome):
         peca.modelo_id = modelo_id
         peca.codigo = codigo
         peca.nome = nome
-        peca.save()
+        peca.salvar()
         
         return {
             'sucesso': True,

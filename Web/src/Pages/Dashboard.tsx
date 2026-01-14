@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import Card from '../Components/dashboard/Card';
 import MenuLateral from '../Components/MenuLateral/MenuLateral';
 import TopBar from '../Components/topBar/TopBar';
-import { postosAPI, funcionariosAPI, modelosAPI, registrosAPI } from '../api/api';
 
 interface CardProps {
   id: number; 
@@ -14,38 +13,6 @@ interface CardProps {
   turno?: string;
 }
 
-interface Funcionario {
-  matricula: string;
-  nome: string;
-  ativo?: boolean;
-  tag?: string;
-}
-
-interface Modelo {
-  codigo: string;
-  descricao?: string;
-}
-
-interface ConfiguracaoPosto {
-  posto: string;
-  funcionario_matricula?: string;
-  modelo_codigo?: string;
-  turno?: string;
-}
-
-interface Registro {
-  posto: string;
-  turno?: string;
-  [key: string]: unknown;
-}
-
-interface ConfiguracoesResponse {
-  configuracoes: ConfiguracaoPosto[];
-}
-
-interface RegistrosResponse {
-  registros: Registro[];
-}
 
 const MetricCard = ({ titulo, valor, icone, cor }: { titulo: string; valor: string | number; icone: string; cor: string }) => {
   return (
@@ -81,72 +48,6 @@ const Dashboard = () => {
     operadoresAtivos: 0
   });
 
-  useEffect(() => {
-    const carregarDados = async () => {
-      try {
-        const [configuracoesData, funcionariosData, modelosData, registrosData] = await Promise.all([
-          postosAPI.listar().catch(() => ({ configuracoes: [] })) as Promise<ConfiguracoesResponse>,
-          funcionariosAPI.listar().catch(() => []) as Promise<Funcionario[]>,
-          modelosAPI.listar().catch(() => []) as Promise<Modelo[]>,
-          registrosAPI.listar({ limit: 100 }).catch(() => ({ registros: [] })) as Promise<RegistrosResponse>
-        ]);
-
-        const funcionariosMap = new Map((funcionariosData || []).map((f) => [f.matricula, f.nome]));
-        const modelosMap = new Map((modelosData || []).map((m) => [m.codigo, m.descricao || m.codigo]));
-        const configuracoes = configuracoesData?.configuracoes || [];
-        const postosProcessados: CardProps[] = [];
-
-        for (let i = 1; i <= 4; i++) {
-          const postoId = `P${i}`;
-          const config = configuracoes.find((c) => c.posto === postoId);
-          
-          const operadorNome = config?.funcionario_matricula 
-            ? funcionariosMap.get(config.funcionario_matricula) || 'Sem operador'
-            : 'Sem operador';
-          
-          const modeloNome = config?.modelo_codigo 
-            ? modelosMap.get(config.modelo_codigo) || 'Sem modelo'
-            : 'Sem modelo';
-
-          const registrosPosto = registrosData?.registros?.filter((r) => r.posto === postoId) || [];
-          const producao = registrosPosto.length || 0;
-          const meta = 100;
-          
-          postosProcessados.push({
-            id: i,
-            posto: `Posto ${i}`,
-            mod: modeloNome,
-            pecas: `${producao}/${meta}`,
-            operador: operadorNome,
-            habilitado: !!config,
-            turno: config?.turno || 'Não definido'
-          });
-        }
-
-        setListaPostos(postosProcessados);
-
-        const postosAtivos = postosProcessados.filter(p => p.habilitado).length;
-        const totalPostos = postosProcessados.length;
-        const producaoTotal = postosProcessados.reduce((acc, p) => {
-          const [atual] = p.pecas.split('/').map(Number);
-          return acc + (atual || 0);
-        }, 0);
-        const operadoresAtivos = new Set(postosProcessados.filter(p => p.operador !== 'Sem operador').map(p => p.operador)).size;
-
-        setMetricas({
-          postosAtivos,
-          totalPostos,
-          producaoHoje: producaoTotal,
-          operadoresAtivos
-        });
-
-      } catch (error) {
-        console.error('Erro ao carregar dados:', error);
-      }
-    };
-
-    carregarDados();
-  }, []);
 
   // Fechar dropdown ao clicar fora
   useEffect(() => {

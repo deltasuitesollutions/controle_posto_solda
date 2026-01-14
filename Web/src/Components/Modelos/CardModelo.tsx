@@ -1,14 +1,15 @@
 import React from 'react'
 
 interface Peca {
-    id: string
-    modeloId: string
+    id: number
+    modelo_id: number
     codigo: string
     nome: string
 }
 
 interface Modelo {
-    id: string
+    id: number
+    codigo?: string
     nome: string
     pecas: Peca[]
 }
@@ -19,7 +20,7 @@ interface CardModeloProps {
     onToggleExpandir: () => void
     onRemoverModelo: () => void
     onEditarModelo: () => void
-    onRemoverPeca: (pecaId: string) => void
+    onRemoverPeca: (pecaId: number) => void
 }
 
 const CardModelo: React.FC<CardModeloProps> = ({

@@ -53,102 +53,205 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
     if (!isOpen) return null
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(156, 163, 175, 0.2)' }} onClick={onClose}>
-            <div className="bg-white rounded-lg max-w-md w-full shadow-xl" onClick={(e) => e.stopPropagation()}>
-                <div className="px-4 py-3 text-white flex justify-between items-center rounded-t-lg" style={{ backgroundColor: 'var(--bg-azul)' }}>
-                    <h3 className="font-semibold">Editar Funcionário</h3>
-                    <button onClick={onClose} className="text-white hover:opacity-80 text-xl leading-none">×</button>
+        <div 
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+            onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                    onClose()
+                }
+            }}
+        >
+            <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+                {/* Header do Modal */}
+                <div className="text-white px-6 py-5 flex shrink-0" style={{ backgroundColor: 'var(--bg-azul)' }}>
+                    <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-white bg-opacity-20 rounded-lg">
+                                <i className="bi bi-person-gear text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold">
+                                    Editar Funcionário
+                                </h3>
+                                <p className="text-sm text-white text-opacity-90 mt-0.5">
+                                    Atualize as informações do funcionário
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={onClose}
+                            className="text-white hover:text-gray-200 transition-colors p-2 rounded-lg hover:bg-white hover:bg-opacity-20"
+                            title="Fechar modal (ESC)"
+                        >
+                            <i className="bi bi-x-lg text-xl"></i>
+                        </button>
+                    </div>
                 </div>
                 
-                <form onSubmit={handleSubmit} className="p-4">
-                    <div className="mb-3">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Tag RFID</label>
-                        <input
-                            type="text"
-                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={tag}
-                            onChange={(e) => setTag(e.target.value)}
-                        />
-                    </div>
-                    
-                    <div className="mb-3">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Matrícula *</label>
-                        <input
-                            type="text"
-                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            required
-                            value={matricula}
-                            onChange={(e) => setMatricula(e.target.value)}
-                        />
-                    </div>
-                    
-                    <div className="mb-3">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
-                        <input
-                            type="text"
-                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            required
-                            value={nome}
-                            onChange={(e) => setNome(e.target.value)}
-                        />
-                    </div>
-                    
-                    <div className="mb-3">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={ativo}
-                                onChange={(e) => setAtivo(e.target.checked)}
-                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                            />
-                            <span className="text-sm text-gray-700">Ativo</span>
-                        </label>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Habilitado na Operação
-                            </label>
-                            <select
-                                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                value={operacao}
-                                onChange={(e) => setOperacao(e.target.value)}
-                            >
-                                <option value="">Não habilitado</option>
-                                <option value="P1">P1</option>
-                                <option value="P2">P2</option>
-                                <option value="P3">P3</option>
-                                <option value="P4">P4</option>
-                            </select>
+                {/* Conteúdo do Modal - Scrollable */}
+                <form id="funcionario-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 bg-gray-50">
+                    <div className="space-y-4">
+                        {/* Seção: Informações Básicas */}
+                        <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-200">
+                            <div className="flex items-center gap-2 mb-4">
+                                <div className="p-1.5 bg-blue-100 rounded-lg">
+                                    <i className="bi bi-info-circle text-blue-600"></i>
+                                </div>
+                                <h4 className="text-base font-semibold text-gray-800">
+                                    Informações Básicas
+                                </h4>
+                            </div>
+                            
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Tag RFID
+                                    </label>
+                                    <input
+                                        type="text"
+                                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                                        placeholder="Ex: 1234567890"
+                                        value={tag}
+                                        onChange={(e) => setTag(e.target.value)}
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1.5">
+                                        Código da tag RFID do funcionário (opcional)
+                                    </p>
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Matrícula <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                                        placeholder="Ex: 12345"
+                                        required
+                                        value={matricula}
+                                        onChange={(e) => setMatricula(e.target.value)}
+                                    />
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Nome Completo <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                                        placeholder="Ex: João Silva"
+                                        required
+                                        value={nome}
+                                        onChange={(e) => setNome(e.target.value)}
+                                    />
+                                </div>
+                                
+                                <div className="pt-2">
+                                    <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                                        <input
+                                            type="checkbox"
+                                            checked={ativo}
+                                            onChange={(e) => setAtivo(e.target.checked)}
+                                            className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                        />
+                                        <div>
+                                            <span className="text-sm font-medium text-gray-700">Funcionário Ativo</span>
+                                            <p className="text-xs text-gray-500 mt-0.5">
+                                                Funcionários inativos não podem realizar operações
+                                            </p>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Turno
-                            </label>
-                            <select
-                                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                value={turno}
-                                onChange={(e) => setTurno(e.target.value)}
-                            >
-                                <option value="">Selecione o turno</option>
-                                <option value="matutino">Matutino</option>
-                                <option value="vespertino">Vespertino</option>
-                                <option value="noturno">Noturno</option>
-                            </select>
-                        </div>
-                    </div>
+                        {/* Seção: Operação e Turno */}
+                        <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-200">
+                            <div className="flex items-center gap-2 mb-4">
+                                <div className="p-1.5 bg-purple-100 rounded-lg">
+                                    <i className="bi bi-briefcase text-purple-600"></i>
+                                </div>
+                                <h4 className="text-base font-semibold text-gray-800">
+                                    Operação e Turno
+                                </h4>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Habilitado na Operação
+                                    </label>
+                                    <select
+                                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
+                                        value={operacao}
+                                        onChange={(e) => setOperacao(e.target.value)}
+                                    >
+                                        <option value="">Não habilitado</option>
+                                        <option value="P1">P1</option>
+                                        <option value="P2">P2</option>
+                                        <option value="P3">P3</option>
+                                        <option value="P4">P4</option>
+                                    </select>
+                                    <p className="text-xs text-gray-500 mt-1.5">
+                                        Selecione a operação permitida
+                                    </p>
+                                </div>
 
-                    <div className="flex justify-end gap-2">
-                        <button type="button" onClick={onClose} className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50">
-                            Cancelar
-                        </button>
-                        <button type="submit" className="px-4 py-2 text-white rounded hover:opacity-90" style={{ backgroundColor: 'var(--bg-azul)' }}>
-                            Salvar
-                        </button>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Turno
+                                    </label>
+                                    <select
+                                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
+                                        value={turno}
+                                        onChange={(e) => setTurno(e.target.value)}
+                                    >
+                                        <option value="">Selecione o turno</option>
+                                        <option value="matutino">Matutino</option>
+                                        <option value="vespertino">Vespertino</option>
+                                        <option value="noturno">Noturno</option>
+                                    </select>
+                                    <p className="text-xs text-gray-500 mt-1.5">
+                                        Turno de trabalho do funcionário
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </form>
+
+                {/* Botões do Modal - Fixed Footer */}
+                <div className="flex justify-end gap-3 p-5 border-t border-gray-200 bg-white shrink-0">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="px-5 py-2.5 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        type="submit"
+                        form="funcionario-form"
+                        onClick={handleSubmit}
+                        className="flex items-center gap-2 px-5 py-2.5 text-white rounded-lg transition-all font-medium shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{ backgroundColor: 'var(--bg-azul)' }}
+                        onMouseEnter={(e) => {
+                            if (!e.currentTarget.disabled) {
+                                e.currentTarget.style.opacity = '0.9'
+                            }
+                        }}
+                        onMouseLeave={(e) => {
+                            if (!e.currentTarget.disabled) {
+                                e.currentTarget.style.opacity = '1'
+                            }
+                        }}
+                    >
+                        <i className="bi bi-check-circle-fill"></i>
+                        <span>Salvar Alterações</span>
+                    </button>
+                </div>
             </div>
         </div>
     )

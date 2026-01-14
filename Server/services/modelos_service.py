@@ -1,11 +1,22 @@
 from typing import Dict, Any, List
-from Server.models import Modelo, Peca  
+from Server.models import Modelo
+from Server.services import pecas_service  
 
 def listar_modelos():
-    """Lista todos os modelos"""
+    """Lista todos os modelos com suas peças"""
     try: 
         modelos = Modelo.listar_todos()
-        return [{'id': modelo.id, 'codigo': modelo.codigo, 'nome': modelo.nome} for modelo in modelos]
+        resultado = []
+        for modelo in modelos:
+            # Buscar peças do modelo usando o service
+            pecas = pecas_service.buscar_por_modelo_id(modelo.id)
+            resultado.append({
+                'id': modelo.id,
+                'codigo': modelo.codigo,
+                'nome': modelo.nome,
+                'pecas': pecas
+            })
+        return resultado
     except Exception as erro:
         print(f'Erro ao listar modelos: {erro}')
         return []
@@ -17,14 +28,14 @@ def buscar_modelo_por_codigo(codigo):
         if not modelo:
             return {'erro': f'Modelo com código {codigo} não encontrado'}
         
-        # Buscar peças do modelo
-        pecas = Peca.buscar_por_modelo_id(modelo.id)
+        # Buscar peças do modelo usando o service
+        pecas = pecas_service.buscar_por_modelo_id(modelo.id)
         
         return {
             'id': modelo.id,
             'codigo': modelo.codigo,
             'nome': modelo.nome,
-            'pecas': [peca.to_dict() for peca in pecas]
+            'pecas': pecas
         }
     except Exception as erro:
         print(f'Erro ao buscar modelo: {erro}')
@@ -33,23 +44,24 @@ def buscar_modelo_por_codigo(codigo):
 def criar_modelo(codigo, nome, pecas=None):
     """Cria um novo modelo com as suas peças"""
     try:
-        modelo_existente = Modelo.buscar_por_codigo(codigo)
+        # Verificar se já existe modelo com o mesmo nome (codigo não existe no banco)
+        # Usar buscar_por_codigo que busca por nome internamente
+        modelo_existente = Modelo.buscar_por_codigo(nome)
         if modelo_existente:
-            return {'erro': f'Já existe um modelo com o código {codigo}'}
+            return {'erro': f'Já existe um modelo com o nome {nome}'}
         
-        # Criar modelo
+        # Criar modelo (codigo não é salvo no banco, apenas nome)
         novo_modelo = Modelo(codigo=codigo, nome=nome)
         novo_modelo.salvar()
 
-        # Criar peças se houver
-        if pecas:
+        # Criar peças se houver usando o service
+        if pecas and novo_modelo.id:
             for peca_info in pecas:
-                nova_peca = Peca(
+                pecas_service.criar_peca(
                     modelo_id=novo_modelo.id,
                     codigo=peca_info.get('codigo', ''),
                     nome=peca_info.get('nome', '')
                 )
-                nova_peca.save()
         
         return {
             'sucesso': True, 
@@ -64,11 +76,16 @@ def criar_modelo(codigo, nome, pecas=None):
 def deletar_modelo(modelo_id):
     """Deleta um modelo"""
     try:
+        print(f'Tentando deletar modelo com ID: {modelo_id} (tipo: {type(modelo_id)})')
         modelo = Modelo.buscar_por_id(modelo_id)
         if not modelo:
+            print(f'Modelo com ID {modelo_id} não encontrado')
             return {'erro': f'Modelo com ID {modelo_id} não encontrado'}
         
+        print(f'Modelo encontrado: ID={modelo.id}, Nome={modelo.nome}')
         modelo.deletar()
+        print(f'Modelo {modelo_id} deletado com sucesso')
+        
         return {
             'sucesso': True, 
             'mensagem': f'Modelo {modelo_id} deletado'
@@ -76,6 +93,8 @@ def deletar_modelo(modelo_id):
     
     except Exception as erro:
         print(f'Erro ao deletar modelo: {erro}')
+        import traceback
+        traceback.print_exc()
         return {'erro': f'Não foi possível deletar o modelo {modelo_id}: {str(erro)}'}
     
 def atualizar_modelo(modelo_id, codigo=None, nome=None, pecas=None):
@@ -85,31 +104,51 @@ def atualizar_modelo(modelo_id, codigo=None, nome=None, pecas=None):
         if not modelo:
             return {'erro': f'Modelo com ID {modelo_id} não encontrado'}
         
-        # Verificar se código foi alterado e se já existe
-        if codigo and codigo != modelo.codigo:
-            modelo_com_mesmo_codigo = Modelo.buscar_por_codigo(codigo)
-            if modelo_com_mesmo_codigo:
-                return {'erro': f'Outro modelo já usa o código {codigo}'}
+        # Atualizar codigo no objeto (não é salvo no banco, apenas para compatibilidade da API)
+        if codigo:
             modelo.codigo = codigo
         
-        if nome:
+        # Verificar se nome foi alterado e se já existe outro modelo com esse nome
+        if nome and nome != modelo.nome:
+            modelo_com_mesmo_nome = Modelo.buscar_por_codigo(nome)  # busca por nome
+            if modelo_com_mesmo_nome and modelo_com_mesmo_nome.id != modelo.id:
+                return {'erro': f'Outro modelo já usa o nome {nome}'}
+            modelo.nome = nome
+        elif nome:
             modelo.nome = nome
         
         modelo.salvar()
 
         # Atualizar peças se fornecidas
-        if pecas is not None:
-            # Deletar peças existentes
-            Peca.deletar_por_modelo_id(modelo.id)
+        if pecas is not None and modelo.id:
+            # Buscar peças existentes do modelo usando o service
+            pecas_existentes = pecas_service.buscar_por_modelo_id(modelo.id)
+            ids_pecas_existentes = {p.get('id') for p in pecas_existentes if p.get('id')}
+            ids_pecas_enviadas = {peca_info.get('id') for peca_info in pecas if peca_info.get('id')}
             
-            # Criar novas peças
+            # Deletar peças que foram removidas (existem no banco mas não foram enviadas)
+            pecas_para_deletar = ids_pecas_existentes - ids_pecas_enviadas
+            for peca_id in pecas_para_deletar:
+                pecas_service.deletar_peca(peca_id)
+            
+            # Atualizar ou criar peças usando o service
             for peca_info in pecas:
-                nova_peca = Peca(
-                    modelo_id=modelo.id,
-                    codigo=peca_info.get('codigo', ''),
-                    nome=peca_info.get('nome', '')
-                )
-                nova_peca.save()
+                peca_id = peca_info.get('id')
+                if peca_id and peca_id in ids_pecas_existentes:
+                    # Peça existente - atualizar usando o service
+                    pecas_service.atualizar_peca(
+                        peca_id=peca_id,
+                        modelo_id=modelo.id,
+                        codigo=peca_info.get('codigo', ''),
+                        nome=peca_info.get('nome', '')
+                    )
+                else:
+                    # Nova peça - criar usando o service
+                    pecas_service.criar_peca(
+                        modelo_id=modelo.id,
+                        codigo=peca_info.get('codigo', ''),
+                        nome=peca_info.get('nome', '')
+                    )
 
         return {
             'sucesso': True, 
