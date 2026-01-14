@@ -9,6 +9,8 @@ from typing import Optional
 from flask import Flask, send_from_directory
 from flask_cors import CORS
 
+from Server.controller import pecas_controller
+
 BASE_DIR = Path(__file__).parent.parent.resolve()
 WEB_DIR = BASE_DIR / 'Web' / 'dist'
 
@@ -52,6 +54,7 @@ def register_blueprints(app: Flask):
         funcionarios_controller,
         modelos_controller,
         posto_configuracao_controller,
+        pecas_controller
     )
     
     app.register_blueprint(producao_controller.producao_bp)
@@ -61,7 +64,7 @@ def register_blueprints(app: Flask):
     app.register_blueprint(funcionarios_controller.funcionarios_bp)
     app.register_blueprint(modelos_controller.modelos_bp)
     app.register_blueprint(posto_configuracao_controller.posto_configuracao_bp)
-
+    app.register_blueprint(pecas_controller.pecas_bp)
 
 def register_web_routes(app: Flask):
     @app.route('/', defaults={'path': ''})

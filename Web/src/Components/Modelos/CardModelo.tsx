@@ -1,16 +1,16 @@
 import React from 'react'
 
-interface Subproduto {
+interface Peca {
     id: string
+    modeloId: string
     codigo: string
-    descricao: string
+    nome: string
 }
 
 interface Modelo {
     id: string
-    codigo: string
-    descricao: string
-    subprodutos: Subproduto[]
+    nome: string
+    pecas: Peca[]
 }
 
 interface CardModeloProps {
@@ -19,7 +19,7 @@ interface CardModeloProps {
     onToggleExpandir: () => void
     onRemoverModelo: () => void
     onEditarModelo: () => void
-    onRemoverSubproduto: (subprodutoId: string) => void
+    onRemoverPeca: (pecaId: string) => void
 }
 
 const CardModelo: React.FC<CardModeloProps> = ({
@@ -28,7 +28,7 @@ const CardModelo: React.FC<CardModeloProps> = ({
     onToggleExpandir,
     onRemoverModelo,
     onEditarModelo,
-    onRemoverSubproduto
+    onRemoverPeca
 }) => {
     return (
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
@@ -43,8 +43,7 @@ const CardModelo: React.FC<CardModeloProps> = ({
                                 <i className={`bi bi-chevron-${estaExpandido ? 'down' : 'right'}`}></i>
                             </button>
                             <div>
-                                <h4 className="font-semibold text-gray-900">{modelo.codigo}</h4>
-                                <p className="text-sm text-gray-600">{modelo.descricao}</p>
+                                <h4 className="font-semibold text-gray-900">{modelo.nome}</h4>
                             </div>
                         </div>
                     </div>
@@ -70,31 +69,35 @@ const CardModelo: React.FC<CardModeloProps> = ({
             {estaExpandido && (
                 <div className="border-t border-gray-200 p-4 bg-gray-50">
                     <h5 className="text-sm font-semibold text-gray-700 mb-3">
-                        Subprodutos ({modelo.subprodutos.length})
+                        Peças ({modelo.pecas.length})
                     </h5>
-                    {modelo.subprodutos.length === 0 ? (
-                        <p className="text-sm text-gray-500">Nenhum subproduto cadastrado</p>
+                    {modelo.pecas.length === 0 ? (
+                        <p className="text-sm text-gray-500">Nenhuma peça cadastrada</p>
                     ) : (
                         <div className="space-y-2">
-                            {modelo.subprodutos.map((subproduto) => (
+                            {modelo.pecas.map((peca) => (
                                 <div
-                                    key={subproduto.id}
+                                    key={peca.id}
                                     className="flex items-center justify-between p-3 bg-white rounded-md border border-gray-200"
                                 >
-                                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
                                         <div>
-                                            <span className="text-xs text-gray-500">Código:</span>
-                                            <p className="font-medium text-gray-900">{subproduto.codigo}</p>
+                                            <span className="text-xs text-gray-500">Modelo:</span>
+                                            <p className="font-medium text-gray-900">{modelo.nome}</p>
                                         </div>
                                         <div>
-                                            <span className="text-xs text-gray-500">Descrição:</span>
-                                            <p className="font-medium text-gray-900">{subproduto.descricao}</p>
+                                            <span className="text-xs text-gray-500">Código:</span>
+                                            <p className="font-medium text-gray-900">{peca.codigo}</p>
+                                        </div>
+                                        <div>
+                                            <span className="text-xs text-gray-500">Nome:</span>
+                                            <p className="font-medium text-gray-900">{peca.nome}</p>
                                         </div>
                                     </div>
                                     <button
-                                        onClick={() => onRemoverSubproduto(subproduto.id)}
+                                        onClick={() => onRemoverPeca(peca.id)}
                                         className="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded transition-colors ml-4"
-                                        title="Remover subproduto"
+                                        title="Remover peça"
                                     >
                                         <i className="bi bi-trash"></i>
                                     </button>

@@ -47,7 +47,7 @@ const Registros = () => {
     const [modalAberto, setModalAberto] = useState<string | null>(null)
     const [carregando, setCarregando] = useState(false)
     const [filtros, setFiltros] = useState({
-        posto: [] as string[],
+        processo: ['subsolda1'] as string[],
         horarioInicio: '',
         horarioFim: '',
         turno: [] as string[],
@@ -58,6 +58,7 @@ const Registros = () => {
     })
 
     const [registros, setRegistros] = useState<Registro[]>([registroMockado])
+    const [registrosSelecionados, setRegistrosSelecionados] = useState<Set<number>>(new Set())
 
     // Carrega registros ao montar e quando filtros mudam - chamada para registros_controller.py
     useEffect(() => {
@@ -68,7 +69,7 @@ const Registros = () => {
                     limit: itensPorPagina,
                     offset: (paginaAtual - 1) * itensPorPagina,
                     data: filtros.data || undefined,
-                    posto: filtros.posto.length > 0 ? filtros.posto[0] : undefined,
+                    posto: filtros.processo.length > 0 ? filtros.processo[0] : undefined,
                     turno: filtros.turno.length > 0 ? filtros.turno[0].replace('Turno ', '') : undefined
                 })
                 
@@ -107,8 +108,8 @@ const Registros = () => {
             }
         }
         carregarRegistros()
-    }, [paginaAtual, itensPorPagina, filtros.data, filtros.posto, filtros.turno])
-    const [opcoesPosto, setOpcoesPosto] = useState<{ id: string; label: string }[]>([])
+    }, [paginaAtual, itensPorPagina, filtros.data, filtros.processo, filtros.turno])
+    const [opcoesProcesso, setOpcoesProcesso] = useState<{ id: string; label: string }[]>([])
     const [opcoesTurno, setOpcoesTurno] = useState<{ id: string; label: string }[]>([])
     const [opcoesProduto, setOpcoesProduto] = useState<{ id: string; label: string }[]>([])
     const [opcoesMatricula, setOpcoesMatricula] = useState<{ id: string; label: string }[]>([])
@@ -145,20 +146,15 @@ const Registros = () => {
                 }))
                 setOpcoesProduto(produtos)
 
-                // Carregar registros para extrair postos e turnos únicos
+                // Carregar registros para extrair processos e turnos únicos
                 const registrosData = await registrosAPI.listar({ limit: 1000, offset: 0 })
                 const registrosList = registrosData?.registros || []
                 
-                // Extrair postos únicos
-                const postosUnicos = new Set<string>()
-                registrosList.forEach((r: any) => {
-                    if (r.posto) postosUnicos.add(r.posto)
-                })
-                const postos = Array.from(postosUnicos).sort().map(p => ({
-                    id: p,
-                    label: p
-                }))
-                setOpcoesPosto(postos)
+                // Definir processos com subsolda1
+                const processos = [
+                    { id: 'subsolda1', label: 'Subsolda1' }
+                ]
+                setOpcoesProcesso(processos)
 
                 // Extrair turnos únicos (são fixos: 1 e 2, mas extraímos dos dados)
                 const turnosUnicos = new Set<string>()
@@ -184,7 +180,7 @@ const Registros = () => {
         const dataMatch = !filtros.data || registro.data === filtros.data || registro.data?.startsWith(filtros.data)
         
         return (
-            (filtros.posto.length === 0 || filtros.posto.includes(registro.posto || '')) &&
+            (filtros.processo.length === 0 || filtros.processo.includes(registro.posto || '')) &&
             (filtros.turno.length === 0 || filtros.turno.includes(String(registro.turno || ''))) &&
             dataMatch &&
             (filtros.produto.length === 0 || filtros.produto.includes(registro.produto || '')) &&
@@ -219,9 +215,85 @@ const Registros = () => {
         return date.toLocaleDateString('pt-BR')
     }
 
+    // Calcular estado de seleção da página atual
+    const todosSelecionadosNaPagina = registrosPagina.length > 0 && 
+        registrosPagina.every(reg => registrosSelecionados.has(reg.id))
+    const algunsSelecionadosNaPagina = registrosPagina.some(reg => registrosSelecionados.has(reg.id))
+
+    // Funções para gerenciar seleção de registros
+    const handleToggleSelecionarTodos = () => {
+        if (todosSelecionadosNaPagina) {
+            // Desmarcar todos da página atual
+            const novosSelecionados = new Set(registrosSelecionados)
+            registrosPagina.forEach(reg => novosSelecionados.delete(reg.id))
+            setRegistrosSelecionados(novosSelecionados)
+        } else {
+            // Marcar todos da página atual
+            const novosSelecionados = new Set(registrosSelecionados)
+            registrosPagina.forEach(reg => novosSelecionados.add(reg.id))
+            setRegistrosSelecionados(novosSelecionados)
+        }
+    }
+
+    const handleToggleSelecionarRegistro = (id: number) => {
+        const novosSelecionados = new Set(registrosSelecionados)
+        if (novosSelecionados.has(id)) {
+            novosSelecionados.delete(id)
+        } else {
+            novosSelecionados.add(id)
+        }
+        setRegistrosSelecionados(novosSelecionados)
+    }
+
+    // Função para exportar registros selecionados
     const handleExportar = () => {
-        // TODO: Implementar exportação de planilha
-        console.log('Exportar planilha')
+        // Se houver registros selecionados, exportar apenas eles
+        // Caso contrário, exportar todos os registros filtrados
+        const registrosParaExportar = registrosSelecionados.size > 0
+            ? registrosFiltrados.filter(reg => registrosSelecionados.has(reg.id))
+            : registrosFiltrados
+
+        if (registrosParaExportar.length === 0) {
+            alert('Nenhum registro para exportar')
+            return
+        }
+
+        // Criar CSV
+        const headers = ['Toten/ID', 'Posto', 'Operador', 'Operação', 'Modelo', 'Turno', 'Início', 'Fim', 'Comentários', 'Peça', 'Código', 'Qtde']
+        const rows = registrosParaExportar.map(reg => [
+            reg.posto || '',
+            reg.posto || '',
+            reg.operador || '',
+            reg.operacao || '',
+            reg.modelo || reg.produto || '',
+            String(reg.turno || ''),
+            reg.hora_inicio || reg.hora || '',
+            reg.hora_fim || '',
+            reg.comentarios || '',
+            reg.modelo || reg.produto || '',
+            reg.modelo_codigo || '',
+            String(reg.quantidade || '')
+        ])
+
+        // Converter para CSV
+        const csvContent = [
+            headers.join(';'),
+            ...rows.map(row => row.map(cell => `"${cell}"`).join(';'))
+        ].join('\r\n')
+
+        // Adicionar BOM para Excel reconhecer UTF-8
+        const BOM = '\uFEFF'
+        const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' })
+        const link = document.createElement('a')
+        const url = URL.createObjectURL(blob)
+        
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+        link.setAttribute('href', url)
+        link.setAttribute('download', `registros_${timestamp}.csv`)
+        link.style.visibility = 'hidden'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
     }
 
     return (
@@ -235,17 +307,17 @@ const Registros = () => {
                             {/* Filtros no topo */}
                             <div className="p-6 border-b border-gray-200">
                                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
-                                    {/* POSTO */}
+                                    {/* PROCESSO */}
                                     <div>
                                         <label className="block text-xs font-medium text-gray-700 mb-1">
-                                            POSTO
+                                            PROCESSO
                                         </label>
                                         <button
-                                            onClick={() => setModalAberto('posto')}
+                                            onClick={() => setModalAberto('processo')}
                                             className="w-full px-3 py-2 pr-8 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-left relative bg-white"
                                         >
-                                            <span className={filtros.posto.length === 0 ? 'text-gray-400' : 'text-gray-900'}>
-                                                {getTextoFiltro(filtros.posto)}
+                                            <span className={filtros.processo.length === 0 ? 'text-gray-400' : 'text-gray-900'}>
+                                                {getTextoFiltro(filtros.processo)}
                                             </span>
                                             <i className="bi bi-chevron-down absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
                                         </button>
@@ -392,8 +464,22 @@ const Registros = () => {
                                         <table className="w-full">
                                             <thead className="bg-gray-50">
                                                 <tr>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={todosSelecionadosNaPagina}
+                                                            ref={(input) => {
+                                                                if (input) input.indeterminate = algunsSelecionadosNaPagina && !todosSelecionadosNaPagina
+                                                            }}
+                                                            onChange={handleToggleSelecionarTodos}
+                                                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                                                        />
+                                                    </th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Toten/ID Posto
+                                                        Toten/ID 
+                                                    </th>
+                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Posto
                                                     </th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                         Operador
@@ -430,6 +516,17 @@ const Registros = () => {
                                             <tbody className="bg-white divide-y divide-gray-200">
                                                 {registrosPagina.map((registro) => (
                                                     <tr key={registro.id} className="hover:bg-gray-50">
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={registrosSelecionados.has(registro.id)}
+                                                                onChange={() => handleToggleSelecionarRegistro(registro.id)}
+                                                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                                                            />
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {registro.posto || '-'}
+                                                        </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                             {registro.posto || '-'}
                                                         </td>
@@ -516,13 +613,21 @@ const Registros = () => {
 
                                     {/* Botão Exportar e Contador */}
                                     <div className="flex items-center gap-6">
+                                        {registrosSelecionados.size > 0 && (
+                                            <span className="text-sm text-gray-700 font-medium">
+                                                {registrosSelecionados.size} registro(s) selecionado(s)
+                                            </span>
+                                        )}
                                         <button
                                             onClick={handleExportar}
                                             className="flex items-center gap-2 px-4 py-2 text-white rounded-md hover:opacity-90 transition-opacity text-sm font-medium"
                                             style={{ backgroundColor: 'var(--bg-azul)' }}
                                         >
                                             <i className="bi bi-file-earmark-spreadsheet"></i>
-                                            Exportar planilha
+                                            {registrosSelecionados.size > 0 
+                                                ? `Exportar selecionados (${registrosSelecionados.size})`
+                                                : 'Exportar planilha'
+                                            }
                                         </button>
                                         <span className="text-sm text-gray-700">
                                             Mostrando {indiceInicial} - {indiceFinal} de {totalItens}
@@ -536,12 +641,12 @@ const Registros = () => {
             </div>
 
             {/* Modais de Filtro */}
-            {modalAberto === 'posto' && (
+            {modalAberto === 'processo' && (
                 <ModalFiltro
-                    titulo="Posto"
-                    opcoes={opcoesPosto}
-                    valoresSelecionados={filtros.posto}
-                    onConfirmar={(valores) => handleConfirmarFiltro('posto', valores)}
+                    titulo="Processo"
+                    opcoes={opcoesProcesso}
+                    valoresSelecionados={filtros.processo}
+                    onConfirmar={(valores) => handleConfirmarFiltro('processo', valores)}
                     onCancelar={() => setModalAberto(null)}
                     onFechar={() => setModalAberto(null)}
                 />

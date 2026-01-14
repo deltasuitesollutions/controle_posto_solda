@@ -5,17 +5,17 @@ import CardModelo from '../Components/Modelos/CardModelo'
 import ModalModelo from '../Components/Modelos/AdicionarModelo'
 import { Paginacao } from '../Components/Compartilhados/paginacao'
 
-interface Subproduto {
+interface Peca {
     id: string
+    modeloId: string
     codigo: string
-    descricao: string
+    nome: string
 }
 
 interface Modelo {
     id: string
-    codigo: string
-    descricao: string
-    subprodutos: Subproduto[]
+    nome: string
+    pecas: Peca[]
 }
 
 const Modelos = () => {
@@ -29,17 +29,30 @@ const Modelos = () => {
     const handleAdicionarModelo = (novoModelo: Omit<Modelo, 'id'>) => {
         if (modeloEditando) {
             // Modo edição - atualiza o modelo existente
+            const modeloAtualizado: Modelo = {
+                ...novoModelo,
+                id: modeloEditando.id,
+                pecas: novoModelo.pecas.map(peca => ({
+                    ...peca,
+                    modeloId: modeloEditando.id
+                }))
+            }
             setModelos(modelos.map(m => 
                 m.id === modeloEditando.id 
-                    ? { ...novoModelo, id: modeloEditando.id }
+                    ? modeloAtualizado
                     : m
             ))
             setModeloEditando(null)
         } else {
             // Modo criação - adiciona novo modelo
+            const modeloId = Date.now().toString()
             const modeloComId: Modelo = {
                 ...novoModelo,
-                id: Date.now().toString()
+                id: modeloId,
+                pecas: novoModelo.pecas.map(peca => ({
+                    ...peca,
+                    modeloId: modeloId
+                }))
             }
             setModelos([...modelos, modeloComId])
         }
@@ -72,12 +85,12 @@ const Modelos = () => {
         setModeloExpandido(modeloExpandido === modeloId ? null : modeloId)
     }
 
-    const handleRemoverSubproduto = (modeloId: string, subprodutoId: string): void => {
+    const handleRemoverPeca = (modeloId: string, pecaId: string): void => {
         setModelos(modelos.map(modelo => {
             if (modelo.id === modeloId) {
                 return {
                     ...modelo,
-                    subprodutos: modelo.subprodutos.filter(s => s.id !== subprodutoId)
+                    pecas: modelo.pecas.filter(p => p.id !== pecaId)
                 }
             }
             return modelo
@@ -147,7 +160,7 @@ const Modelos = () => {
                                                 onToggleExpandir={() => handleToggleExpandir(modelo.id)}
                                                 onRemoverModelo={() => handleRemoverModelo(modelo.id)}
                                                 onEditarModelo={() => handleEditarModelo(modelo)}
-                                                onRemoverSubproduto={(subprodutoId) => handleRemoverSubproduto(modelo.id, subprodutoId)}
+                                                onRemoverPeca={(pecaId) => handleRemoverPeca(modelo.id, pecaId)}
                                             />
                                         ))}
                                     </div>

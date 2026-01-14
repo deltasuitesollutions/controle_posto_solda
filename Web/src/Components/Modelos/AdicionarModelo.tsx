@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react'
 
-interface Subproduto {
+interface Peca {
     id: string
+    modeloId: string
     codigo: string
-    descricao: string
+    nome: string
 }
 
 interface Modelo {
     id: string
-    codigo: string
-    descricao: string
-    subprodutos: Subproduto[]
+    nome: string
+    pecas: Peca[]
 }
 
 interface ModalModeloProps {
@@ -21,56 +21,56 @@ interface ModalModeloProps {
 }
 
 const ModalModelo: React.FC<ModalModeloProps> = ({ isOpen, onClose, onSave, modeloEditando }) => {
-    const [codigo, setCodigo] = useState('')
-    const [descricao, setDescricao] = useState('')
-    const [subprodutosTemp, setSubprodutosTemp] = useState<Subproduto[]>([])
-    const [subprodutoCodigo, setSubprodutoCodigo] = useState('')
-    const [subprodutoDescricao, setSubprodutoDescricao] = useState('')
+    const [nome, setNome] = useState('')
+    const [pecasTemp, setPecasTemp] = useState<Peca[]>([])
+    const [pecaCodigo, setPecaCodigo] = useState('')
+    const [pecaNome, setPecaNome] = useState('')
+    const [modeloIdTemp, setModeloIdTemp] = useState<string>('')
 
     // Carregar dados do modelo quando estiver editando
     useEffect(() => {
         if (modeloEditando) {
-            setCodigo(modeloEditando.codigo)
-            setDescricao(modeloEditando.descricao)
-            setSubprodutosTemp(modeloEditando.subprodutos)
+            setNome(modeloEditando.nome)
+            setPecasTemp(modeloEditando.pecas)
+            setModeloIdTemp(modeloEditando.id)
         } else {
-            setCodigo('')
-            setDescricao('')
-            setSubprodutosTemp([])
+            setNome('')
+            setPecasTemp([])
+            setModeloIdTemp(Date.now().toString()) // ID temporário para novos modelos
         }
-        setSubprodutoCodigo('')
-        setSubprodutoDescricao('')
+        setPecaCodigo('')
+        setPecaNome('')
     }, [modeloEditando, isOpen])
 
-    const adicionarSubprodutoTemp = () => {
-        if (!subprodutoCodigo.trim() || !subprodutoDescricao.trim()) {
+    const adicionarPecaTemp = () => {
+        if (!pecaCodigo.trim() || !pecaNome.trim() || !modeloIdTemp) {
             return
         }
 
-        const novoSubproduto: Subproduto = {
+        const novaPeca: Peca = {
             id: Date.now().toString(),
-            codigo: subprodutoCodigo.trim(),
-            descricao: subprodutoDescricao.trim()
+            modeloId: modeloIdTemp,
+            codigo: pecaCodigo.trim(),
+            nome: pecaNome.trim()
         }
 
-        setSubprodutosTemp([...subprodutosTemp, novoSubproduto])
-        setSubprodutoCodigo('')
-        setSubprodutoDescricao('')
+        setPecasTemp([...pecasTemp, novaPeca])
+        setPecaCodigo('')
+        setPecaNome('')
     }
 
-    const removerSubprodutoTemp = (id: string) => {
-        setSubprodutosTemp(subprodutosTemp.filter(sub => sub.id !== id))
+    const removerPecaTemp = (id: string) => {
+        setPecasTemp(pecasTemp.filter(p => p.id !== id))
     }
 
     const handleSalvar = () => {
-        if (!codigo.trim() || !descricao.trim()) {
+        if (!nome.trim()) {
             return
         }
 
         const novoModelo = {
-            codigo: codigo.trim(),
-            descricao: descricao.trim(),
-            subprodutos: [...subprodutosTemp]
+            nome: nome.trim(),
+            pecas: [...pecasTemp]
         }
 
         onSave(novoModelo)
@@ -115,79 +115,76 @@ const ModalModelo: React.FC<ModalModeloProps> = ({ isOpen, onClose, onSave, mode
                             <i className="bi bi-info-circle"></i>
                             Informações do Modelo
                         </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Código do Produto *
-                                </label>
-                                <input
-                                    type="text"
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    placeholder="Ex: PROD001"
-                                    value={codigo}
-                                    onChange={(e) => setCodigo(e.target.value)}
-                                    required
-                                    autoFocus
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Descrição *
-                                </label>
-                                <input
-                                    type="text"
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    placeholder="Ex: Modelo de Produto A"
-                                    value={descricao}
-                                    onChange={(e) => setDescricao(e.target.value)}
-                                    required
-                                />
-                            </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Nome *
+                            </label>
+                            <input
+                                type="text"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="Ex: Modelo de Produto A"
+                                value={nome}
+                                onChange={(e) => setNome(e.target.value)}
+                                required
+                                autoFocus
+                            />
                         </div>
                     </div>
 
-                    {/* Seção de Subprodutos */}
+                    {/* Seção de Peças */}
                     <div className="border-t border-gray-200 pt-6">
                         <div className="flex items-center justify-between mb-4">
                             <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                                 <i className="bi bi-boxes"></i>
-                                Subprodutos ({subprodutosTemp.length})
+                                Peças ({pecasTemp.length})
                             </h4>
                         </div>
 
-                        {/* Formulário para adicionar subproduto */}
+                        {/* Formulário para adicionar peça */}
                         <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                             <form onSubmit={(e) => {
                                 e.preventDefault()
-                                adicionarSubprodutoTemp()
+                                adicionarPecaTemp()
                             }}>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
                                     <div>
                                         <label className="block text-xs font-medium text-gray-600 mb-1">
-                                            Código do Subproduto
+                                            Modelo *
                                         </label>
                                         <input
                                             type="text"
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            placeholder="Ex: SUB001"
-                                            value={subprodutoCodigo}
-                                            onChange={(e) => setSubprodutoCodigo(e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-100"
+                                            value={nome || 'Novo Modelo'}
+                                            disabled
+                                            readOnly
                                         />
                                     </div>
                                     <div>
                                         <label className="block text-xs font-medium text-gray-600 mb-1">
-                                            Descrição do Subproduto
+                                            Código da Peça *
                                         </label>
                                         <input
                                             type="text"
                                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            placeholder="Ex: Subproduto A"
-                                            value={subprodutoDescricao}
-                                            onChange={(e) => setSubprodutoDescricao(e.target.value)}
+                                            placeholder="Ex: PEC001"
+                                            value={pecaCodigo}
+                                            onChange={(e) => setPecaCodigo(e.target.value)}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                                            Nome da Peça *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            placeholder="Ex: Peça A"
+                                            value={pecaNome}
+                                            onChange={(e) => setPecaNome(e.target.value)}
                                             onKeyDown={(e) => {
-                                                if (e.key === 'Enter' && subprodutoCodigo.trim() && subprodutoDescricao.trim()) {
+                                                if (e.key === 'Enter' && pecaCodigo.trim() && pecaNome.trim()) {
                                                     e.preventDefault()
-                                                    adicionarSubprodutoTemp()
+                                                    adicionarPecaTemp()
                                                 }
                                             }}
                                         />
@@ -207,36 +204,40 @@ const ModalModelo: React.FC<ModalModeloProps> = ({ isOpen, onClose, onSave, mode
                                             e.currentTarget.style.opacity = '1'
                                         }
                                     }}
-                                    disabled={!subprodutoCodigo.trim() || !subprodutoDescricao.trim()}
+                                    disabled={!pecaCodigo.trim() || !pecaNome.trim()}
                                 >
                                     <i className="bi bi-plus-circle-fill"></i>
-                                    <span>Adicionar Subproduto</span>
+                                    <span>Adicionar Peça</span>
                                 </button>
                             </form>
                         </div>
 
-                        {/* Lista de Subprodutos Temporários */}
-                        {subprodutosTemp.length > 0 && (
+                        {/* Lista de Peças Temporárias */}
+                        {pecasTemp.length > 0 && (
                             <div className="space-y-2 max-h-60 overflow-y-auto">
-                                {subprodutosTemp.map((subproduto) => (
+                                {pecasTemp.map((peca) => (
                                     <div 
-                                        key={subproduto.id} 
+                                        key={peca.id} 
                                         className="flex items-center justify-between p-3 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors"
                                     >
-                                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4">
                                             <div>
-                                                <span className="text-xs text-gray-500">Código:</span>
-                                                <p className="font-medium text-gray-900">{subproduto.codigo}</p>
+                                                <span className="text-xs text-gray-500">Modelo:</span>
+                                                <p className="font-medium text-gray-900">{nome || 'Novo Modelo'}</p>
                                             </div>
                                             <div>
-                                                <span className="text-xs text-gray-500">Descrição:</span>
-                                                <p className="font-medium text-gray-900">{subproduto.descricao}</p>
+                                                <span className="text-xs text-gray-500">Código:</span>
+                                                <p className="font-medium text-gray-900">{peca.codigo}</p>
+                                            </div>
+                                            <div>
+                                                <span className="text-xs text-gray-500">Nome:</span>
+                                                <p className="font-medium text-gray-900">{peca.nome}</p>
                                             </div>
                                         </div>
                                         <button
-                                            onClick={() => removerSubprodutoTemp(subproduto.id)}
+                                            onClick={() => removerPecaTemp(peca.id)}
                                             className="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded transition-colors ml-4"
-                                            title="Remover subproduto"
+                                            title="Remover peça"
                                         >
                                             <i className="bi bi-trash"></i>
                                         </button>
@@ -269,7 +270,7 @@ const ModalModelo: React.FC<ModalModeloProps> = ({ isOpen, onClose, onSave, mode
                                 e.currentTarget.style.opacity = '1'
                             }
                         }}
-                        disabled={!codigo.trim() || !descricao.trim()}
+                        disabled={!nome.trim()}
                     >
                         <i className="bi bi-check-circle-fill"></i>
                         <span>Salvar Modelo</span>

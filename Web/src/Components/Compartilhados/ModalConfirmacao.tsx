@@ -86,7 +86,7 @@ const ModalConfirmacao: React.FC<ModalConfirmacaoProps> = ({
                 {item && !mostrarDetalhes && (
                     <div className="bg-gray-100 p-3 rounded mb-3">
                         {Object.entries(item).map(([key, value]) => {
-                            // Não mostrar status e novoStatus juntos, já que são tratados separadamente
+                            // Não mostrar status e novoStatus juntos
                             if (key === 'novoStatus') return null
                             return (
                                 <p key={key} className="text-sm">

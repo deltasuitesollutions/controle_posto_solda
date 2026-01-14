@@ -14,6 +14,7 @@ interface Funcionario {
     ativo: boolean
     habilitado_operacao?: boolean
     operacao?: string
+    turno?: string
 }
 
 const Funcionarios = () => {
@@ -23,6 +24,7 @@ const Funcionarios = () => {
     const [tag, setTag] = useState('')
     const [ativo, setAtivo] = useState(true)
     const [operacao, setOperacao] = useState('')
+    const [turno, setTurno] = useState('')
     const [funcionarios, setFuncionarios] = useState<Funcionario[]>([])
     const [modalEditarAberto, setModalEditarAberto] = useState(false)
     const [modalExcluirAberto, setModalExcluirAberto] = useState(false)
@@ -78,7 +80,7 @@ const Funcionarios = () => {
         
         try {
             // Chamada API para criar funcionário - funcionarios_controller.py POST /api/funcionarios
-            const dadosFuncionario: { matricula: string; nome: string; ativo: boolean; tag?: string; habilitado_operacao?: boolean; operacao?: string } = {
+            const dadosFuncionario: { matricula: string; nome: string; ativo: boolean; tag?: string; habilitado_operacao?: boolean; operacao?: string; turno?: string } = {
                 matricula,
                 nome,
                 ativo,
@@ -89,6 +91,9 @@ const Funcionarios = () => {
             }
             if (operacao) {
                 dadosFuncionario.operacao = operacao
+            }
+            if (turno) {
+                dadosFuncionario.turno = turno
             }
             const resposta = await funcionariosAPI.criar(dadosFuncionario)
             
@@ -102,6 +107,7 @@ const Funcionarios = () => {
             setTag('')
             setAtivo(true)
             setOperacao('')
+            setTurno('')
             
             // Volta o foco para o campo RFID para o próximo funcionário
             setTimeout(() => {
@@ -132,7 +138,7 @@ const Funcionarios = () => {
         
         try {
             // Chamada API para atualizar funcionário - funcionarios_controller.py PUT /api/funcionarios/:id
-            const dadosAtualizacao: { nome: string; ativo: boolean; tag?: string; habilitado_operacao?: boolean; operacao?: string } = {
+            const dadosAtualizacao: { nome: string; ativo: boolean; tag?: string; habilitado_operacao?: boolean; operacao?: string; turno?: string } = {
                 nome: funcionarioAtualizado.nome,
                 ativo: funcionarioAtualizado.ativo,
             }
@@ -144,6 +150,9 @@ const Funcionarios = () => {
             }
             if (funcionarioAtualizado.operacao !== undefined) {
                 dadosAtualizacao.operacao = funcionarioAtualizado.operacao || ''
+            }
+            if (funcionarioAtualizado.turno !== undefined) {
+                dadosAtualizacao.turno = funcionarioAtualizado.turno || ''
             }
             const resposta = await funcionariosAPI.atualizar(funcionarioSelecionado.id, dadosAtualizacao)
             
@@ -340,23 +349,44 @@ const Funcionarios = () => {
                                             </label>
                                         </div>
 
-                                        {/* Habilitado na Operação (Select) */}
-                                        <div className="mb-6">
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                Habilitado na Operação
-                                            </label>
-                                            <select
-                                                id='funcionario-operacao'
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                value={operacao}
-                                                onChange={(e) => setOperacao(e.target.value)}
-                                            >
-                                                <option value="">Não habilitado</option>
-                                                <option value="P1">P1</option>
-                                                <option value="P2">P2</option>
-                                                <option value="P3">P3</option>
-                                                <option value="P4">P4</option>
-                                            </select>
+                                        {/* Habilitado na Operação e Turno na mesma linha */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                            {/* Habilitado na Operação (Select) */}
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                    Habilitado na Operação
+                                                </label>
+                                                <select
+                                                    id='funcionario-operacao'
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                    value={operacao}
+                                                    onChange={(e) => setOperacao(e.target.value)}
+                                                >
+                                                    <option value="">Não habilitado</option>
+                                                    <option value="P1">P1</option>
+                                                    <option value="P2">P2</option>
+                                                    <option value="P3">P3</option>
+                                                    <option value="P4">P4</option>
+                                                </select>
+                                            </div>
+
+                                            {/* Turno */}
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                    Turno
+                                                </label>
+                                                <select
+                                                    id='funcionario-turno'
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                    value={turno}
+                                                    onChange={(e) => setTurno(e.target.value)}
+                                                >
+                                                    <option value="">Selecione o turno</option>
+                                                    <option value="matutino">Matutino</option>
+                                                    <option value="vespertino">Vespertino</option>
+                                                    <option value="noturno">Noturno</option>
+                                                </select>
+                                            </div>
                                         </div>
                                         
                                         {/* Botões de Ação */}
@@ -401,6 +431,9 @@ const Funcionarios = () => {
                                                                 Operação
                                                             </th>
                                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                                Turno
+                                                            </th>
+                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                                 Ações
                                                             </th>
                                                         </tr>
@@ -434,6 +467,17 @@ const Funcionarios = () => {
                                                                     ) : (
                                                                         <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
                                                                             Não habilitado
+                                                                        </span>
+                                                                    )}
+                                                                </td>
+                                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                                    {funcionario.turno ? (
+                                                                        <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800 capitalize">
+                                                                            {funcionario.turno}
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                                                                            Não definido
                                                                         </span>
                                                                     )}
                                                                 </td>

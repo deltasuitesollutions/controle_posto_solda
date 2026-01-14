@@ -8,6 +8,7 @@ interface Funcionario {
     ativo: boolean
     habilitado_operacao?: boolean
     operacao?: string
+    turno?: string
 }
 
 interface ModalEditarFuncionarioProps {
@@ -23,6 +24,7 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
     const [tag, setTag] = useState('')
     const [ativo, setAtivo] = useState(true)
     const [operacao, setOperacao] = useState('')
+    const [turno, setTurno] = useState('')
 
     useEffect(() => {
         if (funcionarioEditando) {
@@ -31,18 +33,20 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
             setTag(funcionarioEditando.tag || '')
             setAtivo(funcionarioEditando.ativo)
             setOperacao(funcionarioEditando.operacao || '')
+            setTurno(funcionarioEditando.turno || '')
         } else {
             setMatricula('')
             setNome('')
             setTag('')
             setAtivo(true)
             setOperacao('')
+            setTurno('')
         }
     }, [funcionarioEditando])
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
-        onSave({ matricula, nome, tag, ativo, habilitado_operacao: !!operacao, operacao })
+        onSave({ matricula, nome, tag, ativo, habilitado_operacao: !!operacao, operacao, turno })
         onClose()
     }
 
@@ -101,21 +105,39 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
                         </label>
                     </div>
 
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Habilitado na Operação
-                        </label>
-                        <select
-                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={operacao}
-                            onChange={(e) => setOperacao(e.target.value)}
-                        >
-                            <option value="">Não habilitado</option>
-                            <option value="P1">P1</option>
-                            <option value="P2">P2</option>
-                            <option value="P3">P3</option>
-                            <option value="P4">P4</option>
-                        </select>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Habilitado na Operação
+                            </label>
+                            <select
+                                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                value={operacao}
+                                onChange={(e) => setOperacao(e.target.value)}
+                            >
+                                <option value="">Não habilitado</option>
+                                <option value="P1">P1</option>
+                                <option value="P2">P2</option>
+                                <option value="P3">P3</option>
+                                <option value="P4">P4</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Turno
+                            </label>
+                            <select
+                                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                value={turno}
+                                onChange={(e) => setTurno(e.target.value)}
+                            >
+                                <option value="">Selecione o turno</option>
+                                <option value="matutino">Matutino</option>
+                                <option value="vespertino">Vespertino</option>
+                                <option value="noturno">Noturno</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div className="flex justify-end gap-2">

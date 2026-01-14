@@ -1,111 +1,122 @@
-"""
-Service para lógica de negócio de modelos/produtos
-"""
 from typing import Dict, Any, List
-from Server.models import Modelo, Subproduto
+from Server.models import Modelo, Peca  
 
-
-def listar_modelos() -> List[Dict[str, Any]]:
-    """Lista todos os modelos/produtos"""
-    try:
+def listar_modelos():
+    """Lista todos os modelos"""
+    try: 
         modelos = Modelo.listar_todos()
-        return [{"codigo": m.codigo, "descricao": m.descricao} for m in modelos]
-    except Exception as e:
-        raise Exception(f"Erro ao listar modelos: {str(e)}")
-
-
-def listar_todos_modelos() -> List[Dict[str, Any]]:
-    """Lista todos os modelos/produtos com ID e subprodutos"""
-    try:
-        modelos = Modelo.listar_todos(incluir_subprodutos=True)
-        return [m.to_dict(incluir_subprodutos=True) for m in modelos]
-    except Exception as e:
-        raise Exception(f"Erro ao listar todos os modelos: {str(e)}")
-
-
-def buscar_modelo(codigo: str) -> Dict[str, Any]:
-    """Busca um modelo pelo código"""
+        return [{'id': modelo.id, 'codigo': modelo.codigo, 'nome': modelo.nome} for modelo in modelos]
+    except Exception as erro:
+        print(f'Erro ao listar modelos: {erro}')
+        return []
+    
+def buscar_modelo_por_codigo(codigo):  
+    """Busca um modelo pelo código com suas peças"""
     try:
         modelo = Modelo.buscar_por_codigo(codigo)
         if not modelo:
-            raise Exception("Modelo não encontrado")
-        return {"codigo": modelo.codigo, "descricao": modelo.descricao}
-    except Exception as e:
-        raise Exception(f"Erro ao buscar modelo: {str(e)}")
-
-
-def criar_modelo(codigo: str, descricao: str = '', subprodutos: List[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """Cria um novo modelo/produto com seus subprodutos"""
+            return {'erro': f'Modelo com código {codigo} não encontrado'}
+        
+        # Buscar peças do modelo
+        pecas = Peca.buscar_por_modelo_id(modelo.id)
+        
+        return {
+            'id': modelo.id,
+            'codigo': modelo.codigo,
+            'nome': modelo.nome,
+            'pecas': [peca.to_dict() for peca in pecas]
+        }
+    except Exception as erro:
+        print(f'Erro ao buscar modelo: {erro}')
+        return {'erro': 'Não foi possível buscar o modelo'}
+    
+def criar_modelo(codigo, nome, pecas=None):
+    """Cria um novo modelo com as suas peças"""
     try:
-        # Verificar se já existe modelo com o mesmo código
         modelo_existente = Modelo.buscar_por_codigo(codigo)
         if modelo_existente:
-            raise Exception(f"Já existe um modelo com o código {codigo}")
+            return {'erro': f'Já existe um modelo com o código {codigo}'}
         
-        modelo = Modelo.criar(codigo=codigo, descricao=descricao)
-        
-        # Criar subprodutos se fornecidos
-        if subprodutos and modelo.id:
-            for subproduto_data in subprodutos:
-                sub_codigo = subproduto_data.get('codigo', '')
-                sub_descricao = subproduto_data.get('descricao', '')
-                if sub_codigo:
-                    Subproduto.criar(
-                        modelo_id=modelo.id,
-                        codigo=sub_codigo,
-                        descricao=sub_descricao
-                    )
-        
-        return modelo.to_dict(incluir_subprodutos=True)
-    except Exception as e:
-        raise Exception(f"Erro ao criar modelo: {str(e)}")
+        # Criar modelo
+        novo_modelo = Modelo(codigo=codigo, nome=nome)
+        novo_modelo.salvar()
 
-
-def atualizar_modelo(modelo_id: int, codigo: str, descricao: str = '', subprodutos: List[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """Atualiza um modelo/produto existente e seus subprodutos"""
+        # Criar peças se houver
+        if pecas:
+            for peca_info in pecas:
+                nova_peca = Peca(
+                    modelo_id=novo_modelo.id,
+                    codigo=peca_info.get('codigo', ''),
+                    nome=peca_info.get('nome', '')
+                )
+                nova_peca.save()
+        
+        return {
+            'sucesso': True, 
+            'modelo_id': novo_modelo.id,
+            'mensagem': f'Modelo {codigo} criado com sucesso'
+        }
+    
+    except Exception as erro:
+        print(f'Erro ao criar modelo: {erro}')
+        return {'erro': f'Não foi possível criar o modelo: {str(erro)}'}
+    
+def deletar_modelo(modelo_id):
+    """Deleta um modelo"""
     try:
         modelo = Modelo.buscar_por_id(modelo_id)
         if not modelo:
-            raise Exception(f"Modelo com ID {modelo_id} não encontrado")
+            return {'erro': f'Modelo com ID {modelo_id} não encontrado'}
         
-        # Verificar se o código já existe em outro modelo
-        modelo_com_codigo = Modelo.buscar_por_codigo(codigo)
-        if modelo_com_codigo and modelo_com_codigo.id != modelo_id:
-            raise Exception(f"Já existe outro modelo com o código {codigo}")
+        modelo.deletar()
+        return {
+            'sucesso': True, 
+            'mensagem': f'Modelo {modelo_id} deletado'
+        }
+    
+    except Exception as erro:
+        print(f'Erro ao deletar modelo: {erro}')
+        return {'erro': f'Não foi possível deletar o modelo {modelo_id}: {str(erro)}'}
+    
+def atualizar_modelo(modelo_id, codigo=None, nome=None, pecas=None):
+    """Atualiza um modelo existente e suas peças"""
+    try:
+        modelo = Modelo.buscar_por_id(modelo_id)
+        if not modelo:
+            return {'erro': f'Modelo com ID {modelo_id} não encontrado'}
         
-        modelo.codigo = codigo
-        modelo.descricao = descricao
-        modelo.save()
+        # Verificar se código foi alterado e se já existe
+        if codigo and codigo != modelo.codigo:
+            modelo_com_mesmo_codigo = Modelo.buscar_por_codigo(codigo)
+            if modelo_com_mesmo_codigo:
+                return {'erro': f'Outro modelo já usa o código {codigo}'}
+            modelo.codigo = codigo
         
-        # Atualizar subprodutos: deletar todos e recriar
-        if modelo.id:
-            # Deletar subprodutos existentes
-            Subproduto.deletar_por_modelo_id(modelo.id)
+        if nome:
+            modelo.nome = nome
+        
+        modelo.salvar()
+
+        # Atualizar peças se fornecidas
+        if pecas is not None:
+            # Deletar peças existentes
+            Peca.deletar_por_modelo_id(modelo.id)
             
-            # Criar novos subprodutos se fornecidos
-            if subprodutos:
-                for subproduto_data in subprodutos:
-                    sub_codigo = subproduto_data.get('codigo', '')
-                    sub_descricao = subproduto_data.get('descricao', '')
-                    if sub_codigo:
-                        Subproduto.criar(
-                            modelo_id=modelo.id,
-                            codigo=sub_codigo,
-                            descricao=sub_descricao
-                        )
-        
-        return modelo.to_dict(incluir_subprodutos=True)
-    except Exception as e:
-        raise Exception(f"Erro ao atualizar modelo: {str(e)}")
+            # Criar novas peças
+            for peca_info in pecas:
+                nova_peca = Peca(
+                    modelo_id=modelo.id,
+                    codigo=peca_info.get('codigo', ''),
+                    nome=peca_info.get('nome', '')
+                )
+                nova_peca.save()
 
-
-def deletar_modelo(modelo_id: int) -> None:
-    """Deleta um modelo/produto"""
-    try:
-        modelo = Modelo.buscar_por_id(modelo_id)
-        if not modelo:
-            raise Exception(f"Modelo com ID {modelo_id} não encontrado")
-        
-        modelo.delete()
-    except Exception as e:
-        raise Exception(f"Erro ao deletar modelo: {str(e)}")
+        return {
+            'sucesso': True, 
+            'mensagem': f'Modelo {modelo_id} atualizado',
+            'modelo': modelo.to_dict()
+        }
+    
+    except Exception as erro:
+        print(f'Erro ao atualizar modelo: {erro}')
+        return {'erro': f'Não foi possível atualizar o modelo {modelo_id}: {str(erro)}'}
