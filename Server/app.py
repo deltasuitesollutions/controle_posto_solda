@@ -54,7 +54,8 @@ def register_blueprints(app: Flask):
         funcionarios_controller,
         modelos_controller,
         posto_configuracao_controller,
-        pecas_controller
+        pecas_controller,
+        produto_controller
     )
     
     app.register_blueprint(producao_controller.producao_bp)
@@ -65,6 +66,7 @@ def register_blueprints(app: Flask):
     app.register_blueprint(modelos_controller.modelos_bp)
     app.register_blueprint(posto_configuracao_controller.posto_configuracao_bp)
     app.register_blueprint(pecas_controller.pecas_bp)
+    app.register_blueprint(produto_controller.produtos_bp)
 
 def register_web_routes(app: Flask):
     @app.route('/', defaults={'path': ''})
@@ -113,4 +115,5 @@ if __name__ == '__main__':
     debug = os.getenv('FLASK_ENV') != 'production'
     
     logger.info(f"Servidor iniciando em http://{host}:{port}")
+    
     app.run(debug=debug, host=host, port=port)

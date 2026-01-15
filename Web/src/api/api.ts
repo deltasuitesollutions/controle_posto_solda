@@ -30,12 +30,12 @@ export const modelosAPI = {
   criar: (data: { nome: string; pecas?: Array<{codigo: string; nome: string}>}) => 
     fetchAPI('/modelos', {
       method: 'POST',
-      body: JSON.stringify({ ...data, codigo: data.nome }), // Envia nome como código para compatibilidade com backend
+      body: JSON.stringify({ ...data, codigo: data.nome }), 
     }),
   atualizar: (id: number, data: {nome: string; pecas?: Array<{id?: number; codigo: string; nome: string}>}) =>
     fetchAPI(`/modelos/${id}`, {
       method: 'PUT',
-      body: JSON.stringify({ ...data, codigo: data.nome }), // Envia nome como código para compatibilidade com backend
+      body: JSON.stringify({ ...data, codigo: data.nome }), 
     }),
   deletar: (id: number) =>
     fetchAPI(`/modelos/${id}`, {
@@ -101,3 +101,29 @@ export const registrosAPI = {
   },
 }
 
+// CHAMADA PARA PRODUTOS_CONTROLLER.PY
+
+export const produtosAPI = {
+  listar: () =>
+    fetchAPI('/produtos'),
+
+  buscarPorId: (id: number) =>
+    fetchAPI(`/produtos/${id}`),
+
+  criar: (data: { nome: string }) =>
+    fetchAPI('/produtos', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  atualizar: (id: number, data: { nome: string }) =>
+    fetchAPI(`/produtos/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deletar: (id: number) =>
+    fetchAPI(`/produtos/${id}`, {
+      method: 'DELETE',
+    }),
+};

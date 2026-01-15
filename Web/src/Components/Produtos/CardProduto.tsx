@@ -1,9 +1,8 @@
 import React from 'react'
 
 interface Produto {
-    id: string
+    id: number
     nome: string
-    codigo: string
 }
 
 interface CardProdutoProps {
@@ -25,7 +24,6 @@ const CardProduto: React.FC<CardProdutoProps> = ({
                         <div className="flex items-center gap-3">
                             <div>
                                 <h4 className="font-semibold text-gray-900">{produto.nome}</h4>
-                                <p className="text-sm text-gray-600">Código: {produto.codigo}</p>
                             </div>
                         </div>
                     </div>

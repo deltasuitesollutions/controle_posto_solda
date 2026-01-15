@@ -8,7 +8,7 @@ from Server.models.peca import Peca
 from Server.models.posto import Posto
 from Server.models.producao import ProducaoRegistro
 from Server.models.posto_configuracao import PostoConfiguracao
-from Server.models.subproduto import Subproduto
+from Server.models.produto import Produto
 __all__ = [
     'DatabaseConnection',
     'Funcionario',

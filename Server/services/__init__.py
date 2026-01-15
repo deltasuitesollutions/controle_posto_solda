@@ -4,10 +4,11 @@ Services package - Lógica de negócio
 
 from Server.services import (
     producao_service,
+    produto_service,
     rfid_service,
     csv_service,
     funcionarios_service,
-    modelos_service,
+    modelos_service
 )
 
 

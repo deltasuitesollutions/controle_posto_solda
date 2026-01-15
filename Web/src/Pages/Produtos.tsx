@@ -4,11 +4,11 @@ import MenuLateral from '../Components/MenuLateral/MenuLateral'
 import CardProduto from '../Components/Produtos/CardProduto'
 import ModalFormulario from '../Components/Compartilhados/ModalFormulario'
 import { Paginacao } from '../Components/Compartilhados/paginacao'
+import { produtosAPI } from '../api/api';
 
 interface Produto {
-    id: string
+    id: number
     nome: string
-    codigo: string
 }
 
 const Produtos = () => {
@@ -17,30 +17,47 @@ const Produtos = () => {
     const [produtoEditando, setProdutoEditando] = useState<Produto | null>(null)
     const [paginaAtual, setPaginaAtual] = useState(1)
     const [itensPorPagina] = useState(10)
+    const [erro, setErro] = useState<string | null>(null)
+    const [carregado, setCarregado] = useState(false)
 
-    const handleAdicionarProduto = (dados: Record<string, any>) => {
-        const novoProduto: Omit<Produto, 'id'> = {
-            nome: dados.nome as string,
-            codigo: dados.codigo as string
-        }
-        
-        if (produtoEditando) {
-            // Modo edição - atualiza o produto existente
-            setProdutos(produtos.map(p => 
-                p.id === produtoEditando.id 
-                    ? { ...novoProduto, id: produtoEditando.id }
-                    : p
-            ))
-            setProdutoEditando(null)
-        } else {
-            // Modo criação - adiciona novo produto
-            const produtoComId: Produto = {
-                ...novoProduto,
-                id: Date.now().toString()
+    // Carregar produtos ao montar o componente
+    useEffect(() => {
+        const carregarProdutos = async () => {
+            try {
+                const dados = await produtosAPI.listar()
+                setProdutos(dados)
+            } catch (err) {
+                console.error('Erro ao carregar produtos:', err)
+                setErro(err instanceof Error ? err.message : 'Erro ao carregar produtos')
+            } finally {
+                setCarregado(true)
             }
-            setProdutos([...produtos, produtoComId])
         }
-        setModalAberto(false)
+        carregarProdutos()
+    }, [])
+
+    const handleAdicionarProduto = async (novoProduto: Record<string, any>) => {
+        try {
+            setErro(null)
+            if (produtoEditando) {
+                // edita
+                await produtosAPI.atualizar(produtoEditando.id, {
+                    nome: novoProduto.nome,
+                })
+            } else {
+                // Cria
+                await produtosAPI.criar({
+                    nome: novoProduto.nome,
+                })
+            }
+            // Recarregar produtos após salvar
+            const dados = await produtosAPI.listar()
+            setProdutos(dados)
+            setModalAberto(false)
+        } catch (err) {
+            console.error('Erro ao salvar produto:', err)
+            setErro(err instanceof Error ? err.message : 'Erro ao salvar produto')
+        }
     }
 
     const handleEditarProduto = (produto: Produto) => {
@@ -51,6 +68,7 @@ const Produtos = () => {
     const handleFecharModal = () => {
         setModalAberto(false)
         setProdutoEditando(null)
+        setErro(null)
     }
 
     const handleAbrirModalNovo = () => {
@@ -58,8 +76,20 @@ const Produtos = () => {
         setModalAberto(true)
     }
 
-    const handleRemoverProduto = (produtoId: string) => {
-        setProdutos(produtos.filter(p => p.id !== produtoId))
+    const handleRemoverProduto = async (produtoId: number) => {
+        if (!window.confirm('Tem certeza que deseja remover este produto?')) {
+            return
+        }
+        try {
+            setErro(null)
+            await produtosAPI.deletar(produtoId)
+            // Recarregar produtos após deletar
+            const dados = await produtosAPI.listar()
+            setProdutos(dados)
+        } catch (err) {
+            console.error('Erro ao remover produto:', err)
+            setErro(err instanceof Error ? err.message : 'Erro ao remover produto')
+        }
     }
 
     // Calcular produtos da página atual
@@ -101,8 +131,15 @@ const Produtos = () => {
                                 </div>
                             </div>
 
+                            {/* Mensagem de erro */}
+                            {erro && (
+                                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                                    <span className="block sm:inline">{erro}</span>
+                                </div>
+                            )}
+
                             {/* Lista de Produtos */}
-                            {produtos.length === 0 ? (
+                            {!carregado ? null : produtos.length === 0 ? (
                                 <div className="bg-white rounded-lg shadow-md overflow-hidden">
                                     <div className="p-12 flex flex-col items-center justify-center">
                                         <i className="bi bi-inbox text-gray-300 text-5xl mb-4"></i>
@@ -155,13 +192,6 @@ const Produtos = () => {
                         label: 'Nome do Produto',
                         tipo: 'text',
                         placeholder: 'Ex: Produto A',
-                        required: true
-                    },
-                    {
-                        nome: 'codigo',
-                        label: 'Código',
-                        tipo: 'text',
-                        placeholder: 'Ex: PROD001',
                         required: true
                     }
                 ]}
