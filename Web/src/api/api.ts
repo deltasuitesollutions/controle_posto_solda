@@ -1,4 +1,3 @@
-// Configuração da API - chamadas para o controller do servidor
 const API_BASE_URL = 'http://localhost:8000/api'
 
 // Função auxiliar para fazer requisições
@@ -70,12 +69,12 @@ export const pecasAPI = {
 export const funcionariosAPI = {
   listar: () => fetchAPI('/funcionarios'),
   listarTodos: () => fetchAPI('/funcionarios/todos'),
-  criar: (data: { matricula: string; nome: string; ativo?: boolean; tag?: string }) => 
+  criar: (data: { matricula: string; nome: string; ativo?: boolean; tag?: string; turno: string}) => 
     fetchAPI('/funcionarios', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  atualizar: (id: number, data: { nome: string; ativo?: boolean; tag?: string }) =>
+  atualizar: (id: number, data: { nome: string; ativo?: boolean; tag?: string; turno: string }) =>
     fetchAPI(`/funcionarios/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -84,21 +83,6 @@ export const funcionariosAPI = {
     fetchAPI(`/funcionarios/${id}`, {
       method: 'DELETE',
     }),
-}
-
-// CHAMADA PARA REGISTROS_CONTROLLER.PY
-
-export const registrosAPI = {
-  listar: (params?: { limit?: number; offset?: number; data?: string; posto?: string; turno?: string }) => {
-    const queryParams = new URLSearchParams()
-    if (params?.limit !== undefined) queryParams.append('limit', params.limit.toString())
-    if (params?.offset !== undefined) queryParams.append('offset', params.offset.toString())
-    if (params?.data) queryParams.append('data', params.data)
-    if (params?.posto) queryParams.append('posto', params.posto)
-    if (params?.turno) queryParams.append('turno', params.turno)
-    const queryString = queryParams.toString()
-    return fetchAPI(`/registros${queryString ? `?${queryString}` : ''}`)
-  },
 }
 
 // CHAMADA PARA PRODUTOS_CONTROLLER.PY

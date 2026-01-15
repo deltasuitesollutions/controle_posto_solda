@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import TopBar from '../Components/topBar/TopBar'
 import MenuLateral from '../Components/MenuLateral/MenuLateral'
 import ModalFiltro from '../Components/Compartilhados/ModalFiltro'
-import { registrosAPI, funcionariosAPI, modelosAPI } from '../api/api'
 
 interface Registro {
     id: number
@@ -45,7 +44,6 @@ const Registros = () => {
     const [paginaAtual, setPaginaAtual] = useState(1)
     const [itensPorPagina, setItensPorPagina] = useState(10)
     const [modalAberto, setModalAberto] = useState<string | null>(null)
-    const [carregando, setCarregando] = useState(false)
     const [filtros, setFiltros] = useState({
         processo: ['subsolda1'] as string[],
         horarioInicio: '',
@@ -60,119 +58,17 @@ const Registros = () => {
     const [registros, setRegistros] = useState<Registro[]>([registroMockado])
     const [registrosSelecionados, setRegistrosSelecionados] = useState<Set<number>>(new Set())
 
-    // Carrega registros ao montar e quando filtros mudam - chamada para registros_controller.py
-    useEffect(() => {
-        const carregarRegistros = async () => {
-            try {
-                setCarregando(true)
-                const dados = await registrosAPI.listar({
-                    limit: itensPorPagina,
-                    offset: (paginaAtual - 1) * itensPorPagina,
-                    data: filtros.data || undefined,
-                    posto: filtros.processo.length > 0 ? filtros.processo[0] : undefined,
-                    turno: filtros.turno.length > 0 ? filtros.turno[0].replace('Turno ', '') : undefined
-                })
-                
-                // Mapear dados da API para o formato esperado
-                const registrosList = dados?.registros || []
-                const registrosMapeados = registrosList.map((r: any) => ({
-                    id: r.id,
-                    data: r.data_raw || r.data || '',
-                    hora: r.hora_inicio || '',
-                    hora_inicio: r.hora_inicio || '',
-                    hora_fim: r.hora_fim || '',
-                    operador: r.funcionario?.nome || '',
-                    matricula: r.funcionario?.matricula || '',
-                    posto: r.posto || '',
-                    produto: r.modelo?.descricao || r.modelo?.codigo || '',
-                    modelo: r.modelo?.descricao || '',
-                    modelo_codigo: r.modelo?.codigo || '',
-                    quantidade: undefined,
-                    turno: r.turno ? `Turno ${r.turno}` : r.turno || '',
-                    operacao: r.operacao || '-',
-                    comentarios: r.comentarios || '-'
-                }))
-                // Se não houver registros, manter o mockado
-                if (registrosMapeados.length > 0) {
-                    setRegistros(registrosMapeados)
-                } else {
-                    // Manter o registro mockado se não houver dados da API
-                    setRegistros([registroMockado])
-                }
-            } catch (error) {
-                console.error('Erro ao carregar registros:', error)
-                // Em caso de erro, manter o registro mockado
-                setRegistros([registroMockado])
-            } finally {
-                setCarregando(false)
-            }
-        }
-        carregarRegistros()
-    }, [paginaAtual, itensPorPagina, filtros.data, filtros.processo, filtros.turno])
-    const [opcoesProcesso, setOpcoesProcesso] = useState<{ id: string; label: string }[]>([])
-    const [opcoesTurno, setOpcoesTurno] = useState<{ id: string; label: string }[]>([])
-    const [opcoesProduto, setOpcoesProduto] = useState<{ id: string; label: string }[]>([])
-    const [opcoesMatricula, setOpcoesMatricula] = useState<{ id: string; label: string }[]>([])
-    const [opcoesOperador, setOpcoesOperador] = useState<{ id: string; label: string }[]>([])
-
-    // Carrega opções de filtros dinamicamente
-    useEffect(() => {
-        const carregarOpcoesFiltros = async () => {
-            try {
-                // Carregar funcionários e modelos
-                const [funcionariosData, modelosData] = await Promise.all([
-                    funcionariosAPI.listar(),
-                    modelosAPI.listar()
-                ])
-
-                // Mapear funcionários para opções de matrícula e operador
-                const funcionarios = funcionariosData || []
-                const matriculas = funcionarios.map((f: any) => ({
-                    id: f.matricula,
-                    label: f.matricula
-                }))
-                const operadores = funcionarios.map((f: any) => ({
-                    id: f.nome,
-                    label: f.nome
-                }))
-                setOpcoesMatricula(matriculas)
-                setOpcoesOperador(operadores)
-
-                // Mapear modelos para opções de produto
-                const modelos = modelosData || []
-                const produtos = modelos.map((m: any) => ({
-                    id: m.codigo,
-                    label: m.descricao || m.codigo
-                }))
-                setOpcoesProduto(produtos)
-
-                // Carregar registros para extrair processos e turnos únicos
-                const registrosData = await registrosAPI.listar({ limit: 1000, offset: 0 })
-                const registrosList = registrosData?.registros || []
-                
-                // Definir processos com subsolda1
-                const processos = [
-                    { id: 'subsolda1', label: 'Subsolda1' }
-                ]
-                setOpcoesProcesso(processos)
-
-                // Extrair turnos únicos (são fixos: 1 e 2, mas extraímos dos dados)
-                const turnosUnicos = new Set<string>()
-                registrosList.forEach((r: any) => {
-                    if (r.turno) turnosUnicos.add(String(r.turno))
-                })
-                // Garantir que sempre temos Turno 1 e Turno 2
-                const turnos = ['1', '2'].map(t => ({
-                    id: `Turno ${t}`,
-                    label: `Turno ${t}`
-                }))
-                setOpcoesTurno(turnos)
-            } catch (error) {
-                console.error('Erro ao carregar opções de filtros:', error)
-            }
-        }
-        carregarOpcoesFiltros()
-    }, [])
+    // Opções de filtros estáticas
+    const [opcoesProcesso] = useState<{ id: string; label: string }[]>([
+        { id: 'subsolda1', label: 'Subsolda1' }
+    ])
+    const [opcoesTurno] = useState<{ id: string; label: string }[]>([
+        { id: 'Turno 1', label: 'Turno 1' },
+        { id: 'Turno 2', label: 'Turno 2' }
+    ])
+    const [opcoesProduto] = useState<{ id: string; label: string }[]>([])
+    const [opcoesMatricula] = useState<{ id: string; label: string }[]>([])
+    const [opcoesOperador] = useState<{ id: string; label: string }[]>([])
 
     // Filtrar registros
     const registrosFiltrados = registros.filter(registro => {
@@ -455,11 +351,7 @@ const Registros = () => {
 
                             {/* Área de conteúdo - Tabela ou mensagem vazia */}
                             <div className="p-12">
-                                {carregando ? (
-                                    <div className="flex flex-col items-center justify-center py-12">
-                                        <p className="text-gray-500 text-lg font-medium">Carregando...</p>
-                                    </div>
-                                ) : registrosPagina.length > 0 ? (
+                                {registrosPagina.length > 0 ? (
                                     <div className="overflow-x-auto">
                                         <table className="w-full">
                                             <thead className="bg-gray-50">

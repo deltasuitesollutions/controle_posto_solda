@@ -28,10 +28,10 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
 
     useEffect(() => {
         if (funcionarioEditando) {
-            setMatricula(funcionarioEditando.matricula)
-            setNome(funcionarioEditando.nome)
+            setMatricula(funcionarioEditando.matricula || '')
+            setNome(funcionarioEditando.nome || '')
             setTag(funcionarioEditando.tag || '')
-            setAtivo(funcionarioEditando.ativo)
+            setAtivo(funcionarioEditando.ativo !== undefined ? funcionarioEditando.ativo : true)
             setOperacao(funcionarioEditando.operacao || '')
             setTurno(funcionarioEditando.turno || '')
         } else {
@@ -112,7 +112,7 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
                                         type="text"
                                         className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                                         placeholder="Ex: 1234567890"
-                                        value={tag}
+                                        value={tag || ''}
                                         onChange={(e) => setTag(e.target.value)}
                                     />
                                     <p className="text-xs text-gray-500 mt-1.5">

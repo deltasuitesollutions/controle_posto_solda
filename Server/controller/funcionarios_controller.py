@@ -1,92 +1,129 @@
-from typing import Tuple, Union
-from flask import Blueprint, jsonify, Response, request
+from flask import Blueprint, jsonify, request
 from Server.services import funcionarios_service
 
 funcionarios_bp = Blueprint('funcionarios', __name__, url_prefix='/api/funcionarios')
 
 
-# Lista todos os funcionários ativos
+# Lista funcionários ativos
 @funcionarios_bp.route('', methods=['GET'])
-def listar_funcionarios() -> Union[Response, Tuple[Response, int]]:
-    funcionarios = funcionarios_service.listar_funcionarios()
-    return jsonify(funcionarios)
+def listar_funcionarios():
+    try:
+        funcionarios = funcionarios_service.listar_funcionarios()
+        return jsonify(funcionarios)
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
 
 
-# Lista todos os funcionários (ativos e inativos)
+# Lista todos os funcionários
 @funcionarios_bp.route('/todos', methods=['GET'])
-def listar_todos_funcionarios() -> Union[Response, Tuple[Response, int]]:
-    funcionarios = funcionarios_service.listar_todos_funcionarios()
-    return jsonify(funcionarios)
+def listar_todos_funcionarios():
+    try:
+        funcionarios = funcionarios_service.listar_todos_funcionarios()
+        return jsonify(funcionarios)
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
 
 
-# Cria um novo funcionário
+# Cria funcionário
 @funcionarios_bp.route('', methods=['POST'])
-def criar_funcionario() -> Union[Response, Tuple[Response, int]]:
+def criar_funcionario():
     try:
         data = request.get_json()
-        
+
         if not data:
-            return jsonify({"error": "Dados não fornecidos"}), 400
-        
+            return jsonify({"erro": "Dados não enviados"}), 400
+
         matricula = data.get('matricula')
         nome = data.get('nome')
         ativo = data.get('ativo', True)
-        tag = data.get('tag')  # Frontend envia tag
-        
+        # Aceita tanto 'tag' quanto 'tag_id' para compatibilidade
+        tag_id = data.get('tag_id') or data.get('tag')
+        turno = data.get('turno')
+
         if not matricula or not nome:
-            return jsonify({"error": "Matrícula e nome são obrigatórios"}), 400
-        
+            return jsonify({"erro": "Matrícula e nome são obrigatórios"}), 400
+
         funcionario = funcionarios_service.criar_funcionario(
-            matricula=matricula,
-            nome=nome,
-            ativo=bool(ativo),
-            tag=tag
+            matricula,
+            nome,
+            ativo,
+            tag_id,
+            turno
         )
-        
-        return jsonify({"status": "success", "data": funcionario}), 201
+
+        return jsonify(funcionario), 201
+
     except Exception as e:
-        erros_cliente = ["já existe", "já está em uso", "obrigatória", "não encontrado"]
-        status = 400 if any(erro in str(e).lower() for erro in erros_cliente) else 500
-        return jsonify({"status": "error", "message": str(e)}), status
+        return jsonify({"erro": str(e)}), 500
 
 
-# Atualiza um funcionário existente
+# Editar funcionário
 @funcionarios_bp.route('/<int:funcionario_id>', methods=['PUT'])
-def atualizar_funcionario(funcionario_id: int) -> Union[Response, Tuple[Response, int]]:
+def atualizar_funcionario(funcionario_id):
     try:
         data = request.get_json()
-        
+
         if not data:
-            return jsonify({"error": "Dados não fornecidos"}), 400
-        
+            return jsonify({"erro": "Dados não enviados"}), 400
+
         nome = data.get('nome')
         ativo = data.get('ativo', True)
-        tag = data.get('tag')  # Frontend envia tag
-        
+        # Aceita tanto 'tag' quanto 'tag_id' para compatibilidade
+        tag_id = data.get('tag_id') or data.get('tag')
+        turno = data.get('turno')
+
         if not nome:
-            return jsonify({"error": "Nome é obrigatório"}), 400
-        
+            return jsonify({"erro": "Nome é obrigatório"}), 400
+
         funcionario = funcionarios_service.atualizar_funcionario(
-            funcionario_id=funcionario_id,
-            nome=nome,
-            ativo=bool(ativo),
-            tag=tag
+            funcionario_id,
+            nome,
+            ativo,
+            tag_id,
+            turno
         )
-        
-        return jsonify({"status": "success", "data": funcionario}), 200
+
+        return jsonify(funcionario)
+
     except Exception as e:
-        erros_cliente = ["já existe", "já está em uso", "obrigatória", "não encontrado"]
-        status = 400 if any(erro in str(e).lower() for erro in erros_cliente) else 500
-        return jsonify({"status": "error", "message": str(e)}), status
+        return jsonify({"erro": str(e)}), 500
 
 
-# Remove um funcionário do sistema
+# Deleta funcionário
 @funcionarios_bp.route('/<int:funcionario_id>', methods=['DELETE'])
-def deletar_funcionario(funcionario_id: int) -> Union[Response, Tuple[Response, int]]:
+def deletar_funcionario(funcionario_id):
     try:
         funcionarios_service.deletar_funcionario(funcionario_id)
-        return jsonify({"status": "success"}), 200
+        return jsonify({"mensagem": "Funcionário removido com sucesso"})
     except Exception as e:
-        erros_cliente = ["já existe", "já está em uso", "obrigatória", "não encontrado"]
-        status = 400 if any(erro in str(e).lower() for erro in erros_cliente) else 500
-        return jsonify({"status": "error", "message": str(e)}), status
+        return jsonify({"erro": str(e)}), 500
+
+
+# Busca por tag RFID
+@funcionarios_bp.route('/tag/<string:tag_id>', methods=['GET'])
+def buscar_por_tag(tag_id):
+    try:
+        funcionario = funcionarios_service.buscar_funcionario_por_tag(tag_id)
+
+        if not funcionario:
+            return jsonify({"erro": "Tag não encontrada"}), 404
+
+        return jsonify(funcionario)
+
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
+
+
+# Busca por matrícula
+@funcionarios_bp.route('/matricula/<string:matricula>', methods=['GET'])
+def buscar_por_matricula(matricula):
+    try:
+        funcionario = funcionarios_service.buscar_por_matricula(matricula)
+
+        if not funcionario:
+            return jsonify({"erro": "Matrícula não encontrada"}), 404
+
+        return jsonify(funcionario)
+
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500

@@ -4,6 +4,7 @@ import MenuLateral from '../Components/MenuLateral/MenuLateral'
 import ModalEditarFuncionario from '../Components/Funcionarios/ModalEditarFuncionario'
 import ModalConfirmacao from '../Components/Compartilhados/ModalConfirmacao'
 import { Paginacao } from '../Components/Compartilhados/paginacao'
+import { funcionariosAPI } from '../api/api'
 
 interface Funcionario {
     id: number
@@ -25,6 +26,7 @@ const Funcionarios = () => {
     const [operacao, setOperacao] = useState('')
     const [turno, setTurno] = useState('')
     const [funcionarios, setFuncionarios] = useState<Funcionario[]>([])
+    const [carregando, setCarregando] = useState(false)
     const [modalEditarAberto, setModalEditarAberto] = useState(false)
     const [modalExcluirAberto, setModalExcluirAberto] = useState(false)
     const [modalStatusAberto, setModalStatusAberto] = useState(false)
@@ -33,8 +35,6 @@ const Funcionarios = () => {
     const [itensPorPagina] = useState(10)
     const rfidInputRef = useRef<HTMLInputElement>(null)
 
-
-    // Helper para fechar modais
     const fecharModal = () => {
         setModalEditarAberto(false)
         setModalExcluirAberto(false)
@@ -42,12 +42,10 @@ const Funcionarios = () => {
         setFuncionarioSelecionado(null)
     }
 
-    // Detecta quando o crachá é passado e move o foco para o campo RFID
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             const activeElement = document.activeElement
             const isInputField = activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA'
-            
             
             if (!isInputField && rfidInputRef.current && (e.key.length === 1 || e.key === 'Enter')) {
                 rfidInputRef.current.focus()
@@ -58,27 +56,53 @@ const Funcionarios = () => {
         return () => window.removeEventListener('keydown', handleKeyDown)
     }, [])
 
+    useEffect(() => {
+        if (abaAtiva === 'listar') {
+            carregarFuncionarios()
+        }
+    }, [abaAtiva])
+
+    const carregarFuncionarios = async () => {
+        setCarregando(true)
+        try {
+            const dados = await funcionariosAPI.listarTodos()
+            
+            if (!Array.isArray(dados)) {
+                setFuncionarios([])
+                return
+            }
+            
+            const dadosNormalizados = dados.map((func: any) => ({
+                ...func,
+                id: func.id || func.funcionario_id,
+                tag: func.tag || func.tag_id || '',
+                ativo: func.ativo !== undefined ? func.ativo : true
+            }))
+            setFuncionarios(dadosNormalizados)
+        } catch (error: any) {
+            alert(`Erro ao carregar funcionários: ${error?.message || 'Erro desconhecido'}`)
+            setFuncionarios([])
+        } finally {
+            setCarregando(false)
+        }
+    }
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         
         try {
-            const dadosFuncionario: { matricula: string; nome: string; ativo: boolean; tag?: string; habilitado_operacao?: boolean; operacao?: string; turno?: string } = {
+            const dadosFuncionario: { matricula: string; nome: string; ativo?: boolean; tag?: string; turno: string } = {
                 matricula,
                 nome,
                 ativo,
-                habilitado_operacao: !!operacao, // Se tiver operação selecionada, está habilitado
+                turno: turno || '',
             }
             if (tag.trim()) {
                 dadosFuncionario.tag = tag.trim()
             }
-            if (operacao) {
-                dadosFuncionario.operacao = operacao
-            }
-            if (turno) {
-                dadosFuncionario.turno = turno
-            }
             
-            // Limpa os campos após salvar
+            await funcionariosAPI.criar(dadosFuncionario)
+            
             setMatricula('')
             setNome('')
             setTag('')
@@ -86,15 +110,18 @@ const Funcionarios = () => {
             setOperacao('')
             setTurno('')
             
-            // Volta o foco para o campo RFID para o próximo funcionário
+            if (abaAtiva === 'listar') {
+                await carregarFuncionarios()
+            }
+            
             setTimeout(() => {
                 rfidInputRef.current?.focus()
             }, 100)
+            
+            alert('Funcionário cadastrado com sucesso!')
         } catch (error: any) {
-            console.error('Erro ao cadastrar funcionário:', error)
             const errorMessage = error?.message || 'Erro ao cadastrar funcionário. Tente novamente.'
             
-            // Verificar se é erro de tag já cadastrada
             if (errorMessage.toLowerCase().includes('tag rfid') && 
                 (errorMessage.toLowerCase().includes('já está cadastrada') || 
                  errorMessage.toLowerCase().includes('já está associada'))) {
@@ -106,36 +133,42 @@ const Funcionarios = () => {
     }
 
     const handleEditarFuncionario = (funcionario: Funcionario) => {
-        setFuncionarioSelecionado(funcionario)
+        const funcionarioCompleto = {
+            ...funcionario,
+            id: funcionario.id || (funcionario as any).funcionario_id,
+            tag: funcionario.tag || (funcionario as any).tag_id || ''
+        }
+        setFuncionarioSelecionado(funcionarioCompleto)
         setModalEditarAberto(true)
     }
 
     const handleSalvarEdicao = async (funcionarioAtualizado: Omit<Funcionario, 'id'>) => {
         if (!funcionarioSelecionado) return
         
+        const funcionarioId = funcionarioSelecionado.id || (funcionarioSelecionado as any).funcionario_id
+        if (!funcionarioId) {
+            alert('Erro: ID do funcionário não encontrado')
+            return
+        }
+        
         try {
-            const dadosAtualizacao: { nome: string; ativo: boolean; tag?: string; habilitado_operacao?: boolean; operacao?: string; turno?: string } = {
+            const dadosAtualizacao: { nome: string; ativo?: boolean; tag?: string; turno: string } = {
                 nome: funcionarioAtualizado.nome,
                 ativo: funcionarioAtualizado.ativo,
+                turno: funcionarioAtualizado.turno || '',
             }
             if (funcionarioAtualizado.tag !== undefined) {
                 dadosAtualizacao.tag = funcionarioAtualizado.tag || ''
             }
-            if (funcionarioAtualizado.habilitado_operacao !== undefined) {
-                dadosAtualizacao.habilitado_operacao = funcionarioAtualizado.habilitado_operacao
-            }
-            if (funcionarioAtualizado.operacao !== undefined) {
-                dadosAtualizacao.operacao = funcionarioAtualizado.operacao || ''
-            }
-            if (funcionarioAtualizado.turno !== undefined) {
-                dadosAtualizacao.turno = funcionarioAtualizado.turno || ''
-            }
+            
+            await funcionariosAPI.atualizar(funcionarioId, dadosAtualizacao)
+            
+            await carregarFuncionarios()
             fecharModal()
+            alert('Funcionário atualizado com sucesso!')
         } catch (error: any) {
-            console.error('Erro ao atualizar funcionário:', error)
             const errorMessage = error?.message || 'Erro ao atualizar funcionário. Tente novamente.'
             
-            // Verificar se é erro de tag já cadastrada
             if (errorMessage.toLowerCase().includes('tag rfid') && 
                 (errorMessage.toLowerCase().includes('já está cadastrada') || 
                  errorMessage.toLowerCase().includes('já está associada'))) {
@@ -147,22 +180,77 @@ const Funcionarios = () => {
     }
 
     const handleExcluirFuncionario = (funcionario: Funcionario) => {
-        setFuncionarioSelecionado(funcionario)
+        const funcionarioCompleto = {
+            ...funcionario,
+            id: funcionario.id || (funcionario as any).funcionario_id
+        }
+        setFuncionarioSelecionado(funcionarioCompleto)
         setModalExcluirAberto(true)
     }
 
     const handleAbrirModalStatus = (funcionario: Funcionario) => {
-        setFuncionarioSelecionado(funcionario)
+        const funcionarioCompleto = {
+            ...funcionario,
+            id: funcionario.id || (funcionario as any).funcionario_id
+        }
+        setFuncionarioSelecionado(funcionarioCompleto)
         setModalStatusAberto(true)
     }
 
+    const handleConfirmarExclusao = async () => {
+        if (!funcionarioSelecionado) return
+        
+        const funcionarioId = funcionarioSelecionado.id || (funcionarioSelecionado as any).funcionario_id
+        if (!funcionarioId) {
+            alert('Erro: ID do funcionário não encontrado')
+            return
+        }
+        
+        try {
+            await funcionariosAPI.deletar(funcionarioId)
+            await carregarFuncionarios()
+            fecharModal()
+            alert('Funcionário excluído com sucesso!')
+        } catch (error: any) {
+            const errorMessage = error?.message || 'Erro ao excluir funcionário. Tente novamente.'
+            alert(`Erro ao excluir funcionário: ${errorMessage}`)
+        }
+    }
 
-    // Calcular funcionários da página atual
+    const handleConfirmarMudancaStatus = async () => {
+        if (!funcionarioSelecionado) return
+        
+        const funcionarioId = funcionarioSelecionado.id || (funcionarioSelecionado as any).funcionario_id
+        if (!funcionarioId) {
+            alert('Erro: ID do funcionário não encontrado')
+            return
+        }
+        
+        try {
+            const novoStatus = !funcionarioSelecionado.ativo
+            const dadosAtualizacao: { nome: string; ativo: boolean; turno: string; tag?: string } = {
+                nome: funcionarioSelecionado.nome,
+                ativo: novoStatus,
+                turno: funcionarioSelecionado.turno || '',
+            }
+            const tagAtual = funcionarioSelecionado.tag || (funcionarioSelecionado as any).tag_id
+            if (tagAtual) {
+                dadosAtualizacao.tag = tagAtual
+            }
+            await funcionariosAPI.atualizar(funcionarioId, dadosAtualizacao)
+            await carregarFuncionarios()
+            fecharModal()
+            alert(`Funcionário ${novoStatus ? 'ativado' : 'desativado'} com sucesso!`)
+        } catch (error: any) {
+            const errorMessage = error?.message || 'Erro ao alterar status do funcionário. Tente novamente.'
+            alert(`Erro ao alterar status: ${errorMessage}`)
+        }
+    }
+
     const indiceInicio = (paginaAtual - 1) * itensPorPagina
     const indiceFim = indiceInicio + itensPorPagina
     const funcionariosPaginaAtual = funcionarios.slice(indiceInicio, indiceFim)
 
-    // Resetar página quando necessário
     useEffect(() => {
         const totalPaginas = Math.ceil(funcionarios.length / itensPorPagina)
         if (paginaAtual > totalPaginas && totalPaginas > 0) {
@@ -178,7 +266,6 @@ const Funcionarios = () => {
                 <div className="flex-1 p-6 pt-32 pb-20 md:pb-24 md:pl-20 transition-all duration-300">
                     <div className="max-w-[95%] mx-auto">
                         <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                            {/* Abas */}
                             <div className="flex border-b border-gray-200">
                                 <button
                                     onClick={() => setAbaAtiva('cadastrar')}
@@ -206,12 +293,9 @@ const Funcionarios = () => {
                                 </button>
                             </div>
 
-                            {/* Conteúdo das Abas */}
                             <div className="p-6">
                                 {abaAtiva === 'cadastrar' ? (
-                                    /* Aba de Cadastro */
                                     <form id="form-funcionario" onSubmit={handleSubmit}>
-                                        {/* Tag RFID */}
                                         <div className="mb-4">
                                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                                 Tag RFID
@@ -229,9 +313,7 @@ const Funcionarios = () => {
                                             />
                                         </div>
                                         
-                                        {/* Matrícula e Nome na mesma linha */}
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                            {/* Matrícula */}
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                                     Matrícula
@@ -247,7 +329,6 @@ const Funcionarios = () => {
                                                 />
                                             </div>
                                             
-                                            {/* Nome */}
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                                     Nome
@@ -264,7 +345,6 @@ const Funcionarios = () => {
                                             </div>
                                         </div>
                                         
-                                        {/* Funcionário Ativo */}
                                         <div className="mb-4">
                                             <label className="flex items-center gap-2 cursor-pointer">
                                                 <input
@@ -278,9 +358,7 @@ const Funcionarios = () => {
                                             </label>
                                         </div>
 
-                                        {/* Habilitado na Operação e Turno na mesma linha */}
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                                            {/* Habilitado na Operação (Select) */}
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                                     Habilitado na Operação
@@ -299,7 +377,6 @@ const Funcionarios = () => {
                                                 </select>
                                             </div>
 
-                                            {/* Turno */}
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                                     Turno
@@ -318,7 +395,6 @@ const Funcionarios = () => {
                                             </div>
                                         </div>
                                         
-                                        {/* Botões de Ação */}
                                         <div className="flex gap-3">
                                             <button 
                                                 type='submit' 
@@ -333,13 +409,8 @@ const Funcionarios = () => {
                                         </div>
                                     </form>
                                 ) : (
-                                    /* Aba de Listagem */
                                     <div>
-                                        {carregando ? (
-                                            <div className="flex flex-col items-center justify-center py-12">
-                                                <p className="text-gray-500 text-lg font-medium">Carregando...</p>
-                                            </div>
-                                        ) : funcionarios.length > 0 ? (
+                                        {carregando ? null : funcionarios.length > 0 ? (
                                             <div className="overflow-x-auto">
                                                 <table className="w-full">
                                                     <thead className="bg-gray-50">
@@ -368,8 +439,10 @@ const Funcionarios = () => {
                                                         </tr>
                                                     </thead>
                                                     <tbody className="bg-white divide-y divide-gray-200">
-                                                        {funcionariosPaginaAtual.map((funcionario) => (
-                                                            <tr key={funcionario.id} className="hover:bg-gray-50">
+                                                        {funcionariosPaginaAtual.map((funcionario) => {
+                                                            const funcionarioId = funcionario.id || (funcionario as any).funcionario_id || funcionario.matricula
+                                                            return (
+                                                            <tr key={funcionarioId} className="hover:bg-gray-50">
                                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                                     {funcionario.matricula}
                                                                 </td>
@@ -441,7 +514,8 @@ const Funcionarios = () => {
                                                                     </div>
                                                                 </td>
                                                             </tr>
-                                                        ))}
+                                                            )
+                                                        })}
                                                     </tbody>
                                                 </table>
                                                 {funcionarios.length > itensPorPagina && (
@@ -469,7 +543,6 @@ const Funcionarios = () => {
                 </div>
             </div>
 
-            {/* Modais */}
             <ModalEditarFuncionario
                 isOpen={modalEditarAberto}
                 onClose={fecharModal}
