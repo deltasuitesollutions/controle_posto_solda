@@ -320,11 +320,6 @@ class DatabaseConnection:
             
             # Garantir que o commit seja efetivo
             conn.commit()
-            # Forçar sincronização com o banco
-            try:
-                conn.set_session(autocommit=False)
-            except:
-                pass
             return result
         except psycopg2.ProgrammingError as e:
             conn.rollback()

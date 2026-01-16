@@ -11,13 +11,20 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
     credentials: 'include',
   })
   
+  const data = await response.json().catch(() => ({ erro: 'Erro ao processar resposta' }))
+  
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Erro na requisição' }))
-    const errorMessage = error.error || error.message || `Erro ${response.status}`
+    // O backend retorna 'erro' (português) quando há erro
+    const errorMessage = data.erro || data.error || data.message || `Erro ${response.status}`
     throw new Error(errorMessage)
   }
   
-  return response.json()
+  // Verificar se a resposta contém um erro mesmo com status 200
+  if (data.erro) {
+    throw new Error(data.erro)
+  }
+  
+  return data
 }
 
 // CHAMADA PARA MODELOS_CONTROLLER.PY
@@ -111,3 +118,50 @@ export const produtosAPI = {
       method: 'DELETE',
     }),
 };
+
+// CHAMADA PARA LINHA_CONTROLLER.PY
+
+export const linhasAPI = {
+  listar: () => fetchAPI('/linhas'),
+  listarTodos: () => fetchAPI('/linhas'),
+  buscarPorId: (id: number) => fetchAPI(`/linhas/${id}`),
+  criar: (data: { nome: string }) => 
+    fetchAPI('/linhas', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  atualizar: (id: number, data: { nome: string }) =>
+    fetchAPI(`/linhas/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  deletar: (id: number) =>
+    fetchAPI(`/linhas/${id}`, {
+      method: 'DELETE',
+    }),
+}
+
+// CHAMADA PARA SUBLINHA_CONTROLLER.PY
+
+export const sublinhasAPI = {
+  listar: (comLinha: boolean = false) => 
+    fetchAPI(`/sublinhas${comLinha ? '?com_linha=true' : ''}`),
+  listarTodos: (comLinha: boolean = false) => 
+    fetchAPI(`/sublinhas${comLinha ? '?com_linha=true' : ''}`),
+  buscarPorId: (id: number) => fetchAPI(`/sublinhas/${id}`),
+  buscarPorLinha: (linhaId: number) => fetchAPI(`/sublinhas/por-linha/${linhaId}`),
+  criar: (data: { nome: string; linha_id: number }) => 
+    fetchAPI('/sublinhas', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  atualizar: (id: number, data: { nome: string; linha_id: number }) =>
+    fetchAPI(`/sublinhas/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  deletar: (id: number) =>
+    fetchAPI(`/sublinhas/${id}`, {
+      method: 'DELETE',
+    }),
+}

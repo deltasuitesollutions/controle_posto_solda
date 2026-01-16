@@ -8,7 +8,9 @@ from Server.services import (
     rfid_service,
     csv_service,
     funcionarios_service,
-    modelos_service
+    modelos_service,
+    linha_service,
+    sublinha_service
 )
 
 
