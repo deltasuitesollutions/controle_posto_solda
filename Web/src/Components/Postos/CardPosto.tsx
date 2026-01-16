@@ -1,29 +1,43 @@
 import React from 'react'
 
 interface Posto {
-    id: string
+    posto_id: number
     nome: string
+    sublinha_id: number
+    toten_id: number
 }
 
 interface CardPostoProps {
     posto: Posto
+    nomeSublinha: string
     onRemoverPosto: () => void
     onEditarPosto: () => void
 }
 
 const CardPosto: React.FC<CardPostoProps> = ({
     posto,
+    nomeSublinha,
     onRemoverPosto,
     onEditarPosto
 }) => {
     return (
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
             <div className="p-4">
                 <div className="flex items-center justify-between">
                     <div className="flex-1">
                         <div className="flex items-center gap-3">
                             <div>
-                                <h4 className="font-semibold text-gray-900">{posto.nome}</h4>
+                                <h4 className="font-semibold text-gray-900 text-lg">{posto.nome}</h4>
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                    <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                        <i className="bi bi-diagram-3 mr-1"></i>
+                                        {nomeSublinha}
+                                    </span>
+                                    <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                        <i className="bi bi-cpu mr-1"></i>
+                                        Totem {posto.toten_id}
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -50,4 +64,3 @@ const CardPosto: React.FC<CardPostoProps> = ({
 }
 
 export default CardPosto
-

@@ -10,7 +10,6 @@ import ProtectedRoute from "./Components/ProtectedRoute";
 import Produtos from "./Pages/Produtos";
 import Linhas from "./Pages/Linhas";
 import Postos from "./Pages/Postos";
-import Totens from "./Pages/Totens";
 import Operacoes from "./Pages/Operacoes";
 
 
@@ -67,14 +66,6 @@ function App() {
         element={
           <ProtectedRoute onlyAdmin>
             <Postos />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/totens" 
-        element={
-          <ProtectedRoute onlyAdmin>
-            <Totens />
           </ProtectedRoute>
         } 
       />

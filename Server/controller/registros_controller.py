@@ -1,6 +1,3 @@
-"""
-Controller para rotas de registros de produção
-"""
 from typing import Tuple, Union
 from flask import Blueprint, jsonify, request, Response
 from Server.services import producao_service

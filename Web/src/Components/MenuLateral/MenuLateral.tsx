@@ -68,7 +68,6 @@ const MenuLateral = () => {
             { to: '/produtos', title: 'Produtos', icon: 'bi-building-gear', label: 'Cadastro de Produtos' },
             { to: '/linhas', title: 'Linhas', icon: 'bi-layers', label: 'Cadastro de Linhas' },
             { to: '/postos', title: 'Postos', icon: 'bi-pin-map-fill', label: 'Cadastro de Postos' },
-            { to: '/totens', title: 'Totens', icon: 'bi-display-fill', label: 'Cadastro de ID/Totens' },
             { to: '/operacoes', title: 'Operacoes', icon: 'bi-gear', label: 'Cadastro de Operações' }
         );
     }

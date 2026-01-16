@@ -165,3 +165,28 @@ export const sublinhasAPI = {
       method: 'DELETE',
     }),
 }
+
+// CHAMADA PARA POSTO_CONTROLLER.PY
+
+export const postosAPI = {
+  listar: () => fetchAPI('/postos'),
+  listarTodos: () => fetchAPI('/postos'),
+  buscarPorId: (id: number) => fetchAPI(`/postos/${id}`),
+  buscarPorSublinha: (sublinhaId: number) => fetchAPI(`/postos/por-sublinha/${sublinhaId}`),
+  buscarPorToten: (totenId: number) => fetchAPI(`/postos/por-toten/${totenId}`),
+  listarTotensDisponiveis: () => fetchAPI('/postos/totens-disponiveis'),
+  criar: (data: { nome: string; sublinha_id: number; toten_id: number }) => 
+    fetchAPI('/postos', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  atualizar: (id: number, data: { nome?: string; sublinha_id?: number; toten_id?: number }) =>
+    fetchAPI(`/postos/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  deletar: (id: number) =>
+    fetchAPI(`/postos/${id}`, {
+      method: 'DELETE',
+    }),
+}
