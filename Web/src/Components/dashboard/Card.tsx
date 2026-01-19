@@ -16,7 +16,7 @@ interface CardProps {
 }
 
 
-const Card = ({posto, mod, peca_nome, qtd_real, pecas, operador, habilitado, turno, comentario: comentarioInicial, comentario_aviso, registro_id}: CardProps) => {
+const Card = ({posto, mod, peca_nome, qtd_real, operador, habilitado, turno, comentario: comentarioInicial, comentario_aviso, registro_id}: CardProps) => {
   const [comentario, setComentario] = useState(comentarioInicial || '');
   const [salvando, setSalvando] = useState(false);
   const [mensagemSucesso, setMensagemSucesso] = useState(false);
