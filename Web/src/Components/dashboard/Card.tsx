@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface CardProps {
     posto: string;
@@ -7,11 +7,19 @@ interface CardProps {
     operador: string;
     habilitado: boolean;
     turno?: string;
+    comentario?: string;
 }
 
 
-const Card = ({posto, mod, pecas, operador, habilitado, turno}: CardProps) => {
-  const [comentario, setComentario] = useState('');
+const Card = ({posto, mod, pecas, operador, habilitado, turno, comentario: comentarioInicial}: CardProps) => {
+  const [comentario, setComentario] = useState(comentarioInicial || '');
+
+  // Atualizar comentário quando o prop mudar (ex: quando funcionário não habilitado)
+  useEffect(() => {
+    if (comentarioInicial) {
+      setComentario(comentarioInicial);
+    }
+  }, [comentarioInicial]);
 
   return (
     <div className='bg-white rounded-lg shadow border border-gray-200'>
@@ -55,13 +63,20 @@ const Card = ({posto, mod, pecas, operador, habilitado, turno}: CardProps) => {
           </div>
         </div>
 
+        {!habilitado && comentarioInicial && (
+          <div className='bg-red-50 border border-red-200 rounded p-2'>
+            <p className='text-xs font-semibold text-red-800 mb-1'>⚠️ Aviso</p>
+            <p className='text-xs text-red-700'>{comentarioInicial}</p>
+          </div>
+        )}
+
         <div className='border-t border-gray-200 pt-2'>
           <textarea
             value={comentario}
             onChange={(e) => setComentario(e.target.value)}
             placeholder='Observação...'
             className='w-full bg-gray-50 border border-gray-300 rounded px-2 py-1 text-xs resize-none'
-            rows={1}
+            rows={2}
           />
         </div>
       </div>

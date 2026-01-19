@@ -2,17 +2,24 @@ import { useState, useEffect } from 'react';
 import Card from '../Components/dashboard/Card';
 import MenuLateral from '../Components/MenuLateral/MenuLateral';
 import TopBar from '../Components/topBar/TopBar';
+import { dashboardAPI } from '../api/api';
 
 interface CardProps {
-  id: number; 
+  posto_id: number;
   posto: string;
   mod: string;
   pecas: string;
   operador: string;
   habilitado: boolean;
   turno?: string;
+  comentario?: string;
 }
 
+interface Sublinha {
+  sublinha_id: number;
+  nome: string;
+  postos: CardProps[];
+}
 
 const MetricCard = ({ titulo, valor, icone, cor }: { titulo: string; valor: string | number; icone: string; cor: string }) => {
   return (
@@ -35,19 +42,45 @@ const Dashboard = () => {
 
   const [processoSelecionado, setProcessoSelecionado] = useState('sub_linha_chassi');
   const [selectAberto, setSelectAberto] = useState(false);
-  const [listaPostos, setListaPostos] = useState<CardProps[]>([
-    { id: 1, posto: 'Posto 1', mod: 'Sem modelo', pecas: '0/100', operador: 'Sem operador', habilitado: false },
-    { id: 2, posto: 'Posto 2', mod: 'Sem modelo', pecas: '0/100', operador: 'Sem operador', habilitado: false },
-    { id: 3, posto: 'Posto 3', mod: 'Sem modelo', pecas: '0/100', operador: 'Sem operador', habilitado: false },
-    { id: 4, posto: 'Posto 4', mod: 'Sem modelo', pecas: '0/100', operador: 'Sem operador', habilitado: false },
-  ]);
+  const [sublinhas, setSublinhas] = useState<Sublinha[]>([]);
   const [metricas, setMetricas] = useState({
     postosAtivos: 0,
-    totalPostos: 4,
+    totalPostos: 0,
     producaoHoje: 0,
     operadoresAtivos: 0
   });
+  const [carregando, setCarregando] = useState(true);
 
+  // Carregar dados do dashboard
+  useEffect(() => {
+    carregarDadosDashboard();
+    
+    // Atualizar a cada 30 segundos
+    const interval = setInterval(() => {
+      carregarDadosDashboard();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const carregarDadosDashboard = async () => {
+    try {
+      setCarregando(true);
+      const dados = await dashboardAPI.obterDados();
+      
+      if (dados.metricas) {
+        setMetricas(dados.metricas);
+      }
+      
+      if (dados.sublinhas) {
+        setSublinhas(dados.sublinhas);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dados do dashboard:', error);
+    } finally {
+      setCarregando(false);
+    }
+  };
 
   // Fechar dropdown ao clicar fora
   useEffect(() => {
@@ -66,12 +99,6 @@ const Dashboard = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [selectAberto]);
-
-  const sublinhas = [
-    { nome: 'SubLinha 1', postos: listaPostos },
-    { nome: 'SubLinha 2', postos: listaPostos },
-    { nome: 'SubLinha 3', postos: listaPostos },
-  ];
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -150,24 +177,35 @@ const Dashboard = () => {
             />
           </div>
 
-          {sublinhas.map((sublinha, idx) => (
-            <div key={idx} className="mb-6">
-              <h2 className="text-lg font-bold text-gray-800 mb-3">{sublinha.nome}</h2>
-              <div className="grid grid-cols-4 gap-3">
-                {sublinha.postos.map((item) => (
-                  <Card
-                    key={`${sublinha.nome}-${item.id}`}
-                    posto={item.posto}
-                    mod={item.mod}
-                    pecas={item.pecas}
-                    operador={item.operador}
-                    habilitado={item.habilitado}
-                    turno={item.turno}
-                  />
-                ))}
-              </div>
+          {carregando ? (
+            <div className="text-center py-8">
+              <p className="text-gray-600">Carregando dados do dashboard...</p>
             </div>
-          ))}
+          ) : sublinhas.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-600">Nenhum posto encontrado</p>
+            </div>
+          ) : (
+            sublinhas.map((sublinha) => (
+              <div key={sublinha.sublinha_id} className="mb-6">
+                <h2 className="text-lg font-bold text-gray-800 mb-3">{sublinha.nome}</h2>
+                <div className="grid grid-cols-4 gap-3">
+                  {sublinha.postos.map((item) => (
+                    <Card
+                      key={`${sublinha.sublinha_id}-${item.posto_id}`}
+                      posto={item.posto}
+                      mod={item.mod}
+                      pecas={item.pecas}
+                      operador={item.operador}
+                      habilitado={item.habilitado}
+                      turno={item.turno}
+                      comentario={item.comentario}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
         </main>
       </div>
     </div>

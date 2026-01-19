@@ -1,0 +1,259 @@
+"""
+Service para gerenciar dados do dashboard
+"""
+from typing import Dict, Any, List, Optional
+from Server.models.database import DatabaseConnection
+from Server.models.posto import Posto
+from Server.models.funcionario import Funcionario
+from Server.models.modelo import Modelo
+from Server.models.operacao import Operacao
+from Server.models.sublinha import Sublinha
+
+
+def buscar_postos_em_uso() -> Dict[str, Any]:
+    """
+    Busca informações dos postos que estão sendo utilizados (com registros abertos)
+    e verifica se os funcionários estão habilitados para as operações
+    
+    Returns:
+        Dicionário com métricas e lista de postos agrupados por sublinha
+    """
+    try:
+        # Buscar todos os registros abertos (fim IS NULL)
+        query_registros = """
+            SELECT 
+                r.registro_id,
+                r.posto_id,
+                r.funcionario_id,
+                r.modelo_id,
+                r.operacao_id,
+                r.quantidade,
+                r.data_inicio,
+                r.hora_inicio,
+                p.nome as posto_nome,
+                p.sublinha_id,
+                f.nome as funcionario_nome,
+                f.matricula,
+                f.turno,
+                m.nome as modelo_nome,
+                o.operacao_id as operacao_id_check,
+                o.codigo_operacao,
+                o.nome as operacao_nome,
+                s.nome as sublinha_nome
+            FROM registros_producao r
+            INNER JOIN postos p ON r.posto_id = p.posto_id
+            INNER JOIN funcionarios f ON r.funcionario_id = f.funcionario_id
+            INNER JOIN modelos m ON r.modelo_id = m.modelo_id
+            LEFT JOIN operacoes o ON r.operacao_id = o.operacao_id
+            LEFT JOIN sublinhas s ON p.sublinha_id = s.sublinha_id
+            WHERE r.fim IS NULL
+            ORDER BY s.nome, p.nome
+        """
+        
+        registros = DatabaseConnection.execute_query(query_registros, fetch_all=True)
+        
+        # Buscar todos os postos e sublinhas
+        todos_postos = Posto.listar_todos()
+        todas_sublinhas = Sublinha.listar_todas()
+        
+        # Criar dicionário de postos por sublinha (todos os postos)
+        postos_por_sublinha: Dict[int, List[Dict[str, Any]]] = {}
+        
+        # Inicializar com todos os postos (zerados)
+        for posto in todos_postos:
+            if posto.sublinha_id not in postos_por_sublinha:
+                postos_por_sublinha[posto.sublinha_id] = []
+            
+            # Criar estrutura básica do posto (zerada)
+            posto_info = {
+                'posto_id': posto.posto_id,
+                'posto': posto.nome,
+                'sublinha_id': posto.sublinha_id,
+                'mod': 'Sem modelo',
+                'pecas': '0/0',
+                'operador': 'Sem operador',
+                'habilitado': True,
+                'turno': None,
+                'operacao_id': None,
+                'operacao_nome': None,
+                'funcionario_id': None,
+                'registro_id': None,
+                'comentario': None
+            }
+            postos_por_sublinha[posto.sublinha_id].append(posto_info)
+        
+        # Processar registros abertos
+        postos_em_uso = set()
+        funcionarios_ativos = set()
+        total_producao_hoje = 0
+        
+        # Dicionário para rastrear quais postos já foram processados (evitar duplicatas)
+        postos_processados: Dict[int, bool] = {}
+        
+        for registro in registros:
+            registro_id = registro[0]
+            posto_id = registro[1]
+            funcionario_id = registro[2]
+            modelo_id = registro[3]
+            operacao_id = registro[4]
+            quantidade = registro[5] if registro[5] else 0
+            data_inicio = registro[6]
+            hora_inicio = registro[7]
+            posto_nome = registro[8]
+            sublinha_id = registro[9]
+            funcionario_nome = registro[10]
+            matricula = registro[11]
+            turno = registro[12]
+            modelo_nome = registro[13]
+            operacao_id_check = registro[14]
+            codigo_operacao = registro[15]
+            operacao_nome = registro[16]
+            sublinha_nome = registro[17]
+            
+            postos_em_uso.add(posto_id)
+            funcionarios_ativos.add(funcionario_id)
+            
+            # Contar produção de hoje
+            from datetime import datetime
+            hoje = datetime.now().strftime('%Y-%m-%d')
+            if data_inicio and str(data_inicio) == hoje:
+                total_producao_hoje += quantidade if quantidade else 0
+            
+            # Se o posto já foi processado, pular (evitar duplicatas)
+            # Pegar apenas o primeiro registro aberto para cada posto
+            if posto_id in postos_processados:
+                continue
+            
+            # Marcar como processado
+            postos_processados[posto_id] = True
+            
+            # Encontrar o posto na lista e atualizar suas informações
+            if sublinha_id in postos_por_sublinha:
+                posto_info = next(
+                    (p for p in postos_por_sublinha[sublinha_id] if p['posto_id'] == posto_id),
+                    None
+                )
+                
+                if posto_info:
+                    # Verificar se funcionário está habilitado para a operação
+                    habilitado = True
+                    comentario = None
+                    
+                    if operacao_id_check:
+                        # Verificar se funcionário está habilitado para esta operação
+                        query_habilitacao = """
+                            SELECT COUNT(*) 
+                            FROM operacoes_habilitadas 
+                            WHERE funcionario_id = %s AND operacao_id = %s
+                        """
+                        resultado = DatabaseConnection.execute_query(
+                            query_habilitacao, 
+                            (funcionario_id, operacao_id_check), 
+                            fetch_one=True
+                        )
+                        
+                        if resultado and resultado[0] == 0:
+                            habilitado = False
+                            comentario = f"Funcionário {funcionario_nome} não está habilitado para a operação {operacao_nome or codigo_operacao}"
+                    
+                    # Buscar quantidade de peças produzidas hoje neste posto
+                    query_pecas_hoje = """
+                        SELECT COALESCE(SUM(quantidade), 0) as total
+                        FROM registros_producao
+                        WHERE posto_id = %s 
+                        AND data_inicio = %s
+                        AND fim IS NOT NULL
+                    """
+                    resultado_pecas = DatabaseConnection.execute_query(
+                        query_pecas_hoje,
+                        (posto_id, hoje),
+                        fetch_one=True
+                    )
+                    total_pecas = resultado_pecas[0] if resultado_pecas and resultado_pecas[0] else 0
+                    
+                    # Meta de peças (pode ser configurável, por enquanto usar 100 como padrão)
+                    meta_pecas = 100
+                    
+                    # Atualizar informações do posto com dados do registro aberto
+                    posto_info['mod'] = modelo_nome or 'Sem modelo'
+                    posto_info['pecas'] = f"{int(total_pecas)}/{meta_pecas}"
+                    posto_info['operador'] = funcionario_nome or 'Sem operador'
+                    posto_info['habilitado'] = habilitado
+                    posto_info['turno'] = turno
+                    posto_info['operacao_id'] = operacao_id_check
+                    posto_info['operacao_nome'] = operacao_nome or codigo_operacao
+                    posto_info['funcionario_id'] = funcionario_id
+                    posto_info['registro_id'] = registro_id
+                    posto_info['comentario'] = comentario
+        
+        # Organizar por sublinha (sempre mostrar todas as sublinhas com 4 cards cada)
+        # Numeração sequencial de 1 a 12
+        sublinhas_com_postos = []
+        numero_posto_global = 1  # Contador global para numeração de 1 a 12
+        
+        for sublinha in todas_sublinhas:
+            # Sempre adicionar a sublinha, mesmo que não tenha postos
+            postos_da_sublinha = postos_por_sublinha.get(sublinha.sublinha_id, [])
+            
+            # Se tiver mais de 4, limitar a 4
+            postos_da_sublinha = postos_da_sublinha[:4]
+            
+            # Atualizar numeração dos postos existentes para sequencial global
+            for posto in postos_da_sublinha:
+                posto['posto'] = f'Posto {numero_posto_global}'
+                numero_posto_global += 1
+            
+            # Garantir que sempre tenha exatamente 4 cards
+            # Se tiver menos de 4, criar cards vazios
+            while len(postos_da_sublinha) < 4:
+                posto_vazio = {
+                    'posto_id': None,
+                    'posto': f'Posto {numero_posto_global}',
+                    'sublinha_id': sublinha.sublinha_id,
+                    'mod': 'Sem modelo',
+                    'pecas': '0/0',
+                    'operador': 'Sem operador',
+                    'habilitado': True,
+                    'turno': None,
+                    'operacao_id': None,
+                    'operacao_nome': None,
+                    'funcionario_id': None,
+                    'registro_id': None,
+                    'comentario': None
+                }
+                postos_da_sublinha.append(posto_vazio)
+                numero_posto_global += 1
+            
+            sublinhas_com_postos.append({
+                'sublinha_id': sublinha.sublinha_id,
+                'nome': sublinha.nome,
+                'postos': postos_da_sublinha
+            })
+        
+        # Calcular métricas
+        metricas = {
+            'postosAtivos': len(postos_em_uso),
+            'totalPostos': len(todos_postos),
+            'producaoHoje': total_producao_hoje,
+            'operadoresAtivos': len(funcionarios_ativos)
+        }
+        
+        return {
+            'metricas': metricas,
+            'sublinhas': sublinhas_com_postos
+        }
+        
+    except Exception as e:
+        print(f'Erro ao buscar postos em uso: {e}')
+        import traceback
+        traceback.print_exc()
+        return {
+            'metricas': {
+                'postosAtivos': 0,
+                'totalPostos': 0,
+                'producaoHoje': 0,
+                'operadoresAtivos': 0
+            },
+            'sublinhas': []
+        }
+

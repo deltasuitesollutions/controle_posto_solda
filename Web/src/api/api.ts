@@ -318,3 +318,9 @@ export const registrosAPI = {
     return fetchAPI(`/registros${queryString ? `?${queryString}` : ''}`)
   },
 }
+
+// CHAMADA PARA DASHBOARD_CONTROLLER.PY
+
+export const dashboardAPI = {
+  obterDados: () => fetchAPI('/dashboard'),
+}
