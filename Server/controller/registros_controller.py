@@ -6,20 +6,28 @@ registros_bp = Blueprint('registros', __name__, url_prefix='/api/registros')
 
 @registros_bp.route('', methods=['GET'])
 def listar_registros() -> Union[Response, Tuple[Response, int]]:
-    """Lista registros de produção com filtros"""
+    """Lista registros de produção com filtros
+    
+    Query parameters:
+        limit: Limite de registros por página (padrão: 100)
+        offset: Offset para paginação (padrão: 0)
+        data: Filtro por data (formato YYYY-MM-DD)
+        posto: Filtro por nome do posto
+        operacao: Filtro por código da operação
+    """
     try:
         limit = request.args.get('limit', 100, type=int)
         offset = request.args.get('offset', 0, type=int)
         data_filtro = request.args.get('data')
         posto_filtro = request.args.get('posto')
-        turno_filtro = request.args.get('turno')
+        operacao_filtro = request.args.get('operacao')
         
         resultado = producao_service.listar_registros(
             limit=limit,
             offset=offset,
             data=data_filtro,
             posto=posto_filtro,
-            turno=turno_filtro
+            operacao=operacao_filtro
         )
         
         return jsonify(resultado)

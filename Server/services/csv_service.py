@@ -7,15 +7,14 @@ from Server.services.export_service import buscar_registros, processar_linha
 def exportar_registros_csv(
     data_inicio: Optional[str] = None, 
     data_fim: Optional[str] = None, 
-    posto: Optional[str] = None, 
-    turno: Optional[str] = None
+    posto: Optional[str] = None
 ) -> bytes:
-    rows = buscar_registros(data_inicio, data_fim, posto, turno)
+    rows = buscar_registros(data_inicio, data_fim, posto)
     
     output = io.StringIO()
     writer = csv.writer(output, delimiter=';', quoting=csv.QUOTE_MINIMAL, lineterminator='\r\n')
     
-    writer.writerow(['Posto', 'Inicio', 'Fim', 'Turno', 'Data', 'Produto', 'Matrícula', 'Operador'])
+    writer.writerow(['Posto', 'Inicio', 'Fim', 'Data', 'Produto', 'Matrícula', 'Operador'])
     
     for row in rows:
         try:
@@ -24,7 +23,6 @@ def exportar_registros_csv(
                 dados['posto'],
                 dados['hora_inicio'],
                 dados['hora_fim'],
-                dados['turno'],
                 dados['data_str'],
                 dados['modelo_desc'],
                 dados['matricula'],

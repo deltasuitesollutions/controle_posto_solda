@@ -159,7 +159,7 @@ const Operacao = () => {
             setRegistroAberto(null);
           }
         } catch (error) {
-          // Se não encontrar registro, não é erro
+          // Se não encontrar registro, não é erro - limpar estado
           setRegistroAberto(null);
         }
       } else {
@@ -167,6 +167,10 @@ const Operacao = () => {
       }
     };
     verificarRegistroAberto();
+    
+    // Verificar periodicamente para manter sincronizado (a cada 5 segundos)
+    const interval = setInterval(verificarRegistroAberto, 5000);
+    return () => clearInterval(interval);
   }, [operacao, funcionarioMatricula, postoAtual]);
 
   const limparFormulario = () => {
@@ -219,11 +223,41 @@ const Operacao = () => {
     try {
       setCarregando(true);
       
-      const produtoCodigo = produto || modelo;
+      // Verificar se há registro aberto antes de tentar criar novo
+      // Se houver, atualizar o estado para garantir que está sincronizado
+      if (registroAberto) {
+        try {
+          const response = await producaoAPI.buscarRegistroAberto(postoAtual, funcionarioMatricula);
+          if (response.registro) {
+            // Ainda há registro aberto, não pode criar novo
+            alert('Já existe um registro em aberto. Conclua o trabalho atual antes de iniciar um novo.');
+            setCarregando(false);
+            return;
+          } else {
+            // Registro foi fechado, limpar estado
+            setRegistroAberto(null);
+          }
+        } catch (error) {
+          // Se não encontrar registro, está ok, pode criar novo
+          setRegistroAberto(null);
+        }
+      }
+      
+      // Sempre usar o modelo selecionado, que é o que existe no banco
+      if (!modelo) {
+        alert('Selecione um modelo antes de iniciar o trabalho.');
+        setCarregando(false);
+        return;
+      }
+      
       await producaoAPI.registrarEntrada({
         posto: postoAtual,
         funcionario_matricula: funcionarioMatricula,
-        modelo_codigo: produtoCodigo
+        modelo_codigo: modelo,
+        operacao: operacao || undefined,
+        peca: peca || undefined,
+        codigo: codigo || undefined,
+        quantidade: quantidade && typeof quantidade === 'number' ? quantidade : undefined
       });
 
       // Atualizar registro aberto
@@ -237,6 +271,8 @@ const Operacao = () => {
       console.error('Erro ao iniciar trabalho:', error);
       const mensagem = error.message || 'Erro ao iniciar trabalho. Tente novamente.';
       alert(mensagem);
+      // Limpar estado em caso de erro
+      setRegistroAberto(null);
     } finally {
       setCarregando(false);
     }
@@ -256,6 +292,24 @@ const Operacao = () => {
     try {
       setCarregando(true);
       
+      // Verificar se o registro ainda está aberto antes de tentar fechar
+      try {
+        const response = await producaoAPI.buscarRegistroAberto(postoAtual, funcionarioMatricula);
+        if (!response.registro) {
+          // Registro já foi fechado, limpar estado
+          setRegistroAberto(null);
+          alert('Este registro já foi concluído anteriormente.');
+          setCarregando(false);
+          return;
+        }
+      } catch (error) {
+        // Se não encontrar registro, já foi fechado
+        setRegistroAberto(null);
+        alert('Este registro já foi concluído anteriormente.');
+        setCarregando(false);
+        return;
+      }
+      
       await producaoAPI.registrarSaida({
         posto: postoAtual,
         funcionario_matricula: funcionarioMatricula
@@ -268,6 +322,10 @@ const Operacao = () => {
       console.error('Erro ao concluir trabalho:', error);
       const mensagem = error.message || 'Erro ao concluir trabalho. Tente novamente.';
       alert(mensagem);
+      // Limpar estado em caso de erro (registro já fechado, etc)
+      if (mensagem.includes('já está fechado')) {
+        setRegistroAberto(null);
+      }
     } finally {
       setCarregando(false);
     }

@@ -273,6 +273,10 @@ export const producaoAPI = {
     funcionario_matricula?: string
     produto?: string
     modelo_codigo?: string
+    operacao?: string
+    peca?: string
+    codigo?: string
+    quantidade?: number
   }) =>
     fetchAPI('/producao/entrada', {
       method: 'POST',

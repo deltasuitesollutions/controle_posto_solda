@@ -9,8 +9,7 @@ from Server.models import ProducaoRegistro, DatabaseConnection, Funcionario, Mod
 def buscar_registros(
     data_inicio: Optional[str] = None, 
     data_fim: Optional[str] = None, 
-    posto: Optional[str] = None, 
-    turno: Optional[str] = None
+    posto: Optional[str] = None
 ) -> List[Tuple[Any, ...]]:
     """Busca registros para exportação"""
     try:
@@ -18,7 +17,7 @@ def buscar_registros(
             raise Exception("Tabela registros_producao não encontrada")
         
         # Buscar todos os registros (sem limite para exportação)
-        registros = ProducaoRegistro.listar(limit=10000, offset=0, data=None, posto=posto, turno=turno)
+        registros = ProducaoRegistro.listar(limit=10000, offset=0, data=None, posto=posto)
         
        
         if data_inicio or data_fim:
@@ -71,8 +70,7 @@ def buscar_registros(
                 modelo.descricao if modelo else None,
                 registro.data_inicio,
                 registro.hora_inicio or registro.inicio,
-                registro.fim,
-                registro.turno
+                registro.fim
             ))
         
         # Ordenar por data e hora (descendente)
@@ -106,7 +104,7 @@ def formatar_data(data_valor: Union[str, date, datetime, None]) -> Tuple[Optiona
 
 def processar_linha(row: Tuple[Any, ...]) -> Dict[str, Any]:
     """Processa uma linha de dados para exportação"""
-    posto, matricula, nome, modelo_cod, modelo_desc, data_val, hora_inicio, hora_fim, turno = row
+    posto, matricula, nome, modelo_cod, modelo_desc, data_val, hora_inicio, hora_fim = row
     data_obj, data_str = formatar_data(data_val)
     
     return {
@@ -118,6 +116,5 @@ def processar_linha(row: Tuple[Any, ...]) -> Dict[str, Any]:
         'data_obj': data_obj,
         'data_str': data_str,
         'hora_inicio': hora_inicio or '',
-        'hora_fim': hora_fim or '',
-        'turno': turno or ''
+        'hora_fim': hora_fim or ''
     }

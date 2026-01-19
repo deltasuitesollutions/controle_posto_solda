@@ -19,7 +19,6 @@ def exportar_csv() -> Union[Response, Tuple[Response, int]]:
             data_inicio=request.args.get('data_inicio'),
             data_fim=request.args.get('data_fim'),
             posto=request.args.get('posto'),
-            turno=request.args.get('turno')
         )
         
         nome_arquivo = csv_service.gerar_nome_arquivo()
@@ -49,7 +48,6 @@ def exportar_excel() -> Union[Response, Tuple[Response, int]]:
             data_inicio=request.args.get('data_inicio'),
             data_fim=request.args.get('data_fim'),
             posto=request.args.get('posto'),
-            turno=request.args.get('turno')
         )
         
         nome_arquivo = excel_service.gerar_nome_arquivo_excel()
