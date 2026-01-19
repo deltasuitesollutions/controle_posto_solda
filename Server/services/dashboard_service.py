@@ -28,8 +28,10 @@ def buscar_postos_em_uso() -> Dict[str, Any]:
                 r.modelo_id,
                 r.operacao_id,
                 r.quantidade,
+                r.peca_id,
                 r.data_inicio,
                 r.hora_inicio,
+                r.comentarios,
                 p.nome as posto_nome,
                 p.sublinha_id,
                 f.nome as funcionario_nome,
@@ -39,13 +41,15 @@ def buscar_postos_em_uso() -> Dict[str, Any]:
                 o.operacao_id as operacao_id_check,
                 o.codigo_operacao,
                 o.nome as operacao_nome,
-                s.nome as sublinha_nome
+                s.nome as sublinha_nome,
+                pe.nome as peca_nome
             FROM registros_producao r
             INNER JOIN postos p ON r.posto_id = p.posto_id
             INNER JOIN funcionarios f ON r.funcionario_id = f.funcionario_id
             INNER JOIN modelos m ON r.modelo_id = m.modelo_id
             LEFT JOIN operacoes o ON r.operacao_id = o.operacao_id
             LEFT JOIN sublinhas s ON p.sublinha_id = s.sublinha_id
+            LEFT JOIN pecas pe ON r.peca_id = pe.peca_id
             WHERE r.fim IS NULL
             ORDER BY s.nome, p.nome
         """
@@ -70,6 +74,8 @@ def buscar_postos_em_uso() -> Dict[str, Any]:
                 'posto': posto.nome,
                 'sublinha_id': posto.sublinha_id,
                 'mod': 'Sem modelo',
+                'peca_nome': 'Sem peça',
+                'qtd_real': 0,
                 'pecas': '0/0',
                 'operador': 'Sem operador',
                 'habilitado': True,
@@ -78,7 +84,8 @@ def buscar_postos_em_uso() -> Dict[str, Any]:
                 'operacao_nome': None,
                 'funcionario_id': None,
                 'registro_id': None,
-                'comentario': None
+                'comentario': None,
+                'comentario_aviso': None
             }
             postos_por_sublinha[posto.sublinha_id].append(posto_info)
         
@@ -97,18 +104,21 @@ def buscar_postos_em_uso() -> Dict[str, Any]:
             modelo_id = registro[3]
             operacao_id = registro[4]
             quantidade = registro[5] if registro[5] else 0
-            data_inicio = registro[6]
-            hora_inicio = registro[7]
-            posto_nome = registro[8]
-            sublinha_id = registro[9]
-            funcionario_nome = registro[10]
-            matricula = registro[11]
-            turno = registro[12]
-            modelo_nome = registro[13]
-            operacao_id_check = registro[14]
-            codigo_operacao = registro[15]
-            operacao_nome = registro[16]
-            sublinha_nome = registro[17]
+            peca_id = registro[6]
+            data_inicio = registro[7]
+            hora_inicio = registro[8]
+            comentarios_registro = registro[9] if len(registro) > 9 else None
+            posto_nome = registro[10]
+            sublinha_id = registro[11]
+            funcionario_nome = registro[12]
+            matricula = registro[13]
+            turno = registro[14]
+            modelo_nome = registro[15]
+            operacao_id_check = registro[16]
+            codigo_operacao = registro[17]
+            operacao_nome = registro[18]
+            sublinha_nome = registro[19]
+            peca_nome = registro[20] if len(registro) > 20 else None
             
             postos_em_uso.add(posto_id)
             funcionarios_ativos.add(funcionario_id)
@@ -137,7 +147,8 @@ def buscar_postos_em_uso() -> Dict[str, Any]:
                 if posto_info:
                     # Verificar se funcionário está habilitado para a operação
                     habilitado = True
-                    comentario = None
+                    comentario_aviso = None
+                    comentario_registro = comentarios_registro if comentarios_registro else None
                     
                     if operacao_id_check:
                         # Verificar se funcionário está habilitado para esta operação
@@ -154,7 +165,7 @@ def buscar_postos_em_uso() -> Dict[str, Any]:
                         
                         if resultado and resultado[0] == 0:
                             habilitado = False
-                            comentario = f"Funcionário {funcionario_nome} não está habilitado para a operação {operacao_nome or codigo_operacao}"
+                            comentario_aviso = f"Funcionário {funcionario_nome} não está habilitado para a operação {operacao_nome or codigo_operacao}"
                     
                     # Buscar quantidade de peças produzidas hoje neste posto
                     query_pecas_hoje = """
@@ -176,6 +187,8 @@ def buscar_postos_em_uso() -> Dict[str, Any]:
                     
                     # Atualizar informações do posto com dados do registro aberto
                     posto_info['mod'] = modelo_nome or 'Sem modelo'
+                    posto_info['peca_nome'] = peca_nome or 'Sem peça'
+                    posto_info['qtd_real'] = quantidade
                     posto_info['pecas'] = f"{int(total_pecas)}/{meta_pecas}"
                     posto_info['operador'] = funcionario_nome or 'Sem operador'
                     posto_info['habilitado'] = habilitado
@@ -184,7 +197,8 @@ def buscar_postos_em_uso() -> Dict[str, Any]:
                     posto_info['operacao_nome'] = operacao_nome or codigo_operacao
                     posto_info['funcionario_id'] = funcionario_id
                     posto_info['registro_id'] = registro_id
-                    posto_info['comentario'] = comentario
+                    posto_info['comentario'] = comentario_registro
+                    posto_info['comentario_aviso'] = comentario_aviso
         
         # Organizar por sublinha (sempre mostrar todas as sublinhas com 4 cards cada)
         # Numeração sequencial de 1 a 12
@@ -211,6 +225,8 @@ def buscar_postos_em_uso() -> Dict[str, Any]:
                     'posto': f'Posto {numero_posto_global}',
                     'sublinha_id': sublinha.sublinha_id,
                     'mod': 'Sem modelo',
+                    'peca_nome': 'Sem peça',
+                    'qtd_real': 0,
                     'pecas': '0/0',
                     'operador': 'Sem operador',
                     'habilitado': True,
@@ -219,7 +235,8 @@ def buscar_postos_em_uso() -> Dict[str, Any]:
                     'operacao_nome': None,
                     'funcionario_id': None,
                     'registro_id': None,
-                    'comentario': None
+                    'comentario': None,
+                    'comentario_aviso': None
                 }
                 postos_da_sublinha.append(posto_vazio)
                 numero_posto_global += 1

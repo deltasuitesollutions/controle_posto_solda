@@ -8,11 +8,15 @@ interface CardProps {
   posto_id: number;
   posto: string;
   mod: string;
+  peca_nome: string;
+  qtd_real: number;
   pecas: string;
   operador: string;
   habilitado: boolean;
   turno?: string;
   comentario?: string;
+  comentario_aviso?: string;
+  registro_id?: number;
 }
 
 interface Sublinha {
@@ -195,11 +199,15 @@ const Dashboard = () => {
                       key={`${sublinha.sublinha_id}-${item.posto_id}`}
                       posto={item.posto}
                       mod={item.mod}
+                      peca_nome={item.peca_nome || 'Sem peça'}
+                      qtd_real={item.qtd_real || 0}
                       pecas={item.pecas}
                       operador={item.operador}
                       habilitado={item.habilitado}
                       turno={item.turno}
                       comentario={item.comentario}
+                      comentario_aviso={item.comentario_aviso}
+                      registro_id={item.registro_id}
                     />
                   ))}
                 </div>

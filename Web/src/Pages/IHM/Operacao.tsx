@@ -206,8 +206,9 @@ const Operacao = () => {
   };
 
   const handleIniciarTrabalho = async () => {
-    if (!operacao || !modelo) {
-      alert('Selecione a operação e o modelo antes de iniciar o trabalho.');
+    // Validar que todos os campos obrigatórios estão preenchidos
+    if (!validarFormulario()) {
+      alert('Preencha todos os campos obrigatórios antes de iniciar o trabalho.');
       return;
     }
 
@@ -268,7 +269,7 @@ const Operacao = () => {
       }
       
       // Mostrar tela verde de sucesso
-      setMensagemSucesso('TRABALHO INICIADO COM SUCESSO');
+      setMensagemSucesso('Iniciado com sucesso');
       setTimeout(() => {
         setMensagemSucesso(null);
       }, 2000);
@@ -325,7 +326,7 @@ const Operacao = () => {
       limparFormulario();
       
       // Mostrar tela verde de sucesso
-      setMensagemSucesso('TRABALHO FINALIZADO COM SUCESSO');
+      setMensagemSucesso('Concluído com sucesso');
       
       // Redirecionar para a página do leitor após 2 segundos
       setTimeout(() => {
@@ -348,8 +349,8 @@ const Operacao = () => {
   return (
     <div className="bg-gray-50 min-h-screen flex flex-col p-6">
       {mensagemSucesso && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-green-600">
-          <span className="text-white text-5xl font-bold mb-6 animate-fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-green-600">
+          <span className="text-white text-4xl font-bold animate-fade-in text-center">
             {mensagemSucesso}
           </span>
         </div>
@@ -368,7 +369,7 @@ const Operacao = () => {
               
               // Buscar posto da operação selecionada
               if (codigoOperacao) {
-                // Primeiro, tentar buscar da lista de operações IHM (que agora inclui posto)
+                // Primeiro, tentar buscar da lista de operações IHM 
                 const operacaoIHM = operacoes.find((op) => op.codigo === codigoOperacao);
                 if (operacaoIHM && operacaoIHM.posto) {
                   setPostoAtual(operacaoIHM.posto);
@@ -544,7 +545,7 @@ const Operacao = () => {
 
           <button
             onClick={registroAberto ? handleConcluirTrabalho : handleIniciarTrabalho}
-            disabled={carregando || !operacao || !modelo}
+            disabled={carregando || (registroAberto ? false : !operacao || !produto || !modelo || !peca || !codigo || !quantidade)}
             className="px-12 py-6 text-white text-3xl font-bold rounded-lg shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ 
               backgroundColor: registroAberto ? '#28a745' : 'var(--bg-laranja)',

@@ -306,6 +306,9 @@ export const registrosAPI = {
     data?: string
     posto?: string
     operacao?: string
+    turno?: string[]
+    hora_inicio?: string
+    hora_fim?: string
   }) => {
     const queryParams = new URLSearchParams()
     if (params?.limit) queryParams.append('limit', params.limit.toString())
@@ -313,10 +316,20 @@ export const registrosAPI = {
     if (params?.data) queryParams.append('data', params.data)
     if (params?.posto) queryParams.append('posto', params.posto)
     if (params?.operacao) queryParams.append('operacao', params.operacao)
+    if (params?.turno && params.turno.length > 0) {
+      queryParams.append('turno', params.turno.join(','))
+    }
+    if (params?.hora_inicio) queryParams.append('hora_inicio', params.hora_inicio)
+    if (params?.hora_fim) queryParams.append('hora_fim', params.hora_fim)
     
     const queryString = queryParams.toString()
     return fetchAPI(`/registros${queryString ? `?${queryString}` : ''}`)
   },
+  atualizarComentario: (registroId: number, comentario: string) =>
+    fetchAPI(`/registros/${registroId}/comentario`, {
+      method: 'PUT',
+      body: JSON.stringify({ comentario }),
+    }),
 }
 
 // CHAMADA PARA DASHBOARD_CONTROLLER.PY

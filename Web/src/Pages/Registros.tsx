@@ -6,6 +6,7 @@ import { registrosAPI } from '../api/api'
 import { postosAPI } from '../api/api'
 import { funcionariosAPI } from '../api/api'
 import { modelosAPI } from '../api/api'
+import * as XLSX from 'xlsx'
 
 interface Registro {
     id: number
@@ -54,8 +55,9 @@ const Registros = () => {
     // Opções de filtros dinâmicas
     const [opcoesProcesso, setOpcoesProcesso] = useState<{ id: string; label: string }[]>([])
     const [opcoesTurno] = useState<{ id: string; label: string }[]>([
-        { id: 'Turno 1', label: 'Turno 1' },
-        { id: 'Turno 2', label: 'Turno 2' }
+        { id: 'matutino', label: 'Matutino' },
+        { id: 'vespertino', label: 'Vespertino' },
+        { id: 'noturno', label: 'Noturno' }
     ])
     const [opcoesProduto, setOpcoesProduto] = useState<{ id: string; label: string }[]>([])
     const [opcoesMatricula, setOpcoesMatricula] = useState<{ id: string; label: string }[]>([])
@@ -103,6 +105,18 @@ const Registros = () => {
                 params.posto = filtros.processo[0]
             }
 
+            if (filtros.turno.length > 0) {
+                params.turno = filtros.turno
+            }
+
+            if (filtros.horarioInicio) {
+                params.hora_inicio = filtros.horarioInicio
+            }
+
+            if (filtros.horarioFim) {
+                params.hora_fim = filtros.horarioFim
+            }
+
             const resposta = await registrosAPI.listar(params)
             
             // Mapear dados do backend para o formato esperado
@@ -139,7 +153,7 @@ const Registros = () => {
         } finally {
             setCarregando(false)
         }
-    }, [paginaAtual, itensPorPagina, filtros.data, filtros.processo])
+    }, [paginaAtual, itensPorPagina, filtros.data, filtros.processo, filtros.turno, filtros.horarioInicio, filtros.horarioFim])
 
     // Buscar registros quando filtros ou paginação mudarem
     useEffect(() => {
@@ -149,12 +163,9 @@ const Registros = () => {
     // Filtrar registros localmente (filtros adicionais que não são suportados pelo backend)
     const registrosFiltrados = registros.filter(registro => {
         return (
-            (filtros.turno.length === 0 || filtros.turno.includes(String(registro.turno || ''))) &&
             (filtros.produto.length === 0 || filtros.produto.includes(registro.produto || '')) &&
             (filtros.matricula.length === 0 || filtros.matricula.includes(registro.matricula || '')) &&
-            (filtros.operador.length === 0 || filtros.operador.includes(registro.operador || '')) &&
-            (!filtros.horarioInicio || (registro.hora_inicio || '') >= filtros.horarioInicio) &&
-            (!filtros.horarioFim || (registro.hora_fim || registro.hora_inicio || '') <= filtros.horarioFim)
+            (filtros.operador.length === 0 || filtros.operador.includes(registro.operador || ''))
         )
     })
 
@@ -221,7 +232,7 @@ const Registros = () => {
             return
         }
 
-        // Criar CSV
+        // Criar dados para Excel
         const headers = [
             'Data Início', 
             'Data Fim', 
@@ -240,6 +251,7 @@ const Registros = () => {
             'Quantidade', 
             'Comentários'
         ]
+        
         const rows = registrosParaExportar.map(reg => [
             reg.data_inicio ? new Date(reg.data_inicio).toLocaleDateString('pt-BR') : '',
             reg.data_fim ? new Date(reg.data_fim).toLocaleDateString('pt-BR') : '',
@@ -259,25 +271,37 @@ const Registros = () => {
             reg.comentarios || ''
         ])
 
-        // Converter para CSV
-        const csvContent = [
-            headers.join(';'),
-            ...rows.map(row => row.map(cell => `"${cell}"`).join(';'))
-        ].join('\r\n')
+        // Criar workbook e worksheet
+        const wb = XLSX.utils.book_new()
+        const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
 
-        // Adicionar BOM para Excel reconhecer UTF-8
-        const BOM = '\uFEFF'
-        const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' })
-        const link = document.createElement('a')
-        const url = URL.createObjectURL(blob)
-        
+        // Definir larguras de colunas (em caracteres)
+        // Colunas de Data Início e Data Fim com largura maior (20 caracteres)
+        ws['!cols'] = [
+            { wch: 20 }, // Data Início
+            { wch: 20 }, // Data Fim
+            { wch: 12 }, // Totem
+            { wch: 15 }, // Posto
+            { wch: 20 }, // Operador
+            { wch: 12 }, // Matrícula
+            { wch: 10 }, // Turno
+            { wch: 15 }, // Operação
+            { wch: 20 }, // Produto
+            { wch: 20 }, // Modelo
+            { wch: 15 }, // Peça
+            { wch: 18 }, // Código Produção
+            { wch: 12 }, // Hora Início
+            { wch: 12 }, // Hora Fim
+            { wch: 12 }, // Quantidade
+            { wch: 30 }  // Comentários
+        ]
+
+        // Adicionar worksheet ao workbook
+        XLSX.utils.book_append_sheet(wb, ws, 'Registros')
+
+        // Gerar arquivo Excel
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
-        link.setAttribute('href', url)
-        link.setAttribute('download', `registros_${timestamp}.csv`)
-        link.style.visibility = 'hidden'
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
+        XLSX.writeFile(wb, `registros_${timestamp}.xlsx`)
     }
 
     return (
@@ -317,13 +341,23 @@ const Registros = () => {
                                             placeholder="HH:MM"
                                             value={filtros.horarioInicio}
                                             onChange={(e) => {
+                                                const valorAnterior = filtros.horarioInicio
                                                 let valor = e.target.value.replace(/[^0-9:]/g, '')
+                                                
+                                                // Se o usuário está apagando (valor novo é menor), permite apagar tudo
+                                                if (valor.length < valorAnterior.length) {
+                                                    setFiltros({ ...filtros, horarioInicio: valor })
+                                                    return
+                                                }
+                                                
                                                 // Limita a 5 caracteres (HH:MM)
                                                 if (valor.length > 5) valor = valor.slice(0, 5)
-                                                // Adiciona : automaticamente após 2 dígitos
+                                                
+                                                // Adiciona : automaticamente após 2 dígitos apenas se estiver digitando
                                                 if (valor.length === 2 && !valor.includes(':')) {
                                                     valor = valor + ':'
                                                 }
+                                                
                                                 setFiltros({ ...filtros, horarioInicio: valor })
                                             }}
                                             maxLength={5}
@@ -341,13 +375,23 @@ const Registros = () => {
                                             placeholder="HH:MM"
                                             value={filtros.horarioFim}
                                             onChange={(e) => {
+                                                const valorAnterior = filtros.horarioFim
                                                 let valor = e.target.value.replace(/[^0-9:]/g, '')
+                                                
+                                                // Se o usuário está apagando (valor novo é menor), permite apagar tudo
+                                                if (valor.length < valorAnterior.length) {
+                                                    setFiltros({ ...filtros, horarioFim: valor })
+                                                    return
+                                                }
+                                                
                                                 // Limita a 5 caracteres (HH:MM)
                                                 if (valor.length > 5) valor = valor.slice(0, 5)
-                                                // Adiciona : automaticamente após 2 dígitos
+                                                
+                                                // Adiciona : automaticamente após 2 dígitos apenas se estiver digitando
                                                 if (valor.length === 2 && !valor.includes(':')) {
                                                     valor = valor + ':'
                                                 }
+                                                
                                                 setFiltros({ ...filtros, horarioFim: valor })
                                             }}
                                             maxLength={5}
@@ -525,6 +569,13 @@ const Registros = () => {
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                             {registro.data_inicio ? (() => {
                                                                 try {
+                                                                    // Converter YYYY-MM-DD para Date interpretando como horário local
+                                                                    const partes = registro.data_inicio.split('-')
+                                                                    if (partes.length === 3) {
+                                                                        const date = new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2]))
+                                                                        return isNaN(date.getTime()) ? registro.data_inicio : date.toLocaleDateString('pt-BR')
+                                                                    }
+                                                                    // Fallback para formato antigo
                                                                     const date = new Date(registro.data_inicio)
                                                                     return isNaN(date.getTime()) ? registro.data_inicio : date.toLocaleDateString('pt-BR')
                                                                 } catch {
@@ -535,6 +586,13 @@ const Registros = () => {
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                             {registro.data_fim ? (() => {
                                                                 try {
+                                                                    // Converter YYYY-MM-DD para Date interpretando como horário local
+                                                                    const partes = registro.data_fim.split('-')
+                                                                    if (partes.length === 3) {
+                                                                        const date = new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2]))
+                                                                        return isNaN(date.getTime()) ? registro.data_fim : date.toLocaleDateString('pt-BR')
+                                                                    }
+                                                                    // Fallback para formato antigo (pode ser timestamp)
                                                                     const date = new Date(registro.data_fim)
                                                                     return isNaN(date.getTime()) ? registro.data_fim : date.toLocaleDateString('pt-BR')
                                                                 } catch {
