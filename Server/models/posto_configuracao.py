@@ -167,12 +167,21 @@ class PostoConfiguracao:
     @staticmethod
     def buscar_por_posto(posto: str) -> Optional['PostoConfiguracao']:
         """Busca a configuração de um posto específico"""
-        query = """SELECT id, posto, funcionario_matricula, modelo_codigo, turno, data_atualizacao 
-                  FROM posto_configuracao WHERE posto = ?"""
-        row = DatabaseConnection.execute_query(query, (posto,), fetch_one=True)
-        if not row:
+        # Verificar se a tabela existe antes de tentar buscar
+        if not DatabaseConnection.table_exists('posto_configuracao'):
             return None
-        return PostoConfiguracao.from_row(row)
+        
+        try:
+            query = """SELECT id, posto, funcionario_matricula, modelo_codigo, turno, data_atualizacao 
+                      FROM posto_configuracao WHERE posto = ?"""
+            row = DatabaseConnection.execute_query(query, (posto,), fetch_one=True)
+            if not row:
+                return None
+            return PostoConfiguracao.from_row(row)
+        except Exception as e:
+            # Se houver erro (tabela não existe, etc), retornar None
+            print(f"Aviso: Erro ao buscar configuração do posto {posto}: {str(e)}")
+            return None
     
     @staticmethod
     def buscar_posto_do_funcionario(funcionario_matricula: str) -> Optional['PostoConfiguracao']:

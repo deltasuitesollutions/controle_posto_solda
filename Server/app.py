@@ -58,7 +58,9 @@ def register_blueprints(app: Flask):
         produto_controller,
         linha_controller,
         sublinha_controller,
-        posto_controller
+        posto_controller,
+        operacao_controller,
+        ihm_controller
     )
     
     app.register_blueprint(producao_controller.producao_bp)
@@ -73,6 +75,8 @@ def register_blueprints(app: Flask):
     app.register_blueprint(linha_controller.linhas_bp)
     app.register_blueprint(sublinha_controller.sublinhas_bp)
     app.register_blueprint(posto_controller.postos_bp)
+    app.register_blueprint(operacao_controller.operacoes_bp)
+    app.register_blueprint(ihm_controller.ihm_bp)
 
 def register_web_routes(app: Flask):
     @app.route('/', defaults={'path': ''})

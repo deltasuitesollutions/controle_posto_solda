@@ -38,8 +38,12 @@ def criar_modelo():
         nome = data.get('nome')
         pecas = data.get('pecas', [])
 
-        if not codigo or not nome:
-            return jsonify({"erro": "Código e nome são obrigatórios"}), 400
+        if not nome:
+            return jsonify({"erro": "Nome é obrigatório"}), 400
+        
+        # Se codigo não for fornecido, usar nome como codigo
+        if not codigo:
+            codigo = nome
         
         resultado = modelos_service.criar_modelo(codigo, nome, pecas)
 

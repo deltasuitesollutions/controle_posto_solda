@@ -76,12 +76,12 @@ export const pecasAPI = {
 export const funcionariosAPI = {
   listar: () => fetchAPI('/funcionarios'),
   listarTodos: () => fetchAPI('/funcionarios/todos'),
-  criar: (data: { matricula: string; nome: string; ativo?: boolean; tag?: string; turno: string}) => 
+  criar: (data: { matricula: string; nome: string; ativo?: boolean; tag?: string; turno: string; operacoes_ids?: number[]}) => 
     fetchAPI('/funcionarios', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  atualizar: (id: number, data: { nome: string; ativo?: boolean; tag?: string; turno: string }) =>
+  atualizar: (id: number, data: { nome: string; ativo?: boolean; tag?: string; turno: string; operacoes_ids?: number[] }) =>
     fetchAPI(`/funcionarios/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -90,6 +90,8 @@ export const funcionariosAPI = {
     fetchAPI(`/funcionarios/${id}`, {
       method: 'DELETE',
     }),
+  buscarOperacoesHabilitadas: (id: number) =>
+    fetchAPI(`/funcionarios/${id}/operacoes-habilitadas`),
 }
 
 // CHAMADA PARA PRODUTOS_CONTROLLER.PY
@@ -189,4 +191,104 @@ export const postosAPI = {
     fetchAPI(`/postos/${id}`, {
       method: 'DELETE',
     }),
+}
+
+// CHAMADA PARA OPERACAO_CONTROLLER.PY
+
+export const operacoesAPI = {
+  listar: () => fetchAPI('/operacoes'),
+  listarTodos: () => fetchAPI('/operacoes'),
+  buscarPorId: (id: number) => fetchAPI(`/operacoes/${id}`),
+  criar: (data: { 
+    operacao: string
+    produto: string
+    modelo: string
+    linha: string
+    posto: string
+    totens?: string[]
+    pecas?: string[]
+    codigos?: string[]
+  }) => 
+    fetchAPI('/operacoes', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  atualizar: (id: number, data: { 
+    operacao?: string
+    produto?: string
+    modelo?: string
+    linha?: string
+    posto?: string
+    totens?: string[]
+    pecas?: string[]
+    codigos?: string[]
+  }) =>
+    fetchAPI(`/operacoes/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  deletar: (id: number) =>
+    fetchAPI(`/operacoes/${id}`, {
+      method: 'DELETE',
+    }),
+}
+
+// CHAMADA PARA IHM_CONTROLLER.PY
+
+export const ihmAPI = {
+  validarRfid: (codigo: string) =>
+    fetchAPI('/ihm/validar-rfid', {
+      method: 'POST',
+      body: JSON.stringify({ codigo }),
+    }),
+  
+  listarOperacoes: () => fetchAPI('/ihm/operacoes'),
+  
+  listarPostos: () => fetchAPI('/ihm/postos'),
+  
+  listarProdutos: () => fetchAPI('/ihm/produtos'),
+  
+  listarModelos: () => fetchAPI('/ihm/modelos'),
+  
+  registrarProducao: (data: {
+    operacao: string
+    produto?: string
+    modelo: string
+    peca?: string
+    codigo?: string
+    quantidade: number
+    operador: string
+  }) =>
+    fetchAPI('/ihm/registrar-producao', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+}
+
+// CHAMADA PARA PRODUCAO_CONTROLLER.PY
+
+export const producaoAPI = {
+  registrarEntrada: (data: {
+    posto: string
+    funcionario_matricula?: string
+    produto?: string
+    modelo_codigo?: string
+  }) =>
+    fetchAPI('/producao/entrada', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  
+  registrarSaida: (data: {
+    registro_id?: number
+    posto?: string
+    funcionario_matricula?: string
+  }) =>
+    fetchAPI('/producao/saida', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  
+  buscarRegistroAberto: (posto: string, funcionario_matricula: string) =>
+    fetchAPI(`/producao/registro-aberto?posto=${encodeURIComponent(posto)}&funcionario_matricula=${encodeURIComponent(funcionario_matricula)}`),
 }

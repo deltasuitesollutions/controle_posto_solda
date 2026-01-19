@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import TopBar from '../Components/topBar/TopBar'
 import MenuLateral from '../Components/MenuLateral/MenuLateral'
 import { Paginacao } from '../Components/Compartilhados/paginacao'
+import { operacoesAPI, produtosAPI, modelosAPI, linhasAPI, postosAPI } from '../api/api'
 
 interface Operacao {
     id: string
@@ -15,11 +16,38 @@ interface Operacao {
     codigos: string[]
 }
 
+interface Produto {
+    id: number
+    nome: string
+}
+
+interface Modelo {
+    id: number
+    nome: string
+}
+
+interface Linha {
+    linha_id: number
+    nome: string
+}
+
+interface Posto {
+    posto_id: number
+    nome: string
+}
+
+interface Toten {
+    id: number
+    nome: string
+}
+
 const Operacoes = () => {
     const [abaAtiva, setAbaAtiva] = useState<'cadastrar' | 'listar'>('cadastrar')
     const [operacoes, setOperacoes] = useState<Operacao[]>([])
     const [paginaAtual, setPaginaAtual] = useState(1)
     const [itensPorPagina] = useState(10)
+    const [carregando, setCarregando] = useState(false)
+    const [erro, setErro] = useState<string | null>(null)
 
     const [operacao, setOperacao] = useState('')
     const [produto, setProduto] = useState('')
@@ -34,11 +62,70 @@ const Operacoes = () => {
     const [codigoTemp, setCodigoTemp] = useState('')
     const [operacaoEditandoId, setOperacaoEditandoId] = useState<string | null>(null)
 
-    const produtos = ['Produto A', 'Produto B', 'Produto C']
-    const modelos = ['Modelo 1', 'Modelo 2', 'Modelo 3']
-    const linhas = ['Linha 1', 'Linha 2', 'Linha 3']
-    const postos = ['Posto 1', 'Posto 2', 'Posto 3']
-    const totensDisponiveis = ['Toten 1', 'Toten 2', 'Toten 3', 'ID-001', 'ID-002']
+    // Dados para os dropdowns
+    const [produtos, setProdutos] = useState<Produto[]>([])
+    const [modelos, setModelos] = useState<Modelo[]>([])
+    const [linhas, setLinhas] = useState<Linha[]>([])
+    const [postos, setPostos] = useState<Posto[]>([])
+    const [totensDisponiveis, setTotensDisponiveis] = useState<Toten[]>([])
+
+    // Carregar dados ao montar o componente
+    useEffect(() => {
+        carregarDadosDropdowns()
+        if (abaAtiva === 'listar') {
+            carregarOperacoes()
+        }
+    }, [abaAtiva])
+
+    const carregarDadosDropdowns = async () => {
+        try {
+            // Carregar produtos
+            const produtosData = await produtosAPI.listar()
+            setProdutos(produtosData.map((p: any) => ({ id: p.id, nome: p.nome })))
+
+            // Carregar modelos
+            const modelosData = await modelosAPI.listarTodos()
+            setModelos(modelosData.map((m: any) => ({ id: m.id, nome: m.nome })))
+
+            // Carregar linhas
+            const linhasData = await linhasAPI.listarTodos()
+            setLinhas(linhasData.map((l: any) => ({ linha_id: l.linha_id, nome: l.nome })))
+
+            // Carregar postos
+            const postosData = await postosAPI.listarTodos()
+            setPostos(postosData.map((p: any) => ({ posto_id: p.posto_id, nome: p.nome })))
+
+            // Carregar totens
+            const totensData = await postosAPI.listarTotensDisponiveis()
+            setTotensDisponiveis(totensData)
+        } catch (error) {
+            console.error('Erro ao carregar dados dos dropdowns:', error)
+        }
+    }
+
+    const carregarOperacoes = async () => {
+        try {
+            setCarregando(true)
+            setErro(null)
+            const dados = await operacoesAPI.listarTodos()
+            setOperacoes(dados.map((op: any) => ({
+                id: op.id,
+                operacao: op.operacao,
+                produto: op.produto,
+                modelo: op.modelo,
+                linha: op.linha,
+                posto: op.posto,
+                totens: op.totens || [],
+                pecas: op.pecas || [],
+                codigos: op.codigos || []
+            })))
+        } catch (error) {
+            console.error('Erro ao carregar operações:', error)
+            setErro(error instanceof Error ? error.message : 'Erro ao carregar operações')
+        } finally {
+            setCarregando(false)
+        }
+    }
 
     const adicionarToten = () => {
         if (!totenTemp.trim() || totens.includes(totenTemp.trim())) return
@@ -85,51 +172,66 @@ const Operacoes = () => {
         setOperacaoEditandoId(null)
     }
 
-    const handleSalvar = (e: React.FormEvent) => {
+    const handleSalvar = async (e: React.FormEvent) => {
         e.preventDefault()
         
         if (!operacao.trim() || !produto || !modelo || !linha || !posto) {
+            alert('Preencha todos os campos obrigatórios')
             return
         }
 
-        if (operacaoEditandoId) {
-            setOperacoes(operacoes.map(o => 
-                o.id === operacaoEditandoId 
-                    ? {
-                        id: operacaoEditandoId,
-                        operacao: operacao.trim(),
-                        produto,
-                        modelo,
-                        linha,
-                        posto,
-                        totens: [...totens],
-                        pecas: [...pecas],
-                        codigos: [...codigos]
-                    }
-                    : o
-            ))
-            setOperacaoEditandoId(null)
-        } else {
-            const novaOperacao: Operacao = {
-                id: Date.now().toString(),
+        try {
+            setErro(null)
+            setCarregando(true)
+
+            const dadosOperacao = {
                 operacao: operacao.trim(),
                 produto,
                 modelo,
                 linha,
                 posto,
-                totens: [...totens],
-                pecas: [...pecas],
-                codigos: [...codigos]
+                totens: totens.length > 0 ? totens : undefined,
+                pecas: pecas.length > 0 ? pecas : undefined,
+                codigos: codigos.length > 0 ? codigos : undefined
             }
-            setOperacoes([...operacoes, novaOperacao])
-        }
 
-        limparFormulario()
-        setAbaAtiva('listar')
+            if (operacaoEditandoId) {
+                // Atualizar operação existente
+                await operacoesAPI.atualizar(parseInt(operacaoEditandoId), dadosOperacao)
+                alert('Operação atualizada com sucesso!')
+            } else {
+                // Criar nova operação
+                await operacoesAPI.criar(dadosOperacao)
+                alert('Operação cadastrada com sucesso!')
+            }
+
+            limparFormulario()
+            setAbaAtiva('listar')
+            await carregarOperacoes()
+        } catch (error) {
+            console.error('Erro ao salvar operação:', error)
+            setErro(error instanceof Error ? error.message : 'Erro ao salvar operação')
+            alert(`Erro: ${error instanceof Error ? error.message : 'Erro ao salvar operação'}`)
+        } finally {
+            setCarregando(false)
+        }
     }
 
-    const handleRemoverOperacao = (operacaoId: string) => {
-        setOperacoes(operacoes.filter(o => o.id !== operacaoId))
+    const handleRemoverOperacao = async (operacaoId: string) => {
+        if (!window.confirm('Tem certeza que deseja remover esta operação?')) {
+            return
+        }
+
+        try {
+            setErro(null)
+            await operacoesAPI.deletar(parseInt(operacaoId))
+            alert('Operação removida com sucesso!')
+            await carregarOperacoes()
+        } catch (error) {
+            console.error('Erro ao remover operação:', error)
+            setErro(error instanceof Error ? error.message : 'Erro ao remover operação')
+            alert(`Erro: ${error instanceof Error ? error.message : 'Erro ao remover operação'}`)
+        }
     }
 
     const handleEditarOperacao = (op: Operacao) => {
@@ -221,7 +323,7 @@ const Operacoes = () => {
                                                 >
                                                     <option value="">Selecione</option>
                                                     {produtos.map((p) => (
-                                                        <option key={p} value={p}>{p}</option>
+                                                        <option key={p.id} value={p.nome}>{p.nome}</option>
                                                     ))}
                                                 </select>
                                             </div>
@@ -238,7 +340,7 @@ const Operacoes = () => {
                                                 >
                                                     <option value="">Selecione</option>
                                                     {modelos.map((m) => (
-                                                        <option key={m} value={m}>{m}</option>
+                                                        <option key={m.id} value={m.nome}>{m.nome}</option>
                                                     ))}
                                                 </select>
                                             </div>
@@ -255,7 +357,7 @@ const Operacoes = () => {
                                                 >
                                                     <option value="">Selecione</option>
                                                     {linhas.map((l) => (
-                                                        <option key={l} value={l}>{l}</option>
+                                                        <option key={l.linha_id} value={l.nome}>{l.nome}</option>
                                                     ))}
                                                 </select>
                                             </div>
@@ -272,7 +374,7 @@ const Operacoes = () => {
                                                 >
                                                     <option value="">Selecione</option>
                                                     {postos.map((p) => (
-                                                        <option key={p} value={p}>{p}</option>
+                                                        <option key={p.posto_id} value={p.nome}>{p.nome}</option>
                                                     ))}
                                                 </select>
                                             </div>
@@ -289,7 +391,7 @@ const Operacoes = () => {
                                                     >
                                                         <option value="">Selecione</option>
                                                         {totensDisponiveis.map((t) => (
-                                                            <option key={t} value={t}>{t}</option>
+                                                            <option key={t.id} value={t.nome}>{t.nome}</option>
                                                         ))}
                                                     </select>
                                                     <button
@@ -415,15 +517,25 @@ const Operacoes = () => {
                                                 type="submit"
                                                 className="px-4 py-2 text-white rounded-md disabled:opacity-50"
                                                 style={{ backgroundColor: 'var(--bg-azul)' }}
-                                                disabled={!operacao.trim() || !produto || !modelo || !linha || !posto}
+                                                disabled={!operacao.trim() || !produto || !modelo || !linha || !posto || carregando}
                                             >
-                                                {operacaoEditandoId ? 'Atualizar' : 'Salvar'}
+                                                {carregando ? 'Salvando...' : (operacaoEditandoId ? 'Atualizar' : 'Salvar')}
                                             </button>
                                         </div>
                                     </form>
                                 ) : (
                                     <div>
-                                        {operacoes.length > 0 ? (
+                                        {erro && (
+                                            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                                                {erro}
+                                            </div>
+                                        )}
+                                        {carregando ? (
+                                            <div className="flex flex-col items-center justify-center py-12">
+                                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                                                <p className="text-gray-500">Carregando operações...</p>
+                                            </div>
+                                        ) : operacoes.length > 0 ? (
                                             <div className="overflow-x-auto">
                                                 <table className="w-full">
                                                     <thead className="bg-gray-50">
@@ -433,6 +545,9 @@ const Operacoes = () => {
                                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Modelo</th>
                                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Linha</th>
                                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Posto</th>
+                                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Totens</th>
+                                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Peças</th>
+                                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Códigos</th>
                                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ações</th>
                                                         </tr>
                                                     </thead>
@@ -444,6 +559,45 @@ const Operacoes = () => {
                                                                 <td className="px-4 py-4 text-sm text-gray-900">{op.modelo}</td>
                                                                 <td className="px-4 py-4 text-sm text-gray-900">{op.linha}</td>
                                                                 <td className="px-4 py-4 text-sm text-gray-900">{op.posto}</td>
+                                                                <td className="px-4 py-4 text-sm text-gray-900">
+                                                                    {op.totens && op.totens.length > 0 ? (
+                                                                        <div className="flex flex-wrap gap-1">
+                                                                            {op.totens.map((toten, idx) => (
+                                                                                <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
+                                                                                    {toten}
+                                                                                </span>
+                                                                            ))}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <span className="text-gray-400">-</span>
+                                                                    )}
+                                                                </td>
+                                                                <td className="px-4 py-4 text-sm text-gray-900">
+                                                                    {op.pecas && op.pecas.length > 0 ? (
+                                                                        <div className="flex flex-wrap gap-1">
+                                                                            {op.pecas.map((peca, idx) => (
+                                                                                <span key={idx} className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">
+                                                                                    {peca}
+                                                                                </span>
+                                                                            ))}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <span className="text-gray-400">-</span>
+                                                                    )}
+                                                                </td>
+                                                                <td className="px-4 py-4 text-sm text-gray-900">
+                                                                    {op.codigos && op.codigos.length > 0 ? (
+                                                                        <div className="flex flex-wrap gap-1">
+                                                                            {op.codigos.map((codigo, idx) => (
+                                                                                <span key={idx} className="px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs">
+                                                                                    {codigo}
+                                                                                </span>
+                                                                            ))}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <span className="text-gray-400">-</span>
+                                                                    )}
+                                                                </td>
                                                                 <td className="px-4 py-4 text-sm">
                                                                     <div className="flex items-center gap-2">
                                                                         <button

@@ -1,5 +1,6 @@
 from typing import Dict, Any, List
 from Server.models import Modelo
+from Server.models.database import DatabaseConnection
 from Server.services import pecas_service  
 
 def listar_modelos():
@@ -13,12 +14,14 @@ def listar_modelos():
             resultado.append({
                 'id': modelo.id,
                 'codigo': modelo.codigo,
-                'nome': modelo.nome,
+                'nome': modelo.descricao,  # Usar descricao ao invés de nome
                 'pecas': pecas
             })
         return resultado
     except Exception as erro:
         print(f'Erro ao listar modelos: {erro}')
+        import traceback
+        traceback.print_exc()
         return []
     
 def buscar_modelo_por_codigo(codigo):  
@@ -34,7 +37,7 @@ def buscar_modelo_por_codigo(codigo):
         return {
             'id': modelo.id,
             'codigo': modelo.codigo,
-            'nome': modelo.nome,
+            'nome': modelo.descricao,  # Usar descricao ao invés de nome
             'pecas': pecas
         }
     except Exception as erro:
@@ -44,15 +47,15 @@ def buscar_modelo_por_codigo(codigo):
 def criar_modelo(codigo, nome, pecas=None):
     """Cria um novo modelo com as suas peças"""
     try:
-        # Verificar se já existe modelo com o mesmo nome (codigo não existe no banco)
-        # Usar buscar_por_codigo que busca por nome internamente
-        modelo_existente = Modelo.buscar_por_codigo(nome)
-        if modelo_existente:
+        # Verificar se já existe modelo com o mesmo nome
+        query = "SELECT modelo_id FROM modelos WHERE nome = %s"
+        resultado = DatabaseConnection.execute_query(query, (nome,), fetch_one=True)
+        if resultado:
             return {'erro': f'Já existe um modelo com o nome {nome}'}
         
         # Criar modelo (codigo não é salvo no banco, apenas nome)
-        novo_modelo = Modelo(codigo=codigo, nome=nome)
-        novo_modelo.salvar()
+        novo_modelo = Modelo(codigo=codigo, descricao=nome)
+        novo_modelo.save()
 
         # Criar peças se houver usando o service
         if pecas and novo_modelo.id:
@@ -82,8 +85,8 @@ def deletar_modelo(modelo_id):
             print(f'Modelo com ID {modelo_id} não encontrado')
             return {'erro': f'Modelo com ID {modelo_id} não encontrado'}
         
-        print(f'Modelo encontrado: ID={modelo.id}, Nome={modelo.nome}')
-        modelo.deletar()
+        print(f'Modelo encontrado: ID={modelo.id}, Nome={modelo.descricao}')
+        modelo.delete()
         print(f'Modelo {modelo_id} deletado com sucesso')
         
         return {
@@ -109,15 +112,16 @@ def atualizar_modelo(modelo_id, codigo=None, nome=None, pecas=None):
             modelo.codigo = codigo
         
         # Verificar se nome foi alterado e se já existe outro modelo com esse nome
-        if nome and nome != modelo.nome:
-            modelo_com_mesmo_nome = Modelo.buscar_por_codigo(nome)  # busca por nome
-            if modelo_com_mesmo_nome and modelo_com_mesmo_nome.id != modelo.id:
+        if nome and nome != modelo.descricao:
+            query = "SELECT modelo_id FROM modelos WHERE nome = %s AND modelo_id != %s"
+            resultado = DatabaseConnection.execute_query(query, (nome, modelo.id), fetch_one=True)
+            if resultado:
                 return {'erro': f'Outro modelo já usa o nome {nome}'}
-            modelo.nome = nome
+            modelo.descricao = nome
         elif nome:
-            modelo.nome = nome
+            modelo.descricao = nome
         
-        modelo.salvar()
+        modelo.save()
 
         # Atualizar peças se fornecidas
         if pecas is not None and modelo.id:

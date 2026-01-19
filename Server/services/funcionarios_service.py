@@ -1,5 +1,6 @@
 from typing import Dict, Any, List, Optional
 from Server.models import Funcionario
+from Server.models.database import DatabaseConnection
 
 
 # Lista todos os funcionários ativos
@@ -28,7 +29,17 @@ def listar_funcionarios() -> List[Dict[str, Any]]:
 # Lista todos os funcionários (ativos e inativos)
 def listar_todos_funcionarios() -> List[Dict[str, Any]]:
     funcionarios = Funcionario.listar_todos()
-    return [f.to_dict() for f in funcionarios]
+    resultado = []
+    
+    for f in funcionarios:
+        funcionario_dict = f.to_dict()
+        # Buscar operações habilitadas para cada funcionário
+        if f.funcionario_id:
+            operacoes_habilitadas = buscar_operacoes_habilitadas(f.funcionario_id)
+            funcionario_dict['operacoes_habilitadas'] = operacoes_habilitadas
+        resultado.append(funcionario_dict)
+    
+    return resultado
 
 
 # Cria um novo funcionário
@@ -37,7 +48,8 @@ def criar_funcionario(
     nome: str, 
     ativo: bool = True, 
     tag_id: Optional[str] = None,
-    turno: Optional[str] = None
+    turno: Optional[str] = None,
+    operacoes_ids: Optional[List[int]] = None
 ) -> Dict[str, Any]:
     
     if not matricula or not matricula.strip():
@@ -62,7 +74,18 @@ def criar_funcionario(
         tag_id=tag_id,
         turno=turno
     )
-    return funcionario.to_dict()
+    
+    # Habilitar operações se fornecidas
+    if operacoes_ids and funcionario.funcionario_id:
+        atualizar_operacoes_habilitadas(funcionario.funcionario_id, operacoes_ids)
+    
+    # Buscar operações habilitadas para retornar
+    funcionario_dict = funcionario.to_dict()
+    if funcionario.funcionario_id:
+        operacoes_habilitadas = buscar_operacoes_habilitadas(funcionario.funcionario_id)
+        funcionario_dict['operacoes_habilitadas'] = operacoes_habilitadas
+    
+    return funcionario_dict
 
 
 # Atualiza um funcionário existente
@@ -71,7 +94,8 @@ def atualizar_funcionario(
     nome: str, 
     ativo: bool, 
     tag_id: Optional[str] = None,
-    turno: Optional[str] = None
+    turno: Optional[str] = None,
+    operacoes_ids: Optional[List[int]] = None
 ) -> Dict[str, Any]:
     
     funcionario = Funcionario.buscar_por_id(funcionario_id)
@@ -94,7 +118,17 @@ def atualizar_funcionario(
         funcionario.tag_id = tag_id
     
     funcionario.save()
-    return funcionario.to_dict()
+    
+    # Atualizar operações habilitadas se fornecidas
+    if operacoes_ids is not None:
+        atualizar_operacoes_habilitadas(funcionario_id, operacoes_ids)
+    
+    # Buscar operações habilitadas para retornar
+    funcionario_dict = funcionario.to_dict()
+    operacoes_habilitadas = buscar_operacoes_habilitadas(funcionario_id)
+    funcionario_dict['operacoes_habilitadas'] = operacoes_habilitadas
+    
+    return funcionario_dict
 
 
 # Remove um funcionário do sistema
@@ -122,3 +156,79 @@ def buscar_por_matricula(matricula: str) -> Optional[Dict[str, Any]]:
     if not funcionario:
         return None
     return funcionario.to_dict()
+
+
+# Função para buscar operações habilitadas de um funcionário
+def buscar_operacoes_habilitadas(funcionario_id: int) -> List[Dict[str, Any]]:
+    """Busca todas as operações habilitadas para um funcionário"""
+    try:
+        query = """
+            SELECT 
+                oh.operacao_habilitada_id,
+                oh.operacao_id,
+                oh.data_habilitacao,
+                o.codigo_operacao,
+                o.nome as nome_operacao
+            FROM operacoes_habilitadas oh
+            INNER JOIN operacoes o ON oh.operacao_id = o.operacao_id
+            WHERE oh.funcionario_id = %s
+            ORDER BY oh.data_habilitacao DESC
+        """
+        rows = DatabaseConnection.execute_query(query, (funcionario_id,), fetch_all=True)
+        
+        if not rows:
+            return []
+        
+        operacoes = []
+        for row in rows:
+            operacoes.append({
+                'operacao_habilitada_id': row[0],
+                'operacao_id': row[1],
+                'data_habilitacao': row[2].isoformat() if row[2] else None,
+                'codigo_operacao': row[3],
+                'nome': row[4] if row[4] else row[3]  # Usar nome se existir, senão código
+            })
+        
+        return operacoes
+    except Exception as e:
+        print(f'Erro ao buscar operações habilitadas: {e}')
+        return []
+
+
+# Função para atualizar operações habilitadas de um funcionário
+def atualizar_operacoes_habilitadas(funcionario_id: int, operacoes_ids: List[int]) -> None:
+    """
+    Atualiza as operações habilitadas de um funcionário.
+    Remove todas as operações existentes e adiciona as novas.
+    
+    Args:
+        funcionario_id: ID do funcionário
+        operacoes_ids: Lista de IDs das operações a serem habilitadas
+    """
+    from datetime import datetime
+    
+    # Verificar se o funcionário existe
+    funcionario = Funcionario.buscar_por_id(funcionario_id)
+    if not funcionario:
+        raise Exception(f"Funcionário com ID {funcionario_id} não encontrado")
+    
+    # Remover todas as operações habilitadas existentes
+    query_delete = "DELETE FROM operacoes_habilitadas WHERE funcionario_id = %s"
+    DatabaseConnection.execute_query(query_delete, (funcionario_id,))
+    
+    # Adicionar as novas operações habilitadas
+    if operacoes_ids:
+        data_habilitacao = datetime.now()
+        for operacao_id in operacoes_ids:
+            # Verificar se a operação existe
+            from Server.models.operacao import Operacao
+            operacao = Operacao.buscar_por_id(operacao_id)
+            if not operacao:
+                print(f'Aviso: Operação com ID {operacao_id} não encontrada, ignorando...')
+                continue
+            
+            query_insert = """
+                INSERT INTO operacoes_habilitadas (funcionario_id, operacao_id, data_habilitacao)
+                VALUES (%s, %s, %s)
+            """
+            DatabaseConnection.execute_query(query_insert, (funcionario_id, operacao_id, data_habilitacao))

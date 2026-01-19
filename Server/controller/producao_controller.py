@@ -11,6 +11,18 @@ producao_bp = Blueprint('producao', __name__, url_prefix='/api/producao')
 def registrar_entrada() -> Union[Response, Tuple[Response, int]]:
     """Registra entrada do operador na cabine
     
+    Request body:
+    {
+        "posto": "P1",  // obrigatório
+        "funcionario_matricula": "12345",  // opcional, busca da config se não fornecido
+        "produto": "PROD001",  // opcional, usa modelo_codigo se não fornecido
+        "modelo_codigo": "MOD001",  // opcional, compatibilidade
+        "operacao": "OP001",  // opcional, código da operação
+        "peca": "PEC001",  // opcional, código da peça
+        "codigo": "COD001",  // opcional, código de produção
+        "quantidade": 10  // opcional, quantidade produzida
+    }
+    
     Se funcionario_matricula ou modelo_codigo não forem fornecidos,
     o sistema busca da configuração do posto.
     """
@@ -27,7 +39,11 @@ def registrar_entrada() -> Union[Response, Tuple[Response, int]]:
             posto=data['posto'],
             funcionario_matricula=data.get('funcionario_matricula'),
             produto=data.get('produto'),
-            modelo_codigo=data.get('modelo_codigo')  # Compatibilidade
+            modelo_codigo=data.get('modelo_codigo'),  # Compatibilidade
+            operacao=data.get('operacao'),
+            peca=data.get('peca'),
+            codigo=data.get('codigo'),
+            quantidade=data.get('quantidade')
         )
         
         return jsonify({
@@ -41,7 +57,16 @@ def registrar_entrada() -> Union[Response, Tuple[Response, int]]:
 
 @producao_bp.route('/saida', methods=['POST'])
 def registrar_saida() -> Union[Response, Tuple[Response, int]]:
-    """Registra saída do operador da cabine"""
+    """Registra saída do operador da cabine
+    
+    Request body:
+    {
+        "registro_id": 123,  // opcional
+        "posto": "P1",  // opcional, necessário se registro_id não fornecido
+        "funcionario_matricula": "12345",  // opcional, necessário se registro_id não fornecido
+        "quantidade": 10  // opcional, quantidade produzida para atualizar
+    }
+    """
     try:
         data: Optional[Dict[str, Any]] = request.json
         
@@ -61,7 +86,8 @@ def registrar_saida() -> Union[Response, Tuple[Response, int]]:
         resultado = producao_service.registrar_saida(
             registro_id=data.get('registro_id'),
             posto=data.get('posto'),
-            funcionario_matricula=data.get('funcionario_matricula')
+            funcionario_matricula=data.get('funcionario_matricula'),
+            quantidade=data.get('quantidade')
         )
         
         return jsonify({
@@ -74,6 +100,41 @@ def registrar_saida() -> Union[Response, Tuple[Response, int]]:
         import traceback
         print(f"Erro ao registrar saída: {str(e)}")
         print(traceback.format_exc())
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+@producao_bp.route('/registro-aberto', methods=['GET'])
+def buscar_registro_aberto() -> Union[Response, Tuple[Response, int]]:
+    """Busca registro aberto para um posto e funcionário"""
+    try:
+        posto = request.args.get('posto')
+        funcionario_matricula = request.args.get('funcionario_matricula')
+        
+        if not posto or not funcionario_matricula:
+            return jsonify({
+                "status": "error",
+                "message": "É necessário fornecer posto e funcionario_matricula"
+            }), 400
+        
+        resultado = producao_service.buscar_registro_aberto(
+            posto=posto,
+            funcionario_matricula=funcionario_matricula
+        )
+        
+        return jsonify({
+            "status": "success",
+            "registro": resultado
+        })
+        
+    except Exception as e:
+        # Se não encontrar registro, retornar sucesso com registro null
+        if "Nenhum registro" in str(e):
+            return jsonify({
+                "status": "success",
+                "registro": None
+            })
         return jsonify({
             "status": "error",
             "message": str(e)

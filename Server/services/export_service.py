@@ -14,8 +14,8 @@ def buscar_registros(
 ) -> List[Tuple[Any, ...]]:
     """Busca registros para exportação"""
     try:
-        if not DatabaseConnection.table_exists('producao_registros'):
-            raise Exception("Tabela producao_registros não encontrada")
+        if not DatabaseConnection.table_exists('registros_producao'):
+            raise Exception("Tabela registros_producao não encontrada")
         
         # Buscar todos os registros (sem limite para exportação)
         registros = ProducaoRegistro.listar(limit=10000, offset=0, data=None, posto=posto, turno=turno)
@@ -57,18 +57,21 @@ def buscar_registros(
         # Converter para formato de tupla 
         rows = []
         for registro in registros:
-            funcionario = Funcionario.buscar_por_matricula(registro.funcionario_matricula)
-            modelo = Modelo.buscar_por_codigo(registro.produto) if registro.produto else None
+            from Server.models.posto import Posto
+            
+            funcionario = next((f for f in Funcionario.listar_todos() if f.funcionario_id == registro.funcionario_id), None)
+            modelo = Modelo.buscar_por_id(registro.modelo_id)
+            posto = Posto.buscar_por_id(registro.posto_id)
             
             rows.append((
-                registro.posto,
-                registro.funcionario_matricula,
+                posto.nome if posto else None,
+                funcionario.matricula if funcionario else None,
                 funcionario.nome if funcionario else None,
-                registro.produto,
+                modelo.codigo if modelo else None,
                 modelo.descricao if modelo else None,
-                registro.data,
-                registro.hora_inicio,
-                registro.hora_fim,
+                registro.data_inicio,
+                registro.hora_inicio or registro.inicio,
+                registro.fim,
                 registro.turno
             ))
         

@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { ihmAPI } from "../../api/api"
 
 type StatusAcesso = 'idle' | 'success' | 'error'
 
@@ -18,18 +19,26 @@ const LeitorRfid = () => {
     const processarRfid = async (codigo: string) => {
         const codigoLimpo = codigo.trim()
         
-        if (codigoLimpo === '123456') {
-            const nomeOperador = 'Operador Teste'
-            setColaborador(nomeOperador)
-            setStatus('success')
-            setTimeout(() => {
-                navigate('/ihm/operacao', { state: { operador: nomeOperador } })
-            }, 2000)
-            return
+        try {
+            const response = await ihmAPI.validarRfid(codigoLimpo)
+            
+            if (response.status === 'success' && response.funcionario) {
+                const nomeOperador = response.funcionario.nome
+                setColaborador(nomeOperador)
+                setStatus('success')
+                setTimeout(() => {
+                    navigate('/ihm/operacao', { state: { operador: nomeOperador } })
+                }, 2000)
+                return
+            }
+            
+            setStatus('error')
+            setTimeout(resetarEstado, 2000)
+        } catch (error: any) {
+            console.error('Erro ao validar RFID:', error)
+            setStatus('error')
+            setTimeout(resetarEstado, 2000)
         }
-
-        setStatus('error')
-        setTimeout(resetarEstado, 2000)
     }
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

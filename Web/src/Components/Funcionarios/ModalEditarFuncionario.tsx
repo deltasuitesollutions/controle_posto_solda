@@ -1,4 +1,13 @@
 import { useState, useEffect } from 'react'
+import { operacoesAPI } from '../../api/api'
+
+interface OperacaoHabilitada {
+    operacao_habilitada_id: number
+    operacao_id: number
+    data_habilitacao?: string
+    codigo_operacao: string
+    nome: string
+}
 
 interface Funcionario {
     id: number
@@ -9,12 +18,13 @@ interface Funcionario {
     habilitado_operacao?: boolean
     operacao?: string
     turno?: string
+    operacoes_habilitadas?: OperacaoHabilitada[]
 }
 
 interface ModalEditarFuncionarioProps {
     isOpen: boolean
     onClose: () => void
-    onSave: (funcionario: Omit<Funcionario, 'id'>) => void
+    onSave: (funcionario: Omit<Funcionario, 'id'> & { operacoes_ids?: number[] }) => void
     funcionarioEditando?: Funcionario | null
 }
 
@@ -23,8 +33,13 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
     const [nome, setNome] = useState('')
     const [tag, setTag] = useState('')
     const [ativo, setAtivo] = useState(true)
-    const [operacao, setOperacao] = useState('')
     const [turno, setTurno] = useState('')
+    const [operacoesDisponiveis, setOperacoesDisponiveis] = useState<Array<{id: number; operacao: string}>>([])
+    const [operacoesSelecionadas, setOperacoesSelecionadas] = useState<number[]>([])
+
+    useEffect(() => {
+        carregarOperacoes()
+    }, [])
 
     useEffect(() => {
         if (funcionarioEditando) {
@@ -32,21 +47,54 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
             setNome(funcionarioEditando.nome || '')
             setTag(funcionarioEditando.tag || '')
             setAtivo(funcionarioEditando.ativo !== undefined ? funcionarioEditando.ativo : true)
-            setOperacao(funcionarioEditando.operacao || '')
             setTurno(funcionarioEditando.turno || '')
+            // Carregar operações habilitadas
+            if (funcionarioEditando.operacoes_habilitadas) {
+                const ids = funcionarioEditando.operacoes_habilitadas.map(op => op.operacao_id)
+                setOperacoesSelecionadas(ids)
+            } else {
+                setOperacoesSelecionadas([])
+            }
         } else {
             setMatricula('')
             setNome('')
             setTag('')
             setAtivo(true)
-            setOperacao('')
             setTurno('')
+            setOperacoesSelecionadas([])
         }
     }, [funcionarioEditando])
 
+    const carregarOperacoes = async () => {
+        try {
+            const dados = await operacoesAPI.listarTodos()
+            // Converter para formato com id numérico
+            const operacoesFormatadas = dados.map((op: any) => {
+                // O id pode vir como número ou string
+                const id = typeof op.id === 'string' ? parseInt(op.id) : (op.id || op.operacao_id || 0)
+                const nome = op.operacao || op.nome || op.codigo_operacao || ''
+                return {
+                    id: id,
+                    operacao: nome
+                }
+            }).filter((op: any) => op.id > 0 && op.operacao)
+            setOperacoesDisponiveis(operacoesFormatadas)
+        } catch (error: any) {
+            console.error('Erro ao carregar operações:', error)
+            setOperacoesDisponiveis([])
+        }
+    }
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
-        onSave({ matricula, nome, tag, ativo, habilitado_operacao: !!operacao, operacao, turno })
+        onSave({ 
+            matricula, 
+            nome, 
+            tag, 
+            ativo, 
+            turno,
+            operacoes_ids: operacoesSelecionadas
+        })
         onClose()
     }
 
@@ -178,27 +226,7 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
                                 </h4>
                             </div>
                             
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Habilitado na Operação
-                                    </label>
-                                    <select
-                                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
-                                        value={operacao}
-                                        onChange={(e) => setOperacao(e.target.value)}
-                                    >
-                                        <option value="">Não habilitado</option>
-                                        <option value="P1">P1</option>
-                                        <option value="P2">P2</option>
-                                        <option value="P3">P3</option>
-                                        <option value="P4">P4</option>
-                                    </select>
-                                    <p className="text-xs text-gray-500 mt-1.5">
-                                        Selecione a operação permitida
-                                    </p>
-                                </div>
-
+                            <div className="space-y-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                         Turno
@@ -215,6 +243,40 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
                                     </select>
                                     <p className="text-xs text-gray-500 mt-1.5">
                                         Turno de trabalho do funcionário
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Habilitado na Operação
+                                    </label>
+                                    <div className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white max-h-40 overflow-y-auto">
+                                        {operacoesDisponiveis.length > 0 ? (
+                                            <div className="space-y-2">
+                                                {operacoesDisponiveis.map((op) => (
+                                                    <label key={op.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={operacoesSelecionadas.includes(op.id)}
+                                                            onChange={(e) => {
+                                                                if (e.target.checked) {
+                                                                    setOperacoesSelecionadas([...operacoesSelecionadas, op.id])
+                                                                } else {
+                                                                    setOperacoesSelecionadas(operacoesSelecionadas.filter(id => id !== op.id))
+                                                                }
+                                                            }}
+                                                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                                        />
+                                                        <span className="text-sm text-gray-700">{op.operacao}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <span className="text-gray-500 text-sm">Carregando operações...</span>
+                                        )}
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-1.5">
+                                        Selecione as operações em que o funcionário está habilitado
                                     </p>
                                 </div>
                             </div>
