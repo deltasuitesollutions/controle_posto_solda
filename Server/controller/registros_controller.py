@@ -1,6 +1,6 @@
 from typing import Tuple, Union
 from flask import Blueprint, jsonify, request, Response
-from Server.services import producao_service
+from Server.services import registro_service
 
 registros_bp = Blueprint('registros', __name__, url_prefix='/api/registros')
 
@@ -22,7 +22,7 @@ def listar_registros() -> Union[Response, Tuple[Response, int]]:
         posto_filtro = request.args.get('posto')
         operacao_filtro = request.args.get('operacao')
         
-        resultado = producao_service.listar_registros(
+        resultado = registro_service.listar_registros(
             limit=limit,
             offset=offset,
             data=data_filtro,

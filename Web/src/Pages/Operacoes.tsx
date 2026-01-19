@@ -530,12 +530,7 @@ const Operacoes = () => {
                                                 {erro}
                                             </div>
                                         )}
-                                        {carregando ? (
-                                            <div className="flex flex-col items-center justify-center py-12">
-                                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-                                                <p className="text-gray-500">Carregando operações...</p>
-                                            </div>
-                                        ) : operacoes.length > 0 ? (
+                                        {carregando ? null : operacoes.length > 0 ? (
                                             <div className="overflow-x-auto">
                                                 <table className="w-full">
                                                     <thead className="bg-gray-50">

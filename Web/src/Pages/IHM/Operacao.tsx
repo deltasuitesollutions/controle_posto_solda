@@ -35,6 +35,7 @@ const Operacao = () => {
   const [registroAberto, setRegistroAberto] = useState<any>(null);
   const [funcionarioMatricula, setFuncionarioMatricula] = useState<string>('');
   const [postoAtual, setPostoAtual] = useState<string>('');
+  const [mensagemSucesso, setMensagemSucesso] = useState<string | null>(null);
   const [erros, setErros] = useState({
     operacao: false,
     produto: false,
@@ -266,13 +267,18 @@ const Operacao = () => {
         setRegistroAberto(response.registro);
       }
       
-      alert('Trabalho iniciado com sucesso!');
+      // Mostrar tela verde de sucesso
+      setMensagemSucesso('TRABALHO INICIADO COM SUCESSO');
+      setTimeout(() => {
+        setMensagemSucesso(null);
+      }, 2000);
     } catch (error: any) {
       console.error('Erro ao iniciar trabalho:', error);
       const mensagem = error.message || 'Erro ao iniciar trabalho. Tente novamente.';
       alert(mensagem);
       // Limpar estado em caso de erro
       setRegistroAberto(null);
+      setMensagemSucesso(null);
     } finally {
       setCarregando(false);
     }
@@ -317,7 +323,14 @@ const Operacao = () => {
 
       setRegistroAberto(null);
       limparFormulario();
-      alert('Trabalho concluído com sucesso!');
+      
+      // Mostrar tela verde de sucesso
+      setMensagemSucesso('TRABALHO FINALIZADO COM SUCESSO');
+      
+      // Redirecionar para a página do leitor após 2 segundos
+      setTimeout(() => {
+        navigate('/ihm/leitor', { replace: true });
+      }, 2000);
     } catch (error: any) {
       console.error('Erro ao concluir trabalho:', error);
       const mensagem = error.message || 'Erro ao concluir trabalho. Tente novamente.';
@@ -326,6 +339,7 @@ const Operacao = () => {
       if (mensagem.includes('já está fechado')) {
         setRegistroAberto(null);
       }
+      setMensagemSucesso(null);
     } finally {
       setCarregando(false);
     }
@@ -333,6 +347,13 @@ const Operacao = () => {
 
   return (
     <div className="bg-gray-50 min-h-screen flex flex-col p-6">
+      {mensagemSucesso && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-green-600">
+          <span className="text-white text-5xl font-bold mb-6 animate-fade-in">
+            {mensagemSucesso}
+          </span>
+        </div>
+      )}
       <div className="flex justify-between items-start mb-8 gap-6">
         <div className="flex-1">
           <label className="block text-gray-700 text-2xl font-bold mb-3">

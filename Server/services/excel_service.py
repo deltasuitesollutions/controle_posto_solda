@@ -32,7 +32,7 @@ def exportar_registros_excel(
         cell.font = header_font
         cell.alignment = center_alignment
     
-    column_widths = [12, 12, 12, 15, 25, 12, 25]  
+    column_widths = [12, 12, 12, 25, 25, 12, 25]  
     for col_num, width in enumerate(column_widths, 1):
         col_letter = ws.cell(row=1, column=col_num).column_letter
         ws.column_dimensions[col_letter].width = width
@@ -51,8 +51,10 @@ def exportar_registros_excel(
                 cell.value = dados['hora_fim'] or ''
             elif col_num == 4:
                 if dados['data_obj']:
+                    # Usar objeto date do Python para o Excel reconhecer como data
                     cell.value = dados['data_obj']
-                    cell.number_format = 'DD/MM/YYYY'  
+                    # Formato de data padrão do Excel reconhecido universalmente
+                    cell.number_format = 'dd/mm/yyyy'
                 else:
                     cell.value = dados['data_str'] or ''
                     cell.number_format = 'General'

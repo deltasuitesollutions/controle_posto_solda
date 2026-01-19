@@ -1,15 +1,22 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import TopBar from '../Components/topBar/TopBar'
 import MenuLateral from '../Components/MenuLateral/MenuLateral'
 import ModalFiltro from '../Components/Compartilhados/ModalFiltro'
+import { registrosAPI } from '../api/api'
+import { postosAPI } from '../api/api'
+import { funcionariosAPI } from '../api/api'
+import { modelosAPI } from '../api/api'
 
 interface Registro {
     id: number
     data: string
+    data_inicio?: string
+    data_fim?: string
     hora?: string
     operador?: string
     matricula?: string
     posto?: string
+    totem?: string
     produto?: string
     modelo?: string
     modelo_codigo?: string
@@ -19,28 +26,12 @@ interface Registro {
     hora_fim?: string
     operacao?: string
     comentarios?: string
+    peca?: string
+    pecas?: Array<{ id: number; codigo: string; nome: string }>
+    codigo_producao?: string
 }
 
 const Registros = () => {
-    // Registro mockado para visualização
-    const registroMockado: Registro = {
-        id: 1,
-        data: new Date().toISOString().split('T')[0],
-        hora: '08:30',
-        hora_inicio: '08:30',
-        hora_fim: '17:00',
-        operador: 'João Silva',
-        matricula: '12345',
-        posto: 'P1',
-        produto: 'Produto A',
-        modelo: 'Produto A',
-        modelo_codigo: 'PROD_A',
-        quantidade: 150,
-        turno: 'Turno 1',
-        operacao: '-',
-        comentarios: '-'
-    }
-
     const [paginaAtual, setPaginaAtual] = useState(1)
     const [itensPorPagina, setItensPorPagina] = useState(10)
     const [modalAberto, setModalAberto] = useState<string | null>(null)
@@ -55,35 +46,115 @@ const Registros = () => {
         operador: [] as string[]
     })
 
-    const [registros, setRegistros] = useState<Registro[]>([registroMockado])
+    const [registros, setRegistros] = useState<Registro[]>([])
     const [registrosSelecionados, setRegistrosSelecionados] = useState<Set<number>>(new Set())
+    const [carregando, setCarregando] = useState(false)
+    const [totalRegistros, setTotalRegistros] = useState(0)
 
-    // Opções de filtros estáticas
-    const [opcoesProcesso] = useState<{ id: string; label: string }[]>([
-        { id: 'subsolda1', label: 'Subsolda1' }
-    ])
+    // Opções de filtros dinâmicas
+    const [opcoesProcesso, setOpcoesProcesso] = useState<{ id: string; label: string }[]>([])
     const [opcoesTurno] = useState<{ id: string; label: string }[]>([
         { id: 'Turno 1', label: 'Turno 1' },
         { id: 'Turno 2', label: 'Turno 2' }
     ])
-    const [opcoesProduto] = useState<{ id: string; label: string }[]>([])
-    const [opcoesMatricula] = useState<{ id: string; label: string }[]>([])
-    const [opcoesOperador] = useState<{ id: string; label: string }[]>([])
+    const [opcoesProduto, setOpcoesProduto] = useState<{ id: string; label: string }[]>([])
+    const [opcoesMatricula, setOpcoesMatricula] = useState<{ id: string; label: string }[]>([])
+    const [opcoesOperador, setOpcoesOperador] = useState<{ id: string; label: string }[]>([])
 
-    // Filtrar registros
+    // Carregar opções de filtros
+    useEffect(() => {
+        const carregarOpcoesFiltros = async () => {
+            try {
+                // Carregar postos (processos)
+                const postos = await postosAPI.listar()
+                setOpcoesProcesso(postos.map((p: any) => ({ id: p.nome, label: p.nome })))
+
+                // Carregar funcionários (operadores e matrículas)
+                const funcionarios = await funcionariosAPI.listarTodos()
+                setOpcoesOperador(funcionarios.map((f: any) => ({ id: f.nome, label: f.nome })))
+                setOpcoesMatricula(funcionarios.map((f: any) => ({ id: f.matricula, label: f.matricula })))
+
+                // Carregar modelos (produtos)
+                const modelos = await modelosAPI.listarTodos()
+                setOpcoesProduto(modelos.map((m: any) => ({ id: m.descricao || m.codigo, label: m.descricao || m.codigo })))
+            } catch (error) {
+                console.error('Erro ao carregar opções de filtros:', error)
+            }
+        }
+
+        carregarOpcoesFiltros()
+    }, [])
+
+    // Buscar registros do backend
+    const buscarRegistros = useCallback(async () => {
+        setCarregando(true)
+        try {
+            const offset = (paginaAtual - 1) * itensPorPagina
+            const params: any = {
+                limit: itensPorPagina,
+                offset: offset
+            }
+
+            if (filtros.data) {
+                params.data = filtros.data
+            }
+
+            if (filtros.processo.length > 0) {
+                params.posto = filtros.processo[0]
+            }
+
+            const resposta = await registrosAPI.listar(params)
+            
+            // Mapear dados do backend para o formato esperado
+            const registrosMapeados: Registro[] = resposta.registros.map((reg: any) => ({
+                id: reg.id,
+                data: reg.data_inicio || '',
+                data_inicio: reg.data_inicio || '',
+                data_fim: reg.data_fim || '',
+                hora: reg.hora_inicio || '',
+                hora_inicio: reg.hora_inicio || '',
+                hora_fim: reg.hora_fim || '',
+                operador: reg.funcionario?.nome || '',
+                matricula: reg.funcionario?.matricula || '',
+                posto: reg.posto?.nome || reg.posto || '',
+                totem: reg.totem?.nome || reg.totem?.id ? `Totem ${reg.totem.id}` : '',
+                produto: reg.produto?.nome || reg.modelo?.descricao || reg.modelo?.codigo || '',
+                modelo: reg.modelo?.descricao || reg.modelo?.codigo || '',
+                modelo_codigo: reg.modelo?.codigo || '',
+                quantidade: reg.quantidade || 0,
+                turno: reg.funcionario?.turno || '',
+                operacao: reg.operacao?.nome || reg.operacao?.codigo || '-',
+                comentarios: reg.comentarios || '-',
+                peca: reg.peca?.nome || reg.peca?.codigo || '',
+                pecas: reg.pecas || [],
+                codigo_producao: reg.codigo_producao || ''
+            }))
+
+            setRegistros(registrosMapeados)
+            setTotalRegistros(resposta.total || 0)
+        } catch (error) {
+            console.error('Erro ao buscar registros:', error)
+            setRegistros([])
+            setTotalRegistros(0)
+        } finally {
+            setCarregando(false)
+        }
+    }, [paginaAtual, itensPorPagina, filtros.data, filtros.processo])
+
+    // Buscar registros quando filtros ou paginação mudarem
+    useEffect(() => {
+        buscarRegistros()
+    }, [buscarRegistros])
+
+    // Filtrar registros localmente (filtros adicionais que não são suportados pelo backend)
     const registrosFiltrados = registros.filter(registro => {
-        // Comparar data (formato YYYY-MM-DD)
-        const dataMatch = !filtros.data || registro.data === filtros.data || registro.data?.startsWith(filtros.data)
-        
         return (
-            (filtros.processo.length === 0 || filtros.processo.includes(registro.posto || '')) &&
             (filtros.turno.length === 0 || filtros.turno.includes(String(registro.turno || ''))) &&
-            dataMatch &&
             (filtros.produto.length === 0 || filtros.produto.includes(registro.produto || '')) &&
             (filtros.matricula.length === 0 || filtros.matricula.includes(registro.matricula || '')) &&
             (filtros.operador.length === 0 || filtros.operador.includes(registro.operador || '')) &&
-            (!filtros.horarioInicio || (registro.hora || '') >= filtros.horarioInicio) &&
-            (!filtros.horarioFim || (registro.hora || '') <= filtros.horarioFim)
+            (!filtros.horarioInicio || (registro.hora_inicio || '') >= filtros.horarioInicio) &&
+            (!filtros.horarioFim || (registro.hora_fim || registro.hora_inicio || '') <= filtros.horarioFim)
         )
     })
 
@@ -96,20 +167,16 @@ const Registros = () => {
     const handleConfirmarFiltro = (tipo: string, valores: string[]) => {
         setFiltros({ ...filtros, [tipo]: valores })
         setModalAberto(null)
+        // Resetar para primeira página quando filtros mudarem
+        setPaginaAtual(1)
     }
 
-    // Paginação
-    const totalItens = registrosFiltrados.length
+    // Paginação (usando dados do backend, não precisa slice local)
+    const totalItens = totalRegistros > 0 ? totalRegistros : registrosFiltrados.length
     const indiceInicial = totalItens > 0 ? (paginaAtual - 1) * itensPorPagina + 1 : 0
     const indiceFinal = Math.min(paginaAtual * itensPorPagina, totalItens)
-    const registrosPagina = registrosFiltrados.slice(indiceInicial - 1, indiceFinal)
+    const registrosPagina = registrosFiltrados
     const totalPaginas = Math.ceil(totalItens / itensPorPagina)
-
-    const formatarData = (data: string) => {
-        if (!data) return ''
-        const date = new Date(data)
-        return date.toLocaleDateString('pt-BR')
-    }
 
     // Calcular estado de seleção da página atual
     const todosSelecionadosNaPagina = registrosPagina.length > 0 && 
@@ -155,20 +222,41 @@ const Registros = () => {
         }
 
         // Criar CSV
-        const headers = ['Toten/ID', 'Posto', 'Operador', 'Operação', 'Modelo', 'Turno', 'Início', 'Fim', 'Comentários', 'Peça', 'Código', 'Qtde']
+        const headers = [
+            'Data Início', 
+            'Data Fim', 
+            'Totem', 
+            'Posto', 
+            'Operador', 
+            'Matrícula', 
+            'Turno', 
+            'Operação', 
+            'Produto', 
+            'Modelo', 
+            'Peça', 
+            'Código Produção', 
+            'Hora Início', 
+            'Hora Fim', 
+            'Quantidade', 
+            'Comentários'
+        ]
         const rows = registrosParaExportar.map(reg => [
-            reg.posto || '',
+            reg.data_inicio ? new Date(reg.data_inicio).toLocaleDateString('pt-BR') : '',
+            reg.data_fim ? new Date(reg.data_fim).toLocaleDateString('pt-BR') : '',
+            reg.totem || '',
             reg.posto || '',
             reg.operador || '',
-            reg.operacao || '',
-            reg.modelo || reg.produto || '',
+            reg.matricula || '',
             String(reg.turno || ''),
+            reg.operacao || '',
+            reg.produto || '',
+            reg.modelo || '',
+            reg.peca || '',
+            reg.codigo_producao || '',
             reg.hora_inicio || reg.hora || '',
             reg.hora_fim || '',
-            reg.comentarios || '',
-            reg.modelo || reg.produto || '',
-            reg.modelo_codigo || '',
-            String(reg.quantidade || '')
+            String(reg.quantidade || ''),
+            reg.comentarios || ''
         ])
 
         // Converter para CSV
@@ -350,8 +438,14 @@ const Registros = () => {
                             </div>
 
                             {/* Área de conteúdo - Tabela ou mensagem vazia */}
-                            <div className="p-12">
-                                {registrosPagina.length > 0 ? (
+                            <div className="p-4">
+                                {carregando ? (
+                                    <div className="flex flex-col items-center justify-center py-8">
+                                        <p className="text-gray-500 text-sm font-medium">
+                                            Carregando registros...
+                                        </p>
+                                    </div>
+                                ) : registrosPagina.length > 0 ? (
                                     <div className="overflow-x-auto">
                                         <table className="w-full">
                                             <thead className="bg-gray-50">
@@ -368,40 +462,52 @@ const Registros = () => {
                                                         />
                                                     </th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Toten/ID 
+                                                        Data Início
                                                     </th>
-                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Data Fim
+                                                    </th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Totem
+                                                    </th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                         Posto
                                                     </th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                         Operador
                                                     </th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Operação
-                                                    </th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Modelo
+                                                        Matrícula
                                                     </th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                         Turno
                                                     </th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Início
+                                                        Operação
                                                     </th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Fim
+                                                        Produto
                                                     </th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Comentários
+                                                        Modelo
                                                     </th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                         Peça
                                                     </th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Código
+                                                        Código Produção
                                                     </th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Qtde
+                                                        Hora Início
+                                                    </th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Hora Fim
+                                                    </th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Quantidade
+                                                    </th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Comentários
                                                     </th>
                                                 </tr>
                                             </thead>
@@ -417,7 +523,27 @@ const Registros = () => {
                                                             />
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {registro.posto || '-'}
+                                                            {registro.data_inicio ? (() => {
+                                                                try {
+                                                                    const date = new Date(registro.data_inicio)
+                                                                    return isNaN(date.getTime()) ? registro.data_inicio : date.toLocaleDateString('pt-BR')
+                                                                } catch {
+                                                                    return registro.data_inicio
+                                                                }
+                                                            })() : '-'}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {registro.data_fim ? (() => {
+                                                                try {
+                                                                    const date = new Date(registro.data_fim)
+                                                                    return isNaN(date.getTime()) ? registro.data_fim : date.toLocaleDateString('pt-BR')
+                                                                } catch {
+                                                                    return registro.data_fim
+                                                                }
+                                                            })() : '-'}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {registro.totem || '-'}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                             {registro.posto || '-'}
@@ -426,13 +552,25 @@ const Registros = () => {
                                                             {registro.operador || '-'}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {registro.operacao || '-'}
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {registro.modelo || registro.produto || '-'}
+                                                            {registro.matricula || '-'}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                             {registro.turno || '-'}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {registro.operacao || '-'}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {registro.produto || '-'}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {registro.modelo || '-'}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {registro.peca || '-'}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {registro.codigo_producao || '-'}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                             {registro.hora_inicio || registro.hora || '-'}
@@ -441,16 +579,10 @@ const Registros = () => {
                                                             {registro.hora_fim || '-'}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {registro.comentarios || '-'}
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {registro.modelo || registro.produto || '-'}
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {registro.modelo_codigo || '-'}
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                             {registro.quantidade || '-'}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {registro.comentarios || '-'}
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -458,8 +590,8 @@ const Registros = () => {
                                         </table>
                                     </div>
                                 ) : (
-                                    <div className="flex flex-col items-center justify-center py-12">
-                                        <p className="text-gray-500 text-lg font-medium">
+                                    <div className="flex flex-col items-center justify-center py-8">
+                                        <p className="text-gray-500 text-sm font-medium">
                                             Nenhum registro encontrado
                                         </p>
                                     </div>

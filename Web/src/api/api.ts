@@ -296,3 +296,25 @@ export const producaoAPI = {
   buscarRegistroAberto: (posto: string, funcionario_matricula: string) =>
     fetchAPI(`/producao/registro-aberto?posto=${encodeURIComponent(posto)}&funcionario_matricula=${encodeURIComponent(funcionario_matricula)}`),
 }
+
+// CHAMADA PARA REGISTROS_CONTROLLER.PY
+
+export const registrosAPI = {
+  listar: (params?: {
+    limit?: number
+    offset?: number
+    data?: string
+    posto?: string
+    operacao?: string
+  }) => {
+    const queryParams = new URLSearchParams()
+    if (params?.limit) queryParams.append('limit', params.limit.toString())
+    if (params?.offset) queryParams.append('offset', params.offset.toString())
+    if (params?.data) queryParams.append('data', params.data)
+    if (params?.posto) queryParams.append('posto', params.posto)
+    if (params?.operacao) queryParams.append('operacao', params.operacao)
+    
+    const queryString = queryParams.toString()
+    return fetchAPI(`/registros${queryString ? `?${queryString}` : ''}`)
+  },
+}
