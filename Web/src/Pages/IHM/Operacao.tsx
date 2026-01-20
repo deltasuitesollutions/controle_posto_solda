@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ihmAPI, producaoAPI, funcionariosAPI, operacoesAPI } from '../../api/api';
 
@@ -44,6 +44,7 @@ const Operacao = () => {
     codigo: false,
     quantidade: false,
   });
+  const redirecionadoRef = useRef(false);
 
   const arrowIcon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E";
   const selectStyle = {
@@ -156,15 +157,29 @@ const Operacao = () => {
           const response = await producaoAPI.buscarRegistroAberto(postoAtual, funcionarioMatricula);
           if (response.registro) {
             setRegistroAberto(response.registro);
+            // Se há registro aberto e ainda não foi redirecionado, redirecionar para o leitor de finalização
+            if (!redirecionadoRef.current) {
+              redirecionadoRef.current = true;
+              navigate('/ihm/leitor-finalizar', { 
+                state: { 
+                  posto: postoAtual,
+                  funcionario_matricula: funcionarioMatricula,
+                  operador: operador
+                } 
+              });
+            }
           } else {
             setRegistroAberto(null);
+            redirecionadoRef.current = false;
           }
         } catch (error) {
           // Se não encontrar registro, não é erro - limpar estado
           setRegistroAberto(null);
+          redirecionadoRef.current = false;
         }
       } else {
         setRegistroAberto(null);
+        redirecionadoRef.current = false;
       }
     };
     verificarRegistroAberto();
@@ -172,7 +187,7 @@ const Operacao = () => {
     // Verificar periodicamente para manter sincronizado (a cada 5 segundos)
     const interval = setInterval(verificarRegistroAberto, 5000);
     return () => clearInterval(interval);
-  }, [operacao, funcionarioMatricula, postoAtual]);
+  }, [operacao, funcionarioMatricula, postoAtual, navigate, operador]);
 
   const limparFormulario = () => {
     setOperacao('');
@@ -272,6 +287,15 @@ const Operacao = () => {
       setMensagemSucesso('Iniciado com sucesso');
       setTimeout(() => {
         setMensagemSucesso(null);
+        setCarregando(false);
+        // Redirecionar para o leitor de finalização após mostrar tela verde
+        navigate('/ihm/leitor-finalizar', { 
+          state: { 
+            posto: postoAtual,
+            funcionario_matricula: funcionarioMatricula,
+            operador: operador
+          } 
+        });
       }, 2000);
     } catch (error: any) {
       console.error('Erro ao iniciar trabalho:', error);
@@ -280,71 +304,10 @@ const Operacao = () => {
       // Limpar estado em caso de erro
       setRegistroAberto(null);
       setMensagemSucesso(null);
-    } finally {
       setCarregando(false);
     }
   };
 
-  const handleConcluirTrabalho = async () => {
-    if (!registroAberto) {
-      alert('Não há registro aberto para concluir.');
-      return;
-    }
-
-    if (!postoAtual || !funcionarioMatricula) {
-      alert('Dados insuficientes para concluir o trabalho.');
-      return;
-    }
-
-    try {
-      setCarregando(true);
-      
-      // Verificar se o registro ainda está aberto antes de tentar fechar
-      try {
-        const response = await producaoAPI.buscarRegistroAberto(postoAtual, funcionarioMatricula);
-        if (!response.registro) {
-          // Registro já foi fechado, limpar estado
-          setRegistroAberto(null);
-          alert('Este registro já foi concluído anteriormente.');
-          setCarregando(false);
-          return;
-        }
-      } catch (error) {
-        // Se não encontrar registro, já foi fechado
-        setRegistroAberto(null);
-        alert('Este registro já foi concluído anteriormente.');
-        setCarregando(false);
-        return;
-      }
-      
-      await producaoAPI.registrarSaida({
-        posto: postoAtual,
-        funcionario_matricula: funcionarioMatricula
-      });
-
-      setRegistroAberto(null);
-      limparFormulario();
-      
-      // Mostrar tela verde de sucesso
-      setMensagemSucesso('Concluído com sucesso');
-      
-      // Redirecionar para a página do leitor após 2 segundos
-      setTimeout(() => {
-        navigate('/ihm/leitor', { replace: true });
-      }, 2000);
-    } catch (error: any) {
-      console.error('Erro ao concluir trabalho:', error);
-      const mensagem = error.message || 'Erro ao concluir trabalho. Tente novamente.';
-      alert(mensagem);
-      // Limpar estado em caso de erro (registro já fechado, etc)
-      if (mensagem.includes('já está fechado')) {
-        setRegistroAberto(null);
-      }
-      setMensagemSucesso(null);
-    } finally {
-      setCarregando(false);
-    }
-  };
 
   return (
     <div className="bg-gray-50 min-h-screen flex flex-col p-6">
@@ -544,8 +507,8 @@ const Operacao = () => {
           </div>
 
           <button
-            onClick={registroAberto ? handleConcluirTrabalho : handleIniciarTrabalho}
-            disabled={carregando || (registroAberto ? false : !operacao || !produto || !modelo || !peca || !codigo || !quantidade)}
+            onClick={handleIniciarTrabalho}
+            disabled={carregando || registroAberto || !operacao || !produto || !modelo || !peca || !codigo || !quantidade}
             className="px-12 py-6 text-white text-3xl font-bold rounded-lg shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ 
               backgroundColor: registroAberto ? '#28a745' : 'var(--bg-laranja)',
@@ -553,17 +516,17 @@ const Operacao = () => {
               minWidth: '300px'
             }}
             onMouseEnter={(e) => {
-              if (!carregando) {
-                e.currentTarget.style.backgroundColor = registroAberto ? '#218838' : '#C55A15';
+              if (!carregando && !registroAberto) {
+                e.currentTarget.style.backgroundColor = '#C55A15';
               }
             }}
             onMouseLeave={(e) => {
-              if (!carregando) {
-                e.currentTarget.style.backgroundColor = registroAberto ? '#28a745' : 'var(--bg-laranja)';
+              if (!carregando && !registroAberto) {
+                e.currentTarget.style.backgroundColor = 'var(--bg-laranja)';
               }
             }}
           >
-            {registroAberto ? 'Concluir trabalho' : 'Iniciar trabalho'}
+            Iniciar trabalho
           </button>
         </div>
       </div>

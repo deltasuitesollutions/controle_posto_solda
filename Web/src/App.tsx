@@ -6,6 +6,7 @@ import Dashboard from "./Pages/Dashboard";
 import Login from "./Pages/Login";
 import LeitorIHM from "./Pages/IHM/Leitor";
 import OperacaoIHM from "./Pages/IHM/Operacao";
+import LeitorFinalizar from "./Pages/IHM/LeitorFinalizar";
 import ProtectedRoute from "./Components/ProtectedRoute";
 import Produtos from "./Pages/Produtos";
 import Linhas from "./Pages/Linhas";
@@ -92,6 +93,14 @@ function App() {
         element={
           <ProtectedRoute onlyOperador>
             <OperacaoIHM />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/ihm/leitor-finalizar" 
+        element={
+          <ProtectedRoute onlyOperador>
+            <LeitorFinalizar />
           </ProtectedRoute>
         } 
       />
