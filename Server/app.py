@@ -69,7 +69,8 @@ def register_blueprints(app: Flask):
         usuarios_controller,
         audit_controller,
         cancelamento_controller,
-        tags_temporarias_controller
+        tags_temporarias_controller,
+        device_info_controller
     )
     
     app.register_blueprint(producao_controller.producao_bp)
@@ -91,6 +92,7 @@ def register_blueprints(app: Flask):
     app.register_blueprint(audit_controller.audit_bp)
     app.register_blueprint(cancelamento_controller.cancelamento_bp)
     app.register_blueprint(tags_temporarias_controller.tags_temporarias_bp)
+    app.register_blueprint(device_info_controller.device_info_bp)
 
 def register_web_routes(app: Flask):
     @app.route('/', defaults={'path': ''})

@@ -12,6 +12,7 @@ from Server.models.produto import Produto
 from Server.models.usuario import Usuario
 from Server.models.audit_log import AuditLog
 from Server.models.cancelamento import CancelamentoOperacao
+from Server.models.device_info import DeviceInfo
 __all__ = [
     'DatabaseConnection',
     'Funcionario',
@@ -23,6 +24,7 @@ __all__ = [
     'Subproduto',
     'Usuario',
     'AuditLog',
-    'CancelamentoOperacao'
+    'CancelamentoOperacao',
+    'DeviceInfo'
 ]
 
