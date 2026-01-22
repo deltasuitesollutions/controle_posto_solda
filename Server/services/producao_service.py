@@ -17,11 +17,15 @@ def _buscar_operacao_id(operacao_codigo: str) -> Optional[int]:
     return None
 
 
-def _buscar_peca_id(peca_codigo: str) -> Optional[int]:
-    """Busca ID da peça pelo código"""
+def _buscar_peca_id(peca_identificador: str) -> Optional[int]:
+    """Busca ID da peça pelo código ou nome"""
     from Server.models.peca import Peca
     pecas = Peca.listar_todas()
-    peca = next((p for p in pecas if p.codigo == peca_codigo), None)
+    # Tentar buscar primeiro pelo código
+    peca = next((p for p in pecas if p.codigo == peca_identificador), None)
+    # Se não encontrou, tentar buscar pelo nome
+    if not peca:
+        peca = next((p for p in pecas if p.nome == peca_identificador or p.nome.lower() == peca_identificador.lower()), None)
     return peca.id if peca else None
 
 

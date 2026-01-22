@@ -186,24 +186,33 @@ const LeitorFinalizar = () => {
             <div className="pt-8 px-6 pb-20 flex items-center justify-center">
                 <div className="w-full max-w-2xl">
                     <div className="bg-white rounded-lg shadow-lg p-8">
-                        <div
-                            className="flex items-center border-2 rounded-lg px-4 py-4"
-                            style={{
-                                borderColor: '#4C79AF',
-                                boxShadow: '0 0 0 3px rgba(76, 121, 175, 0.1)'
-                            }}
-                        >
-                            <input
-                                type="text"
-                                className="flex-1 text-lg outline-none bg-transparent placeholder-gray-400"
-                                placeholder="Passe o crachá RFID para finalizar"
-                                autoComplete="off"
-                                value={rfidInput}
-                                onChange={(e) => setRfidInput(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                autoFocus
-                                disabled={status !== 'idle'}
-                            />
+                        <div className="flex items-center gap-3">
+                            <div
+                                className="flex-1 flex items-center border-2 rounded-lg px-4 py-4"
+                                style={{
+                                    borderColor: '#4C79AF',
+                                    boxShadow: '0 0 0 3px rgba(76, 121, 175, 0.1)'
+                                }}
+                            >
+                                <input
+                                    type="text"
+                                    className="flex-1 text-lg outline-none bg-transparent placeholder-gray-400"
+                                    placeholder="Passe o crachá RFID para finalizar"
+                                    autoComplete="off"
+                                    value={rfidInput}
+                                    onChange={(e) => setRfidInput(e.target.value)}
+                                    onKeyDown={handleKeyDown}
+                                    autoFocus
+                                    disabled={status !== 'idle'}
+                                />
+                            </div>
+                            <button
+                                onClick={() => rfidInput.trim() && processarRfid(rfidInput)}
+                                disabled={!rfidInput.trim() || status !== 'idle'}
+                                className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-4 px-8 rounded-lg text-lg transition-colors duration-200 whitespace-nowrap"
+                            >
+                                Concluir
+                            </button>
                         </div>
                     </div>
                 </div>

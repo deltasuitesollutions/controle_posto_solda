@@ -50,6 +50,7 @@ const Operacoes = () => {
     const [erro, setErro] = useState<string | null>(null)
 
     const [operacao, setOperacao] = useState('')
+    const [operacaoSelecionadaId, setOperacaoSelecionadaId] = useState('')
     const [produto, setProduto] = useState('')
     const [modelo, setModelo] = useState('')
     const [linha, setLinha] = useState('')
@@ -73,6 +74,13 @@ const Operacoes = () => {
     useEffect(() => {
         carregarDadosDropdowns()
         if (abaAtiva === 'listar') {
+            carregarOperacoes()
+        }
+    }, [abaAtiva])
+
+    // Carregar operações quando mudar para aba de cadastrar para popular o dropdown
+    useEffect(() => {
+        if (abaAtiva === 'cadastrar') {
             carregarOperacoes()
         }
     }, [abaAtiva])
@@ -159,6 +167,7 @@ const Operacoes = () => {
 
     const limparFormulario = () => {
         setOperacao('')
+        setOperacaoSelecionadaId('')
         setProduto('')
         setModelo('')
         setLinha('')
@@ -170,6 +179,49 @@ const Operacoes = () => {
         setPecaTemp('')
         setCodigoTemp('')
         setOperacaoEditandoId(null)
+    }
+
+    const carregarDadosOperacao = async (operacaoId: string) => {
+        if (!operacaoId) {
+            limparFormulario()
+            return
+        }
+
+        try {
+            setCarregando(true)
+            const dados = await operacoesAPI.buscarPorId(parseInt(operacaoId))
+            
+            if (dados && !dados.erro) {
+                setOperacao(dados.operacao || '')
+                setProduto(dados.produto || '')
+                setModelo(dados.modelo || '')
+                setLinha(dados.linha || '')
+                setPosto(dados.posto || '')
+                setTotens(dados.totens || [])
+                setPecas(dados.pecas || [])
+                setCodigos(dados.codigos || [])
+                setOperacaoEditandoId(operacaoId)
+            } else {
+                alert('Erro ao carregar dados da operação')
+                limparFormulario()
+            }
+        } catch (error) {
+            console.error('Erro ao carregar dados da operação:', error)
+            alert(`Erro ao carregar dados da operação: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+            limparFormulario()
+        } finally {
+            setCarregando(false)
+        }
+    }
+
+    const handleSelecionarOperacao = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const operacaoId = e.target.value
+        setOperacaoSelecionadaId(operacaoId)
+        if (operacaoId) {
+            carregarDadosOperacao(operacaoId)
+        } else {
+            limparFormulario()
+        }
     }
 
     const handleSalvar = async (e: React.FormEvent) => {
@@ -235,6 +287,7 @@ const Operacoes = () => {
     }
 
     const handleEditarOperacao = (op: Operacao) => {
+        setOperacaoSelecionadaId(op.id)
         setOperacao(op.operacao)
         setProduto(op.produto)
         setModelo(op.modelo)
@@ -297,6 +350,22 @@ const Operacoes = () => {
                                 {abaAtiva === 'cadastrar' ? (
                                     <form onSubmit={handleSalvar}>
                                         <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                    Selecionar Operação Existente
+                                                </label>
+                                                <select
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
+                                                    value={operacaoSelecionadaId}
+                                                    onChange={handleSelecionarOperacao}
+                                                >
+                                                    <option value="">Selecione uma operação para editar ou deixe em branco para criar nova</option>
+                                                    {operacoes.map((op) => (
+                                                        <option key={op.id} value={op.id}>{op.operacao}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                                     Operação *

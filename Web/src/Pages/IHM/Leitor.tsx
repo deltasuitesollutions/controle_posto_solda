@@ -61,19 +61,14 @@ const LeitorRfid = () => {
         <div className="bg-gray-100 min-h-screen flex flex-col">
             {status !== 'idle' && (
                 <div className={`fixed inset-0 z-50 flex flex-col items-center justify-center ${isSuccess ? 'bg-green-600' : 'bg-red-600'}`}>
-                    <span className="text-white text-5xl font-bold mb-6 animate-fade-in">
-                        {isSuccess ? 'ACESSO LIBERADO' : 'ACESSO NEGADO'}
-                    </span>
-                    {isSuccess && colaborador && (
-                        <span className="text-white text-2xl animate-fade-in">
-                            Ótimo turno de trabalho, {colaborador}
-                        </span>
-                    )}
-                    {isError && (
-                        <span className="text-white text-2xl animate-fade-in">
-                            Verifique a liberação com o seu líder
-                        </span>
-                    )}
+                    <div className="flex flex-col items-center text-center">
+                        <div className="text-white text-5xl font-bold animate-fade-in">
+                            ACESSO
+                        </div>
+                        <div className="text-white text-5xl font-bold animate-fade-in mt-6">
+                            {isSuccess ? 'LIBERADO' : 'NEGADO'}
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -85,8 +80,8 @@ const LeitorRfid = () => {
                 >
                     Sair
                 </button>
-                <span className="text-gray-700 font-sans text-2xl py-6">
-                    Seja Bem Vindo, colaborador!
+                <span className="text-gray-700 font-sans text-4xl font-bold py-6 tracking-wide">
+                    Seja Bem Vindo!
                 </span>
             </div>
 

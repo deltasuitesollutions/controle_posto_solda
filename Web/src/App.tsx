@@ -6,12 +6,14 @@ import Login from "./Pages/Login";
 import LeitorIHM from "./Pages/IHM/Leitor";
 import OperacaoIHM from "./Pages/IHM/Operacao";
 import LeitorFinalizar from "./Pages/IHM/LeitorFinalizar";
+import FinalizarProducao from "./Pages/IHM/FinalizarProducao";
 import ProtectedRoute from "./Components/ProtectedRoute";
 import Linhas from "./Pages/Linhas";
 import Postos from "./Pages/Postos";
 import Operacoes from "./Pages/Operacoes";
 import Usuarios from "./Pages/Usuarios";
 import Auditoria from "./Pages/Auditoria";
+import OperacoesCanceladas from "./Pages/OperacoesCanceladas";
 import CadastroProdutoModelo from "./Pages/CadastroProdutoModelo";
 import ListagemPecas from "./Pages/ListagemPecas";
 
@@ -101,7 +103,15 @@ function App() {
           <ProtectedRoute allowedRoles={['admin', 'master']}>
             <Auditoria />
           </ProtectedRoute>
-        } 
+        }
+      />
+      <Route 
+        path="/operacoes-canceladas" 
+        element={
+          <ProtectedRoute onlyAdmin>
+            <OperacoesCanceladas />
+          </ProtectedRoute>
+        }
       />
       
       {/* Rotas IHM - apenas para operadores (fluxo sequencial) */}
@@ -128,6 +138,14 @@ function App() {
             <LeitorFinalizar />
           </ProtectedRoute>
         } 
+      />
+      <Route 
+        path="/ihm/finalizar-producao" 
+        element={
+          <ProtectedRoute onlyOperador>
+            <FinalizarProducao />
+          </ProtectedRoute>
+        }
       />
       
       {/* Redireciona rotas não encontradas */}

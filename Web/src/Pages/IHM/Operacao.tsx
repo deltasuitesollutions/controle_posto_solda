@@ -22,12 +22,11 @@ const Operacao = () => {
 
   const [operacao, setOperacao] = useState('');
   const [produto, setProduto] = useState('');
-  const [modelo, setModelo] = useState('');
+  const [modelo, setModelo] = useState(''); // Código do modelo para envio
+  const [modeloDescricao, setModeloDescricao] = useState(''); // Descrição do modelo para exibição
   const [peca, setPeca] = useState('');
   const [codigo, setCodigo] = useState('');
-  const [quantidade, setQuantidade] = useState<number | ''>('');
   const [modelos, setModelos] = useState<Modelo[]>([]);
-  const [subprodutos, setSubprodutos] = useState<Subproduto[]>([]);
   const [operacoes, setOperacoes] = useState<Array<{codigo: string; nome: string; posto?: string}>>([]);
   const [operacoesCompletas, setOperacoesCompletas] = useState<Array<any>>([]);
   const [produtos, setProdutos] = useState<Array<{id: string; codigo: string; nome: string}>>([]);
@@ -35,16 +34,13 @@ const Operacao = () => {
   const [registroAberto, setRegistroAberto] = useState<any>(null);
   const [funcionarioMatricula, setFuncionarioMatricula] = useState<string>('');
   const [postoAtual, setPostoAtual] = useState<string>('');
-  const [mensagemSucesso, setMensagemSucesso] = useState<string | null>(null);
   const [erros, setErros] = useState({
     operacao: false,
     produto: false,
     modelo: false,
     peca: false,
     codigo: false,
-    quantidade: false,
   });
-  const redirecionadoRef = useRef(false);
   const tinhaRegistroRef = useRef(false);
 
   const arrowIcon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E";
@@ -132,23 +128,6 @@ const Operacao = () => {
     carregarDados();
   }, [operador]);
 
-  useEffect(() => {
-    if (modelo) {
-      const modeloSelecionado = modelos.find(m => m.codigo === modelo);
-      setSubprodutos(modeloSelecionado?.subprodutos || []);
-    } else {
-      setSubprodutos([]);
-    }
-  }, [modelo, modelos]);
-
-  useEffect(() => {
-    if (peca) {
-      const pecaSelecionada = subprodutos.find(p => p.codigo === peca);
-      setCodigo(pecaSelecionada?.codigo || '');
-    } else {
-      setCodigo('');
-    }
-  }, [peca, subprodutos]);
 
   // Verificar registro aberto quando operação e matrícula estiverem disponíveis
   useEffect(() => {
@@ -159,17 +138,8 @@ const Operacao = () => {
           if (response.registro) {
             tinhaRegistroRef.current = true;
             setRegistroAberto(response.registro);
-            // Se há registro aberto e ainda não foi redirecionado, redirecionar para o leitor de finalização
-            if (!redirecionadoRef.current) {
-              redirecionadoRef.current = true;
-              navigate('/ihm/leitor-finalizar', { 
-                state: { 
-                  posto: postoAtual,
-                  funcionario_matricula: funcionarioMatricula,
-                  operador: operador
-                } 
-              });
-            }
+            // Se há registro aberto, apenas atualizar o estado (não redirecionar)
+            // O botão mudará para "Finalizar processo"
           } else {
             // Se havia registro aberto antes e agora não há mais (foi cancelado), redirecionar para o leitor
             if (tinhaRegistroRef.current) {
@@ -179,7 +149,6 @@ const Operacao = () => {
             }
             tinhaRegistroRef.current = false;
             setRegistroAberto(null);
-            redirecionadoRef.current = false;
           }
         } catch (error) {
           // Se não encontrar registro e havia um registro aberto antes (foi cancelado), redirecionar
@@ -191,12 +160,10 @@ const Operacao = () => {
           // Se não encontrar registro, não é erro - limpar estado
           tinhaRegistroRef.current = false;
           setRegistroAberto(null);
-          redirecionadoRef.current = false;
         }
       } else {
         tinhaRegistroRef.current = false;
         setRegistroAberto(null);
-        redirecionadoRef.current = false;
       }
     };
     verificarRegistroAberto();
@@ -210,16 +177,15 @@ const Operacao = () => {
     setOperacao('');
     setProduto('');
     setModelo('');
+    setModeloDescricao('');
     setPeca('');
     setCodigo('');
-    setQuantidade('');
     setErros({
       operacao: false,
       produto: false,
       modelo: false,
       peca: false,
       codigo: false,
-      quantidade: false,
     });
   };
 
@@ -230,7 +196,6 @@ const Operacao = () => {
       modelo: !modelo,
       peca: !peca,
       codigo: !codigo,
-      quantidade: !quantidade || quantidade <= 0,
     };
 
     setErros(novosErros);
@@ -290,8 +255,7 @@ const Operacao = () => {
         modelo_codigo: modelo,
         operacao: operacao || undefined,
         peca: peca || undefined,
-        codigo: codigo || undefined,
-        quantidade: quantidade && typeof quantidade === 'number' ? quantidade : undefined
+        codigo: codigo || undefined
       });
 
       // Atualizar registro aberto
@@ -300,41 +264,35 @@ const Operacao = () => {
         setRegistroAberto(response.registro);
       }
       
-      // Mostrar tela verde de sucesso
-      setMensagemSucesso('Iniciado com sucesso');
-      setTimeout(() => {
-        setMensagemSucesso(null);
-        setCarregando(false);
-        // Redirecionar para o leitor de finalização após mostrar tela verde
-        navigate('/ihm/leitor-finalizar', { 
-          state: { 
-            posto: postoAtual,
-            funcionario_matricula: funcionarioMatricula,
-            operador: operador
-          } 
-        });
-      }, 2000);
+      setCarregando(false);
     } catch (error: any) {
       console.error('Erro ao iniciar trabalho:', error);
       const mensagem = error.message || 'Erro ao iniciar trabalho. Tente novamente.';
       alert(mensagem);
       // Limpar estado em caso de erro
       setRegistroAberto(null);
-      setMensagemSucesso(null);
       setCarregando(false);
     }
   };
 
 
+  const handleFinalizarProcesso = () => {
+    if (!postoAtual || !funcionarioMatricula) {
+      alert('Dados insuficientes para finalizar o processo.');
+      return;
+    }
+
+    navigate('/ihm/finalizar-producao', {
+      state: {
+        posto: postoAtual,
+        funcionario_matricula: funcionarioMatricula,
+        operador: operador
+      }
+    });
+  };
+
   return (
     <div className="bg-gray-50 min-h-screen flex flex-col p-6">
-      {mensagemSucesso && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-green-600">
-          <span className="text-white text-4xl font-bold animate-fade-in text-center">
-            {mensagemSucesso}
-          </span>
-        </div>
-      )}
       <div className="flex justify-between items-start mb-8 gap-6">
         <div className="flex-1">
           <label className="block text-gray-700 text-2xl font-bold mb-3">
@@ -347,30 +305,144 @@ const Operacao = () => {
               setOperacao(codigoOperacao);
               if (erros.operacao) setErros({ ...erros, operacao: false });
               
-              // Buscar posto da operação selecionada
-              if (codigoOperacao) {
-                // Primeiro, tentar buscar da lista de operações IHM 
-                const operacaoIHM = operacoes.find((op) => op.codigo === codigoOperacao);
+              // Limpar campos quando não há operação selecionada
+              if (!codigoOperacao) {
+                setProduto('');
+                setModelo('');
+                setModeloDescricao('');
+                setPeca('');
+                setCodigo('');
+                setPostoAtual('');
+                return;
+              }
+              
+              console.log('Buscando operação:', codigoOperacao);
+              console.log('Operações IHM:', operacoes);
+              console.log('Operações completas:', operacoesCompletas);
+              
+              // Buscar dados completos da operação
+              // Primeiro, buscar a operação na lista IHM para obter o posto
+              const operacaoIHM = operacoes.find((op) => op.codigo === codigoOperacao);
+              console.log('Operação IHM encontrada:', operacaoIHM);
+              
+              let operacaoEncontrada: any = null;
+              
+              // Normalizar strings para comparação (remover espaços e converter para minúsculas)
+              const normalizar = (str: string | undefined) => (str || '').trim().toLowerCase();
+              
+              if (operacaoIHM && operacaoIHM.posto) {
+                // Se temos o posto, buscar pela combinação de operação e posto (mais preciso)
+                operacaoEncontrada = operacoesCompletas.find((op: any) => {
+                  // Comparar operação (pode ser código ou nome)
+                  const matchOperacao = normalizar(op.operacao) === normalizar(codigoOperacao);
+                  // Comparar posto
+                  const matchPosto = normalizar(op.posto) === normalizar(operacaoIHM.posto);
+                  return matchOperacao && matchPosto;
+                });
+              }
+              
+              // Se ainda não encontrou, tentar apenas pelo campo operacao (sem posto)
+              if (!operacaoEncontrada) {
+                operacaoEncontrada = operacoesCompletas.find((op: any) => {
+                  return normalizar(op.operacao) === normalizar(codigoOperacao);
+                });
+              }
+              
+              // Se ainda não encontrou e temos posto, tentar buscar apenas pelo posto
+              if (!operacaoEncontrada && operacaoIHM && operacaoIHM.posto) {
+                // Última tentativa: buscar pelo posto (pode haver apenas uma operação por posto)
+                const operacoesComPosto = operacoesCompletas.filter((op: any) => 
+                  normalizar(op.posto) === normalizar(operacaoIHM.posto)
+                );
+                if (operacoesComPosto.length === 1) {
+                  operacaoEncontrada = operacoesComPosto[0];
+                } else if (operacoesComPosto.length > 1) {
+                  // Se houver múltiplas operações no mesmo posto, tentar encontrar pela operação
+                  operacaoEncontrada = operacoesComPosto.find((op: any) => 
+                    normalizar(op.operacao) === normalizar(codigoOperacao)
+                  ) || operacoesComPosto[0]; // Se não encontrar, usar a primeira
+                }
+              }
+              
+              console.log('Operação completa encontrada:', operacaoEncontrada);
+              
+              if (operacaoEncontrada) {
+                console.log('Preenchendo campos com:', operacaoEncontrada);
+                
+                // Preencher produto
+                const produtoEncontrado = operacaoEncontrada.produto || '';
+                setProduto(produtoEncontrado);
+                console.log('Produto definido:', produtoEncontrado);
+                
+                // Buscar código do modelo pela descrição ou nome
+                const descricaoModelo = operacaoEncontrada.modelo || '';
+                console.log('Buscando modelo:', descricaoModelo);
+                console.log('Modelos disponíveis:', modelos);
+                
+                // Tentar encontrar modelo por descrição ou código
+                const modeloEncontrado = modelos.find(m => 
+                  normalizar(m.descricao) === normalizar(descricaoModelo) || 
+                  normalizar(m.codigo) === normalizar(descricaoModelo)
+                );
+                
+                if (modeloEncontrado) {
+                  setModelo(modeloEncontrado.codigo); // Código para envio
+                  setModeloDescricao(modeloEncontrado.descricao || modeloEncontrado.codigo); // Descrição para exibição
+                  console.log('Modelo encontrado:', modeloEncontrado);
+                } else {
+                  // Se não encontrou, usar a descrição diretamente
+                  setModelo(descricaoModelo);
+                  setModeloDescricao(descricaoModelo);
+                  console.log('Modelo não encontrado na lista, usando descrição:', descricaoModelo);
+                }
+                
+                // Preencher peça (pegar a primeira peça se houver)
+                if (operacaoEncontrada.pecas && operacaoEncontrada.pecas.length > 0) {
+                  const primeiraPeca = operacaoEncontrada.pecas[0];
+                  setPeca(primeiraPeca);
+                  console.log('Peça definida:', primeiraPeca);
+                } else {
+                  setPeca('');
+                  console.log('Nenhuma peça encontrada');
+                }
+                
+                // Preencher código (pegar o primeiro código se houver)
+                if (operacaoEncontrada.codigos && operacaoEncontrada.codigos.length > 0) {
+                  const primeiroCodigo = operacaoEncontrada.codigos[0];
+                  setCodigo(primeiroCodigo);
+                  console.log('Código definido:', primeiroCodigo);
+                } else {
+                  setCodigo('');
+                  console.log('Nenhum código encontrado');
+                }
+                
+                // Definir posto
+                if (operacaoEncontrada.posto) {
+                  setPostoAtual(operacaoEncontrada.posto);
+                  console.log('Posto definido:', operacaoEncontrada.posto);
+                } else if (operacaoIHM && operacaoIHM.posto) {
+                  setPostoAtual(operacaoIHM.posto);
+                  console.log('Posto definido da lista IHM:', operacaoIHM.posto);
+                } else {
+                  setPostoAtual('');
+                  console.log('Nenhum posto encontrado');
+                }
+              } else {
+                console.log('Operação completa não encontrada, tentando apenas definir posto');
+                // Se não encontrou na lista completa, tentar apenas buscar posto da lista IHM
                 if (operacaoIHM && operacaoIHM.posto) {
                   setPostoAtual(operacaoIHM.posto);
-                  return;
-                }
-                
-                // Se não encontrou na lista IHM, tentar na lista completa
-                let operacaoEncontrada = operacoesCompletas.find((op: any) => op.operacao === codigoOperacao);
-                
-                // Se não encontrou, tentar pelo campo 'codigo' (caso a estrutura seja diferente)
-                if (!operacaoEncontrada) {
-                  operacaoEncontrada = operacoesCompletas.find((op: any) => op.codigo === codigoOperacao);
-                }
-                
-                if (operacaoEncontrada && operacaoEncontrada.posto) {
-                  setPostoAtual(operacaoEncontrada.posto);
+                  console.log('Posto definido da lista IHM:', operacaoIHM.posto);
                 } else {
                   setPostoAtual('');
                 }
-              } else {
-                setPostoAtual('');
+                // Limpar campos se não encontrou operação completa
+                setProduto('');
+                setModelo('');
+                setModeloDescricao('');
+                setPeca('');
+                setCodigo('');
+                console.log('Campos limpos - operação não encontrada');
               }
             }}
             className={`w-full px-5 py-4 text-xl border-4 rounded-lg focus:outline-none bg-white appearance-none cursor-pointer ${erros.operacao ? 'border-red-500' : 'border-gray-400 focus:border-blue-500'}`}
@@ -391,29 +463,6 @@ const Operacao = () => {
           </select>
         </div>
 
-        <div className="flex items-center gap-6">
-          <div>
-            <label className="block text-gray-700 text-2xl font-bold">
-              Quantidade
-            </label>
-            <label className="block text-gray-700 text-2xl font-bold">
-              produzidas
-            </label>
-          </div>
-          <input
-            type="number"
-            value={quantidade}
-            onChange={(e) => {
-              const val = e.target.value;
-              setQuantidade(val === '' ? '' : parseInt(val, 10));
-              if (erros.quantidade) setErros({ ...erros, quantidade: false });
-            }}
-            min="1"
-            className={`w-36 px-5 py-4 text-xl border-4 rounded-lg focus:outline-none bg-white text-center ${erros.quantidade ? 'border-red-500' : 'border-gray-400 focus:border-blue-500'}`}
-            placeholder="INT"
-            style={{ minHeight: '60px' }}
-          />
-        </div>
       </div>
 
       <div className="grid grid-cols-4 gap-6 mb-8">
@@ -421,90 +470,52 @@ const Operacao = () => {
           <label className="text-gray-700 text-2xl font-bold mb-4 block">
             PRODUTO
           </label>
-          <select
+          <input
+            type="text"
             value={produto}
-            onChange={(e) => {
-              setProduto(e.target.value);
-              if (erros.produto) setErros({ ...erros, produto: false });
-            }}
-            className={`w-full px-6 py-5 text-2xl border-4 rounded-lg focus:outline-none bg-white appearance-none cursor-pointer ${erros.produto ? 'border-red-500' : 'border-gray-400 focus:border-blue-500'}`}
-            style={selectStyle}
-          >
-            <option value="">Selecione</option>
-            {produtos.map((p) => (
-              <option key={p.codigo} value={p.codigo}>
-                {p.nome || p.codigo}
-              </option>
-            ))}
-          </select>
+            readOnly
+            className={`w-full px-6 py-5 text-2xl border-4 rounded-lg focus:outline-none bg-gray-100 cursor-not-allowed ${erros.produto ? 'border-red-500' : 'border-gray-400'}`}
+            style={{ minHeight: '70px' }}
+          />
         </div>
 
         <div>
           <label className="text-gray-700 text-2xl font-bold mb-4 block">
             MODELO
           </label>
-          <select
-            value={modelo}
-            onChange={(e) => {
-              setModelo(e.target.value);
-              if (erros.modelo) setErros({ ...erros, modelo: false });
-            }}
-            className={`w-full px-6 py-5 text-2xl border-4 rounded-lg focus:outline-none bg-white appearance-none cursor-pointer ${erros.modelo ? 'border-red-500' : 'border-gray-400 focus:border-blue-500'}`}
-            style={selectStyle}
-          >
-            <option value="">Selecione</option>
-            {modelos.map((m) => (
-              <option key={m.codigo} value={m.codigo}>
-                {m.descricao || m.codigo}
-              </option>
-            ))}
-          </select>
+          <input
+            type="text"
+            value={modeloDescricao}
+            readOnly
+            className={`w-full px-6 py-5 text-2xl border-4 rounded-lg focus:outline-none bg-gray-100 cursor-not-allowed ${erros.modelo ? 'border-red-500' : 'border-gray-400'}`}
+            style={{ minHeight: '70px' }}
+          />
         </div>
 
         <div>
           <label className="text-gray-700 text-2xl font-bold mb-4 block">
             PEÇA
           </label>
-          <select
+          <input
+            type="text"
             value={peca}
-            onChange={(e) => {
-              setPeca(e.target.value);
-              if (erros.peca) setErros({ ...erros, peca: false });
-            }}
-            disabled={!modelo}
-            className={`w-full px-6 py-5 text-2xl border-4 rounded-lg focus:outline-none bg-white appearance-none cursor-pointer disabled:bg-gray-200 disabled:cursor-not-allowed disabled:text-gray-500 ${erros.peca ? 'border-red-500' : 'border-gray-400 focus:border-blue-500'}`}
-            style={selectStyle}
-          >
-            <option value="">Selecione</option>
-            {subprodutos.map((p) => (
-              <option key={p.codigo} value={p.codigo}>
-                {p.descricao || p.codigo}
-              </option>
-            ))}
-          </select>
+            readOnly
+            className={`w-full px-6 py-5 text-2xl border-4 rounded-lg focus:outline-none bg-gray-100 cursor-not-allowed ${erros.peca ? 'border-red-500' : 'border-gray-400'}`}
+            style={{ minHeight: '70px' }}
+          />
         </div>
 
         <div>
           <label className="text-gray-700 text-2xl font-bold mb-4 block">
             CÓDIGO
           </label>
-          <select
+          <input
+            type="text"
             value={codigo}
-            onChange={(e) => {
-              setCodigo(e.target.value);
-              if (erros.codigo) setErros({ ...erros, codigo: false });
-            }}
-            disabled={!peca}
-            className={`w-full px-6 py-5 text-2xl border-4 rounded-lg focus:outline-none bg-white appearance-none cursor-pointer disabled:bg-gray-200 disabled:cursor-not-allowed disabled:text-gray-500 ${erros.codigo ? 'border-red-500' : 'border-gray-400 focus:border-blue-500'}`}
-            style={selectStyle}
-          >
-            <option value="">Selecione</option>
-            {subprodutos.map((p) => (
-              <option key={p.codigo} value={p.codigo}>
-                {p.codigo}
-              </option>
-            ))}
-          </select>
+            readOnly
+            className={`w-full px-6 py-5 text-2xl border-4 rounded-lg focus:outline-none bg-gray-100 cursor-not-allowed ${erros.codigo ? 'border-red-500' : 'border-gray-400'}`}
+            style={{ minHeight: '70px' }}
+          />
         </div>
       </div>
 
@@ -524,8 +535,8 @@ const Operacao = () => {
           </div>
 
           <button
-            onClick={handleIniciarTrabalho}
-            disabled={carregando || registroAberto || !operacao || !produto || !modelo || !peca || !codigo || !quantidade}
+            onClick={registroAberto ? handleFinalizarProcesso : handleIniciarTrabalho}
+            disabled={carregando || (!registroAberto && (!operacao || !produto || !modelo || !peca || !codigo))}
             className="px-12 py-6 text-white text-3xl font-bold rounded-lg shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ 
               backgroundColor: registroAberto ? '#28a745' : 'var(--bg-laranja)',
@@ -533,17 +544,25 @@ const Operacao = () => {
               minWidth: '300px'
             }}
             onMouseEnter={(e) => {
-              if (!carregando && !registroAberto) {
-                e.currentTarget.style.backgroundColor = '#C55A15';
+              if (!carregando) {
+                if (registroAberto) {
+                  e.currentTarget.style.backgroundColor = '#218838';
+                } else {
+                  e.currentTarget.style.backgroundColor = '#C55A15';
+                }
               }
             }}
             onMouseLeave={(e) => {
-              if (!carregando && !registroAberto) {
-                e.currentTarget.style.backgroundColor = 'var(--bg-laranja)';
+              if (!carregando) {
+                if (registroAberto) {
+                  e.currentTarget.style.backgroundColor = '#28a745';
+                } else {
+                  e.currentTarget.style.backgroundColor = 'var(--bg-laranja)';
+                }
               }
             }}
           >
-            Iniciar trabalho
+            {registroAberto ? 'Finalizar processo' : 'Iniciar trabalho'}
           </button>
         </div>
       </div>

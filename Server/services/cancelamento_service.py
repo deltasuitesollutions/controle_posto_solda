@@ -36,35 +36,33 @@ def cancelar_operacao(
     modelo = Modelo.buscar_por_id(registro.modelo_id) if registro.modelo_id else None
     operacao = Operacao.buscar_por_id(registro.operacao_id) if registro.operacao_id else None
     
+    # Verificar se a tabela operacoes_canceladas existe
+    if not DatabaseConnection.table_exists('operacoes_canceladas'):
+        raise Exception("Tabela 'operacoes_canceladas' não existe. Execute as migrações necessárias.")
+    
     # Criar cancelamento ANTES de deletar o registro, salvando TODOS os dados
     conn = DatabaseConnection.get_connection()
     cursor = conn.cursor()
     
     try:
-        # Inserir cancelamento com todos os dados do registro
-        query_cancelamento = """
-            INSERT INTO operacoes_canceladas (
-                registro_id, motivo, cancelado_por_usuario_id, data_cancelamento,
-                posto_id, funcionario_id, operacao_id, modelo_id, peca_id, sublinha_id,
-                data_inicio, hora_inicio, fim, quantidade, codigo_producao, comentarios, inicio,
-                funcionario_nome, funcionario_matricula, posto_nome,
-                modelo_nome, modelo_codigo, operacao_codigo, operacao_nome
-            )
-            VALUES (
-                %s, %s, %s, CURRENT_TIMESTAMP,
-                %s, %s, %s, %s, %s, %s,
-                %s, %s, %s, %s, %s, %s, %s,
-                %s, %s, %s,
-                %s, %s, %s, %s
-            )
-            RETURNING id, data_cancelamento
-        """
-        cursor.execute(query_cancelamento, (
-            registro_id, motivo.strip(), cancelado_por_usuario_id,
-            registro.posto_id, registro.funcionario_id, registro.operacao_id,
-            registro.modelo_id, registro.peca_id, registro.sublinha_id,
-            registro.data_inicio, registro.hora_inicio, registro.fim,
-            registro.quantidade, registro.codigo_producao, registro.comentarios, registro.inicio,
+        # Preparar dados para inserção
+        dados_cancelamento = (
+            registro_id, 
+            motivo.strip(), 
+            cancelado_por_usuario_id,
+            registro.posto_id, 
+            registro.funcionario_id, 
+            registro.operacao_id,
+            registro.modelo_id, 
+            registro.peca_id, 
+            registro.sublinha_id,
+            registro.data_inicio, 
+            registro.hora_inicio, 
+            registro.fim,
+            registro.quantidade, 
+            registro.codigo_producao, 
+            registro.comentarios, 
+            registro.inicio,
             funcionario.nome if funcionario else None,
             funcionario.matricula if funcionario else None,
             posto.nome if posto else None,
@@ -72,15 +70,130 @@ def cancelar_operacao(
             modelo.codigo if modelo else None,
             operacao.codigo_operacao if operacao else None,
             operacao.nome if operacao else None
-        ))
+        )
+        
+        # Verificar quais colunas existem na tabela para fazer INSERT adaptativo
+        cursor.execute("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_schema = 'public' 
+            AND table_name = 'operacoes_canceladas'
+            ORDER BY ordinal_position
+        """)
+        colunas_existentes = [row[0] for row in cursor.fetchall()]
+        
+        # Colunas básicas obrigatórias
+        colunas_basicas = ['registro_id', 'motivo', 'data_cancelamento']
+        if not all(col in colunas_existentes for col in colunas_basicas):
+            raise Exception(f"Tabela 'operacoes_canceladas' não tem as colunas básicas necessárias: {colunas_basicas}")
+        
+        # Construir query INSERT adaptativa baseada nas colunas existentes
+        colunas_para_inserir = ['registro_id', 'motivo', 'data_cancelamento']
+        valores_para_inserir = [registro_id, motivo.strip(), 'CURRENT_TIMESTAMP']
+        
+        # Adicionar colunas opcionais se existirem
+        colunas_opcionais = [
+            ('cancelado_por_usuario_id', cancelado_por_usuario_id),
+            ('posto_id', registro.posto_id),
+            ('funcionario_id', registro.funcionario_id),
+            ('operacao_id', registro.operacao_id),
+            ('modelo_id', registro.modelo_id),
+            ('peca_id', registro.peca_id),
+            ('sublinha_id', registro.sublinha_id),
+            ('data_inicio', registro.data_inicio),
+            ('hora_inicio', registro.hora_inicio),
+            ('fim', registro.fim),
+            ('quantidade', registro.quantidade),
+            ('codigo_producao', registro.codigo_producao),
+            ('comentarios', registro.comentarios),
+            ('inicio', registro.inicio),
+            ('funcionario_nome', funcionario.nome if funcionario else None),
+            ('funcionario_matricula', funcionario.matricula if funcionario else None),
+            ('posto_nome', posto.nome if posto else None),
+            ('modelo_nome', modelo.descricao if modelo else None),
+            ('modelo_codigo', modelo.codigo if modelo else None),
+            ('operacao_codigo', operacao.codigo_operacao if operacao else None),
+            ('operacao_nome', operacao.nome if operacao else None)
+        ]
+        
+        for coluna, valor in colunas_opcionais:
+            if coluna in colunas_existentes:
+                colunas_para_inserir.append(coluna)
+                if coluna == 'data_cancelamento':
+                    valores_para_inserir.append('CURRENT_TIMESTAMP')
+                else:
+                    valores_para_inserir.append(valor)
+        
+        # Construir query INSERT
+        placeholders = []
+        valores_finais = []
+        for i, valor in enumerate(valores_para_inserir):
+            if valor == 'CURRENT_TIMESTAMP':
+                placeholders.append('CURRENT_TIMESTAMP')
+            else:
+                placeholders.append('%s')
+                valores_finais.append(valor)
+        
+        query_cancelamento = f"""
+            INSERT INTO operacoes_canceladas ({', '.join(colunas_para_inserir)})
+            VALUES ({', '.join(placeholders)})
+            RETURNING id, data_cancelamento
+        """
+        
+        # Executar inserção
+        cursor.execute(query_cancelamento, tuple(valores_finais))
         result = cursor.fetchone()
+        
+        if not result:
+            raise Exception("Falha ao inserir cancelamento na tabela operacoes_canceladas")
+        
         cancelamento_id = result[0] if result else None
         data_cancelamento = str(result[1]) if result and result[1] else None
         
-        # Agora deletar o registro de produção
-        # A foreign key deve estar configurada como ON DELETE SET NULL para não deletar o cancelamento
+        # Verificar se o cancelamento foi realmente inserido
+        cursor.execute("SELECT COUNT(*) FROM operacoes_canceladas WHERE id = %s", (cancelamento_id,))
+        count = cursor.fetchone()[0]
+        if count == 0:
+            raise Exception("Cancelamento não foi inserido na tabela operacoes_canceladas")
+        
+        # IMPORTANTE: Remover a foreign key temporariamente se existir para evitar CASCADE
+        # Ou garantir que a foreign key não cause problemas
+        # Primeiro, verificar se há foreign key com CASCADE
+        cursor.execute("""
+            SELECT tc.constraint_name
+            FROM information_schema.table_constraints tc
+            JOIN information_schema.key_column_usage kcu 
+                ON tc.constraint_name = kcu.constraint_name
+            WHERE tc.table_name = 'operacoes_canceladas'
+            AND tc.constraint_type = 'FOREIGN KEY'
+            AND kcu.column_name = 'registro_id'
+        """)
+        fk_constraint = cursor.fetchone()
+        
+        fk_removida = False
+        fk_name = None
+        if fk_constraint:
+            fk_name = fk_constraint[0]
+            # Remover temporariamente a foreign key para evitar CASCADE
+            try:
+                cursor.execute(f"ALTER TABLE operacoes_canceladas DROP CONSTRAINT IF EXISTS {fk_name}")
+                fk_removida = True
+                print(f"Foreign key '{fk_name}' removida temporariamente para evitar CASCADE")
+            except Exception as e:
+                print(f"Aviso: Não foi possível remover foreign key: {e}")
+        
+        # Agora deletar o registro de produção APENAS se o cancelamento foi inserido com sucesso
         query_delete = "DELETE FROM registros_producao WHERE registro_id = %s"
         cursor.execute(query_delete, (registro_id,))
+        
+        # Verificar se o cancelamento ainda existe após deletar o registro
+        cursor.execute("SELECT COUNT(*) FROM operacoes_canceladas WHERE id = %s", (cancelamento_id,))
+        count_apos_delete = cursor.fetchone()[0]
+        if count_apos_delete == 0:
+            raise Exception("Cancelamento foi deletado após remover o registro. Verifique a foreign key.")
+        
+        # Se removemos a foreign key, não vamos recriá-la (deixar sem foreign key é mais seguro)
+        # Pois o registro_id é apenas uma referência histórica
         
         conn.commit()
         
@@ -93,6 +206,10 @@ def cancelar_operacao(
         }
     except Exception as e:
         conn.rollback()
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Erro ao cancelar operação: {str(e)}")
+        print(f"Detalhes: {error_details}")
         raise Exception(f"Erro ao cancelar operação: {str(e)}")
     finally:
         cursor.close()

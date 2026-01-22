@@ -307,6 +307,7 @@ export const producaoAPI = {
     registro_id?: number
     posto?: string
     funcionario_matricula?: string
+    quantidade?: number
   }) =>
     fetchAPI('/producao/saida', {
       method: 'POST',
