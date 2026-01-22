@@ -1,4 +1,6 @@
-# React + TypeScript + Vite
+# Frontend - React + TypeScript + Vite
+
+> **⚠️ ARQUITETURA API-FIRST**: Este frontend **NUNCA** acessa o banco de dados diretamente. Todas as comunicações passam pela API REST em `http://localhost:8000/api`. Consulte `docs/ARQUITETURA_API.md` para mais detalhes.
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

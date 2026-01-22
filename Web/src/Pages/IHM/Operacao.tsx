@@ -29,7 +29,6 @@ const Operacao = () => {
   const [modelos, setModelos] = useState<Modelo[]>([]);
   const [operacoes, setOperacoes] = useState<Array<{codigo: string; nome: string; posto?: string}>>([]);
   const [operacoesCompletas, setOperacoesCompletas] = useState<Array<any>>([]);
-  const [produtos, setProdutos] = useState<Array<{id: string; codigo: string; nome: string}>>([]);
   const [carregando, setCarregando] = useState(false);
   const [registroAberto, setRegistroAberto] = useState<any>(null);
   const [funcionarioMatricula, setFuncionarioMatricula] = useState<string>('');
@@ -42,15 +41,11 @@ const Operacao = () => {
     codigo: false,
   });
   const tinhaRegistroRef = useRef(false);
+  
+  // Índices para buscas rápidas (O(1) ao invés de O(n))
+  const operacoesMapRef = useRef<Map<string, any>>(new Map());
+  const modelosMapRef = useRef<Map<string, Modelo>>(new Map());
 
-  const arrowIcon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E";
-  const selectStyle = {
-    backgroundImage: `url("${arrowIcon}")`,
-    backgroundRepeat: 'no-repeat' as const,
-    backgroundPosition: 'right 1.5rem center',
-    paddingRight: '3.5rem',
-    minHeight: '70px',
-  };
 
   useEffect(() => {
     if (!operador) {
@@ -63,64 +58,81 @@ const Operacao = () => {
       try {
         setCarregando(true);
         
-        // Carregar operações cadastradas (formato IHM)
-        try {
-          const dadosOperacoes = await ihmAPI.listarOperacoes();
-          setOperacoes(dadosOperacoes || []);
-        } catch (error) {
-          console.error('Erro ao carregar operações:', error);
-          setOperacoes([]);
-        }
+        // Carregar todos os dados em paralelo para maior velocidade
+        const [
+          dadosOperacoes,
+          dadosOperacoesCompletas,
+          dadosModelos,
+          dadosFuncionarios
+        ] = await Promise.all([
+          ihmAPI.listarOperacoes().catch(() => []),
+          operacoesAPI.listarTodos().catch(() => []),
+          ihmAPI.listarModelos().catch(() => []),
+          operador ? funcionariosAPI.listarTodos().catch(() => []) : Promise.resolve([])
+        ]);
         
-        // Carregar operações completas (com posto)
-        try {
-          const dadosOperacoesCompletas = await operacoesAPI.listarTodos();
-          setOperacoesCompletas(dadosOperacoesCompletas || []);
-        } catch (error) {
-          console.error('Erro ao carregar operações completas:', error);
-          setOperacoesCompletas([]);
-        }
+        // Processar operações IHM
+        setOperacoes(dadosOperacoes || []);
         
-        // Carregar produtos
-        try {
-          const dadosProdutos = await ihmAPI.listarProdutos();
-          setProdutos(dadosProdutos || []);
-        } catch (error) {
-          console.error('Erro ao carregar produtos:', error);
-          setProdutos([]);
-        }
+        // Processar operações completas e criar índice
+        const operacoesCompletasProcessadas = dadosOperacoesCompletas || [];
+        setOperacoesCompletas(operacoesCompletasProcessadas);
         
-        // Carregar modelos
-        try {
-          const dados = await ihmAPI.listarModelos();
-          const modelosMapeados = (dados || []).map((m: any) => ({
-            id: m.id?.toString() || m.codigo,
-            codigo: m.codigo,
-            descricao: m.descricao || m.codigo,
-            subprodutos: (m.subprodutos || []).map((s: any) => ({
-              id: s.id?.toString() || s.codigo,
-              codigo: s.codigo,
-              descricao: s.descricao || s.codigo,
-            })),
-          }));
-          setModelos(modelosMapeados);
-        } catch (error) {
-          console.error('Erro ao carregar modelos:', error);
-          setModelos([]);
-        }
+        // Criar índice de operações para busca rápida
+        const operacoesMap = new Map<string, any>();
+        const normalizar = (str: string | undefined) => (str || '').trim().toLowerCase();
+        
+        operacoesCompletasProcessadas.forEach((op: any) => {
+          const chaveOperacao = normalizar(op.operacao);
+          const chavePosto = normalizar(op.posto);
+          const chaveCombinada = `${chaveOperacao}_${chavePosto}`;
+          
+          // Armazenar por operação + posto (mais específico)
+          if (!operacoesMap.has(chaveCombinada)) {
+            operacoesMap.set(chaveCombinada, op);
+          }
+          
+          // Também armazenar apenas por operação (fallback)
+          if (!operacoesMap.has(chaveOperacao)) {
+            operacoesMap.set(chaveOperacao, op);
+          }
+        });
+        operacoesMapRef.current = operacoesMap;
+        
+        // Processar modelos e criar índice
+        const modelosMapeados = (dadosModelos || []).map((m: any) => ({
+          id: m.id?.toString() || m.codigo,
+          codigo: m.codigo,
+          descricao: m.descricao || m.codigo,
+          subprodutos: (m.subprodutos || []).map((s: any) => ({
+            id: s.id?.toString() || s.codigo,
+            codigo: s.codigo,
+            descricao: s.descricao || s.codigo,
+          })),
+        }));
+        setModelos(modelosMapeados);
+        
+        // Criar índice de modelos para busca rápida
+        const modelosMap = new Map<string, Modelo>();
+        modelosMapeados.forEach((m: Modelo) => {
+          const chaveCodigo = normalizar(m.codigo);
+          const chaveDescricao = normalizar(m.descricao);
+          modelosMap.set(chaveCodigo, m);
+          if (chaveDescricao !== chaveCodigo) {
+            modelosMap.set(chaveDescricao, m);
+          }
+        });
+        modelosMapRef.current = modelosMap;
         
         // Buscar matrícula do funcionário pelo nome
-        if (operador) {
-          try {
-            const funcionarios = await funcionariosAPI.listarTodos();
-            const funcionarioEncontrado = funcionarios.find((f: any) => f.nome === operador);
-            if (funcionarioEncontrado) {
-              setFuncionarioMatricula(funcionarioEncontrado.matricula);
-            }
-          } catch (error) {
-            console.error('Erro ao buscar funcionário:', error);
+        if (operador && dadosFuncionarios.length > 0) {
+          const funcionarioEncontrado = dadosFuncionarios.find((f: any) => f.nome === operador);
+          if (funcionarioEncontrado) {
+            setFuncionarioMatricula(funcionarioEncontrado.matricula);
           }
         }
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error);
       } finally {
         setCarregando(false);
       }
@@ -128,112 +140,70 @@ const Operacao = () => {
     carregarDados();
   }, [operador]);
 
+  // Função otimizada para preencher campos quando operação é selecionada
+  const preencherCamposOperacao = (codigoOperacao: string) => {
+    if (!codigoOperacao) {
+      setProduto('');
+      setModelo('');
+      setModeloDescricao('');
+      setPeca('');
+      setCodigo('');
+      setPostoAtual('');
+      return;
+    }
+    
+    const normalizar = (str: string | undefined) => (str || '').trim().toLowerCase();
+    const chaveOperacao = normalizar(codigoOperacao);
+    
+    // Buscar operação IHM para obter o posto
+    const operacaoIHM = operacoes.find((op) => op.codigo === codigoOperacao);
+    const chavePosto = operacaoIHM?.posto ? normalizar(operacaoIHM.posto) : '';
+    const chaveCombinada = `${chaveOperacao}_${chavePosto}`;
+    
+    // Buscar operação completa usando índice (O(1))
+    let operacaoEncontrada = operacoesMapRef.current.get(chaveCombinada) || 
+                              operacoesMapRef.current.get(chaveOperacao);
+    
+    if (operacaoEncontrada) {
+      // Preencher produto
+      setProduto(operacaoEncontrada.produto || '');
+      
+      // Buscar modelo usando índice (O(1))
+      const descricaoModelo = operacaoEncontrada.modelo || '';
+      const chaveModelo = normalizar(descricaoModelo);
+      const modeloEncontrado = modelosMapRef.current.get(chaveModelo);
+      
+      if (modeloEncontrado) {
+        setModelo(modeloEncontrado.codigo);
+        setModeloDescricao(modeloEncontrado.descricao || modeloEncontrado.codigo);
+      } else {
+        setModelo(descricaoModelo);
+        setModeloDescricao(descricaoModelo);
+      }
+      
+      // Preencher peça (primeira peça se houver)
+      setPeca(operacaoEncontrada.pecas?.[0] || '');
+      
+      // Preencher código (primeiro código se houver)
+      setCodigo(operacaoEncontrada.codigos?.[0] || '');
+      
+      // Definir posto
+      setPostoAtual(operacaoEncontrada.posto || operacaoIHM?.posto || '');
+    } else {
+      // Se não encontrou operação completa, usar apenas dados do IHM
+      setPostoAtual(operacaoIHM?.posto || '');
+      setProduto('');
+      setModelo('');
+      setModeloDescricao('');
+      setPeca('');
+      setCodigo('');
+    }
+  };
+
   // Preencher campos quando os dados forem carregados e já houver uma operação selecionada
   useEffect(() => {
     if (operacao && operacoes.length > 0 && operacoesCompletas.length > 0 && modelos.length > 0) {
-      // Buscar dados completos da operação
-      const operacaoIHM = operacoes.find((op) => op.codigo === operacao);
-      
-      let operacaoEncontrada: any = null;
-      
-      // Normalizar strings para comparação (remover espaços e converter para minúsculas)
-      const normalizar = (str: string | undefined) => (str || '').trim().toLowerCase();
-      
-      if (operacaoIHM && operacaoIHM.posto) {
-        // Se temos o posto, buscar pela combinação de operação e posto (mais preciso)
-        operacaoEncontrada = operacoesCompletas.find((op: any) => {
-          // Comparar operação (pode ser código ou nome)
-          const matchOperacao = normalizar(op.operacao) === normalizar(operacao);
-          // Comparar posto
-          const matchPosto = normalizar(op.posto) === normalizar(operacaoIHM.posto);
-          return matchOperacao && matchPosto;
-        });
-      }
-      
-      // Se ainda não encontrou, tentar apenas pelo campo operacao (sem posto)
-      if (!operacaoEncontrada) {
-        operacaoEncontrada = operacoesCompletas.find((op: any) => {
-          return normalizar(op.operacao) === normalizar(operacao);
-        });
-      }
-      
-      // Se ainda não encontrou e temos posto, tentar buscar apenas pelo posto
-      if (!operacaoEncontrada && operacaoIHM && operacaoIHM.posto) {
-        // Última tentativa: buscar pelo posto (pode haver apenas uma operação por posto)
-        const operacoesComPosto = operacoesCompletas.filter((op: any) => 
-          normalizar(op.posto) === normalizar(operacaoIHM.posto)
-        );
-        if (operacoesComPosto.length === 1) {
-          operacaoEncontrada = operacoesComPosto[0];
-        } else if (operacoesComPosto.length > 1) {
-          // Se houver múltiplas operações no mesmo posto, tentar encontrar pela operação
-          operacaoEncontrada = operacoesComPosto.find((op: any) => 
-            normalizar(op.operacao) === normalizar(operacao)
-          ) || operacoesComPosto[0]; // Se não encontrar, usar a primeira
-        }
-      }
-      
-      if (operacaoEncontrada) {
-        // Preencher produto
-        const produtoEncontrado = operacaoEncontrada.produto || '';
-        setProduto(produtoEncontrado);
-        
-        // Buscar código do modelo pela descrição ou nome
-        const descricaoModelo = operacaoEncontrada.modelo || '';
-        
-        // Tentar encontrar modelo por descrição ou código
-        const modeloEncontrado = modelos.find(m => 
-          normalizar(m.descricao) === normalizar(descricaoModelo) || 
-          normalizar(m.codigo) === normalizar(descricaoModelo)
-        );
-        
-        if (modeloEncontrado) {
-          setModelo(modeloEncontrado.codigo); // Código para envio
-          setModeloDescricao(modeloEncontrado.descricao || modeloEncontrado.codigo); // Descrição para exibição
-        } else {
-          // Se não encontrou, usar a descrição diretamente
-          setModelo(descricaoModelo);
-          setModeloDescricao(descricaoModelo);
-        }
-        
-        // Preencher peça (pegar a primeira peça se houver)
-        if (operacaoEncontrada.pecas && operacaoEncontrada.pecas.length > 0) {
-          const primeiraPeca = operacaoEncontrada.pecas[0];
-          setPeca(primeiraPeca);
-        } else {
-          setPeca('');
-        }
-        
-        // Preencher código (pegar o primeiro código se houver)
-        if (operacaoEncontrada.codigos && operacaoEncontrada.codigos.length > 0) {
-          const primeiroCodigo = operacaoEncontrada.codigos[0];
-          setCodigo(primeiroCodigo);
-        } else {
-          setCodigo('');
-        }
-        
-        // Definir posto
-        if (operacaoEncontrada.posto) {
-          setPostoAtual(operacaoEncontrada.posto);
-        } else if (operacaoIHM && operacaoIHM.posto) {
-          setPostoAtual(operacaoIHM.posto);
-        } else {
-          setPostoAtual('');
-        }
-      } else {
-        // Se não encontrou na lista completa, tentar apenas buscar posto da lista IHM
-        if (operacaoIHM && operacaoIHM.posto) {
-          setPostoAtual(operacaoIHM.posto);
-        } else {
-          setPostoAtual('');
-        }
-        // Limpar campos se não encontrou operação completa
-        setProduto('');
-        setModelo('');
-        setModeloDescricao('');
-        setPeca('');
-        setCodigo('');
-      }
+      preencherCamposOperacao(operacao);
     }
   }, [operacao, operacoes, operacoesCompletas, modelos]);
 
@@ -280,22 +250,6 @@ const Operacao = () => {
     const interval = setInterval(verificarRegistroAberto, 5000);
     return () => clearInterval(interval);
   }, [operacao, funcionarioMatricula, postoAtual, navigate, operador]);
-
-  const limparFormulario = () => {
-    setOperacao('');
-    setProduto('');
-    setModelo('');
-    setModeloDescricao('');
-    setPeca('');
-    setCodigo('');
-    setErros({
-      operacao: false,
-      produto: false,
-      modelo: false,
-      peca: false,
-      codigo: false,
-    });
-  };
 
   const validarFormulario = (): boolean => {
     const novosErros = {
@@ -413,126 +367,10 @@ const Operacao = () => {
               setOperacao(codigoOperacao);
               if (erros.operacao) setErros({ ...erros, operacao: false });
               
-              // Limpar campos quando não há operação selecionada
-              if (!codigoOperacao) {
-                setProduto('');
-                setModelo('');
-                setModeloDescricao('');
-                setPeca('');
-                setCodigo('');
-                setPostoAtual('');
-                return;
-              }
-              
-              // Se os dados ainda não foram carregados, apenas atualizar o estado da operação
-              // O useEffect vai preencher os campos quando os dados estiverem prontos
-              if (operacoes.length === 0 || operacoesCompletas.length === 0 || modelos.length === 0) {
-                return;
-              }
-              
-              // Se os dados estão carregados, preencher os campos imediatamente
-              // Buscar dados completos da operação
-              const operacaoIHM = operacoes.find((op) => op.codigo === codigoOperacao);
-              
-              let operacaoEncontrada: any = null;
-              
-              // Normalizar strings para comparação (remover espaços e converter para minúsculas)
-              const normalizar = (str: string | undefined) => (str || '').trim().toLowerCase();
-              
-              if (operacaoIHM && operacaoIHM.posto) {
-                // Se temos o posto, buscar pela combinação de operação e posto (mais preciso)
-                operacaoEncontrada = operacoesCompletas.find((op: any) => {
-                  // Comparar operação (pode ser código ou nome)
-                  const matchOperacao = normalizar(op.operacao) === normalizar(codigoOperacao);
-                  // Comparar posto
-                  const matchPosto = normalizar(op.posto) === normalizar(operacaoIHM.posto);
-                  return matchOperacao && matchPosto;
-                });
-              }
-              
-              // Se ainda não encontrou, tentar apenas pelo campo operacao (sem posto)
-              if (!operacaoEncontrada) {
-                operacaoEncontrada = operacoesCompletas.find((op: any) => {
-                  return normalizar(op.operacao) === normalizar(codigoOperacao);
-                });
-              }
-              
-              // Se ainda não encontrou e temos posto, tentar buscar apenas pelo posto
-              if (!operacaoEncontrada && operacaoIHM && operacaoIHM.posto) {
-                // Última tentativa: buscar pelo posto (pode haver apenas uma operação por posto)
-                const operacoesComPosto = operacoesCompletas.filter((op: any) => 
-                  normalizar(op.posto) === normalizar(operacaoIHM.posto)
-                );
-                if (operacoesComPosto.length === 1) {
-                  operacaoEncontrada = operacoesComPosto[0];
-                } else if (operacoesComPosto.length > 1) {
-                  // Se houver múltiplas operações no mesmo posto, tentar encontrar pela operação
-                  operacaoEncontrada = operacoesComPosto.find((op: any) => 
-                    normalizar(op.operacao) === normalizar(codigoOperacao)
-                  ) || operacoesComPosto[0]; // Se não encontrar, usar a primeira
-                }
-              }
-              
-              if (operacaoEncontrada) {
-                // Preencher produto
-                const produtoEncontrado = operacaoEncontrada.produto || '';
-                setProduto(produtoEncontrado);
-                
-                // Buscar código do modelo pela descrição ou nome
-                const descricaoModelo = operacaoEncontrada.modelo || '';
-                
-                // Tentar encontrar modelo por descrição ou código
-                const modeloEncontrado = modelos.find(m => 
-                  normalizar(m.descricao) === normalizar(descricaoModelo) || 
-                  normalizar(m.codigo) === normalizar(descricaoModelo)
-                );
-                
-                if (modeloEncontrado) {
-                  setModelo(modeloEncontrado.codigo); // Código para envio
-                  setModeloDescricao(modeloEncontrado.descricao || modeloEncontrado.codigo); // Descrição para exibição
-                } else {
-                  // Se não encontrou, usar a descrição diretamente
-                  setModelo(descricaoModelo);
-                  setModeloDescricao(descricaoModelo);
-                }
-                
-                // Preencher peça (pegar a primeira peça se houver)
-                if (operacaoEncontrada.pecas && operacaoEncontrada.pecas.length > 0) {
-                  const primeiraPeca = operacaoEncontrada.pecas[0];
-                  setPeca(primeiraPeca);
-                } else {
-                  setPeca('');
-                }
-                
-                // Preencher código (pegar o primeiro código se houver)
-                if (operacaoEncontrada.codigos && operacaoEncontrada.codigos.length > 0) {
-                  const primeiroCodigo = operacaoEncontrada.codigos[0];
-                  setCodigo(primeiroCodigo);
-                } else {
-                  setCodigo('');
-                }
-                
-                // Definir posto
-                if (operacaoEncontrada.posto) {
-                  setPostoAtual(operacaoEncontrada.posto);
-                } else if (operacaoIHM && operacaoIHM.posto) {
-                  setPostoAtual(operacaoIHM.posto);
-                } else {
-                  setPostoAtual('');
-                }
-              } else {
-                // Se não encontrou na lista completa, tentar apenas buscar posto da lista IHM
-                if (operacaoIHM && operacaoIHM.posto) {
-                  setPostoAtual(operacaoIHM.posto);
-                } else {
-                  setPostoAtual('');
-                }
-                // Limpar campos se não encontrou operação completa
-                setProduto('');
-                setModelo('');
-                setModeloDescricao('');
-                setPeca('');
-                setCodigo('');
+              // Preencher campos imediatamente usando função otimizada
+              // Se os dados ainda não foram carregados, o useEffect vai preencher depois
+              if (operacoes.length > 0 && operacoesCompletas.length > 0 && modelos.length > 0) {
+                preencherCamposOperacao(codigoOperacao);
               }
             }}
             className={`w-full px-5 py-4 text-xl border-4 rounded-lg focus:outline-none bg-white appearance-none cursor-pointer ${erros.operacao ? 'border-red-500' : 'border-gray-400 focus:border-blue-500'}`}

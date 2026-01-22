@@ -1,6 +1,32 @@
+/**
+ * ARQUITETURA API-FIRST
+ * 
+ * IMPORTANTE: Este é o ÚNICO ponto de comunicação entre o frontend e o backend.
+ * 
+ * REGRAS:
+ * - O frontend NUNCA deve acessar o banco de dados diretamente
+ * - Todas as operações devem passar por esta API
+ * - Não importar models, services ou database do backend
+ * - Usar apenas funções HTTP (GET, POST, PUT, DELETE)
+ * 
+ * Se você precisar acessar dados:
+ * 1. Adicione uma função aqui (ex: modelosAPI.criar)
+ * 2. Certifique-se de que o endpoint existe no backend (Server/controller/)
+ * 3. Use a função no componente React
+ */
+
 const API_BASE_URL = 'http://localhost:8000/api'
 
-// Função auxiliar para fazer requisições
+/**
+ * Função auxiliar para fazer requisições HTTP à API
+ * 
+ * Esta é a única forma permitida de comunicação com o backend.
+ * NUNCA importe ou use DatabaseConnection, models ou services diretamente.
+ * 
+ * @param endpoint - Endpoint da API (ex: '/modelos', '/funcionarios')
+ * @param options - Opções do fetch (method, body, headers, etc.)
+ * @returns Promise com os dados retornados pela API
+ */
 async function fetchAPI(endpoint: string, options: RequestInit = {}) {
   // Obter usuario_id do localStorage se disponível
   let usuarioId: string | null = null
