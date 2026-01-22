@@ -17,6 +17,7 @@ interface Sublinha {
     sublinha_id: number
     linha_id: number
     nome: string
+    linha_nome?: string
 }
 
 interface Toten {
@@ -49,11 +50,12 @@ const Postos = () => {
 
     const carregarSublinhas = async () => {
         try {
-            const dados = await sublinhasAPI.listarTodos()
+            const dados = await sublinhasAPI.listarTodos(true)
             setSublinhas(dados.map((s: any) => ({
                 sublinha_id: s.sublinha_id,
                 linha_id: s.linha_id,
-                nome: s.nome
+                nome: s.nome,
+                linha_nome: s.linha_nome
             })))
             if (dados.length > 0 && sublinhaId === 0) {
                 setSublinhaId(dados[0].sublinha_id)
@@ -286,7 +288,7 @@ const Postos = () => {
                                                     <option value={0}>Selecione uma sublinha</option>
                                                     {sublinhas.map((sublinha) => (
                                                         <option key={sublinha.sublinha_id} value={sublinha.sublinha_id}>
-                                                            {sublinha.nome}
+                                                            {sublinha.linha_nome ? `${sublinha.linha_nome} - ${sublinha.nome}` : sublinha.nome}
                                                         </option>
                                                     ))}
                                                 </select>

@@ -35,13 +35,15 @@ const ModalConfirmacao: React.FC<ModalConfirmacaoProps> = ({
 
     const footer = (
         <>
-            <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors"
-            >
-                {textoCancelar}
-            </button>
+            {textoCancelar && (
+                <button
+                    type="button"
+                    onClick={onClose}
+                    className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors"
+                >
+                    {textoCancelar}
+                </button>
+            )}
             <button
                 type="button"
                 onClick={handleConfirm}

@@ -47,7 +47,8 @@ class Modelo:
     def save(self) -> 'Modelo':
         """Salva o modelo no banco de dados"""
         # A tabela tem: modelo_id, nome
-        nome = self.descricao or self.codigo
+        # Usar descricao se estiver definida (mesmo que seja string vazia), senão usar codigo
+        nome = self.descricao if self.descricao is not None else (self.codigo or '')
         if self.id:
             # Atualizar
             query = "UPDATE modelos SET nome = %s WHERE modelo_id = %s"

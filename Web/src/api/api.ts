@@ -72,6 +72,7 @@ export const modelosAPI = {
 
 export const pecasAPI = {
   listarTodos: () => fetchAPI('/pecas'),
+  listarTodosComRelacoes: () => fetchAPI('/pecas?com_relacoes=true'),
   buscarPorId: (id: number) => fetchAPI(`/pecas/${id}`),
   buscarPorModelo: (modeloId: number) => fetchAPI(`/pecas/modelo/${modeloId}`),
   criar: (data: { modelo_id: number; codigo: string; nome: string}) => 

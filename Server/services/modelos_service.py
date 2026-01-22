@@ -110,14 +110,16 @@ def atualizar_modelo(modelo_id, codigo=None, nome=None, pecas=None, produto_id=N
             return {'erro': f'Modelo com ID {modelo_id} não encontrado'}
         
         # Atualizar codigo no objeto (não é salvo no banco, apenas para compatibilidade da API)
-        if codigo:
+        if codigo is not None:
             modelo.codigo = codigo
         
-        # Atualizar nome
-        if nome:
+        # Atualizar nome - sempre atualizar se fornecido (mesmo que seja string vazia)
+        if nome is not None:
             modelo.descricao = nome
         
-        modelo.save()
+        # Sempre salvar se nome ou codigo foram fornecidos
+        if nome is not None or codigo is not None:
+            modelo.save()
 
         # Atualizar relacionamento com produto se fornecido
         if produto_id is not None and modelo.id:
@@ -158,10 +160,19 @@ def atualizar_modelo(modelo_id, codigo=None, nome=None, pecas=None, produto_id=N
                         nome=peca_info.get('nome', '')
                     )
 
+        # Buscar modelo atualizado para retornar dados corretos
+        modelo_atualizado = Modelo.buscar_por_id(modelo_id)
+        produto_id = Modelo.buscar_produto_por_modelo_id(modelo_id) if modelo_atualizado else None
+        
         return {
             'sucesso': True, 
             'mensagem': f'Modelo {modelo_id} atualizado',
-            'modelo': modelo.to_dict()
+            'modelo': {
+                'id': modelo_atualizado.id if modelo_atualizado else modelo_id,
+                'codigo': modelo_atualizado.codigo if modelo_atualizado else None,
+                'nome': modelo_atualizado.descricao if modelo_atualizado else None,
+                'produto_id': produto_id
+            }
         }
     
     except Exception as erro:

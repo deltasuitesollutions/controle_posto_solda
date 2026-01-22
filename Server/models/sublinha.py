@@ -2,24 +2,29 @@ from Server.models.database import DatabaseConnection
 from typing import Dict, Any, Optional, List
 
 class Sublinha:
-    def __init__(self, nome: str, linha_id: int, sublinha_id: Optional[int] = None):
+    def __init__(self, nome: str, linha_id: int, sublinha_id: Optional[int] = None, linha_nome: Optional[str] = None):
         self.sublinha_id = sublinha_id
         self.linha_id = linha_id
         self.nome = nome
+        self.linha_nome = linha_nome
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        result = {
             'sublinha_id': self.sublinha_id,
             'linha_id': self.linha_id,
             'nome': self.nome
         }
+        if self.linha_nome:
+            result['linha_nome'] = self.linha_nome
+        return result
     
     @staticmethod
     def from_dict(data: Dict[str, Any]) -> 'Sublinha':
         return Sublinha(
             sublinha_id=data.get('sublinha_id'),
             linha_id=data.get('linha_id'),
-            nome=data.get('nome', '')
+            nome=data.get('nome', ''),
+            linha_nome=data.get('linha_nome')
         )
     
     def salvar(self) -> None:
@@ -55,7 +60,8 @@ class Sublinha:
                     sublinha = cls(
                         sublinha_id=resultado[0],
                         linha_id=resultado[1],
-                        nome=resultado[2]
+                        nome=resultado[2],
+                        linha_nome=resultado[3] if len(resultado) > 3 else None
                     )
                     sublinhas.append(sublinha)
             return sublinhas

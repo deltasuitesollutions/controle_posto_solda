@@ -9,6 +9,8 @@ interface CampoFormulario {
     required?: boolean
     opcoes?: Array<{ valor: string; label: string }>
     valorInicial?: any
+    readOnly?: boolean
+    disabled?: boolean
 }
 
 interface ModalFormularioProps {
@@ -176,7 +178,9 @@ const ModalFormulario: React.FC<ModalFormularioProps> = ({
                             {campo.tipo === 'text' || campo.tipo === 'number' ? (
                                 <input
                                     type={campo.tipo}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                                        campo.readOnly || campo.disabled ? 'bg-gray-100 cursor-not-allowed' : ''
+                                    }`}
                                     placeholder={campo.placeholder}
                                     value={valores[campo.nome] || ''}
                                     onChange={(e) =>
@@ -186,14 +190,19 @@ const ModalFormulario: React.FC<ModalFormularioProps> = ({
                                         )
                                     }
                                     required={campo.required}
-                                    autoFocus={campo.nome === campos[0]?.nome}
+                                    readOnly={campo.readOnly}
+                                    disabled={campo.disabled}
+                                    autoFocus={campo.nome === campos[0]?.nome && !campo.readOnly && !campo.disabled}
                                 />
                             ) : campo.tipo === 'select' ? (
                                 <select
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                                        campo.disabled ? 'bg-gray-100 cursor-not-allowed' : ''
+                                    }`}
                                     value={valores[campo.nome] || ''}
                                     onChange={(e) => handleChange(campo.nome, e.target.value)}
                                     required={campo.required}
+                                    disabled={campo.disabled}
                                 >
                                     <option value="">Selecione...</option>
                                     {campo.opcoes?.map((opcao) => (

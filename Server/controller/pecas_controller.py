@@ -9,7 +9,13 @@ pecas_bp = Blueprint('pecas', __name__, url_prefix='/api/pecas')
 def listar_pecas():
     """Lista todas as peças"""
     try:
-        pecas = pecas_service.listar_todas()
+        # Verificar se o parâmetro com_relacoes está presente para usar query otimizada
+        com_relacoes = request.args.get('com_relacoes', 'false').lower() == 'true'
+        
+        if com_relacoes:
+            pecas = pecas_service.listar_todas_com_relacoes()
+        else:
+            pecas = pecas_service.listar_todas()
         return jsonify(pecas)
     except Exception as e:
         print(f"Erro ao listar peças: {e}")
@@ -90,8 +96,7 @@ def atualizar_peca(peca_id):
         nome = data.get('nome')
         
         # Buscar dados anteriores para o log
-        pecas_anteriores = pecas_service.listar_todas()
-        peca_anterior = next((p for p in pecas_anteriores if p.get('id') == peca_id), None)
+        peca_anterior = pecas_service.buscar_por_id(peca_id)
         
         resultado = pecas_service.atualizar_peca(peca_id, modelo_id, codigo, nome)
         
@@ -129,8 +134,7 @@ def deletar_peca(peca_id):
     """Deleta uma peça"""
     try:
         # Buscar dados da peça antes de deletar
-        pecas_anteriores = pecas_service.listar_todas()
-        peca_anterior = next((p for p in pecas_anteriores if p.get('id') == peca_id), None)
+        peca_anterior = pecas_service.buscar_por_id(peca_id)
         
         resultado = pecas_service.deletar_peca(peca_id)
         

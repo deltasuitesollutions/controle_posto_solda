@@ -390,7 +390,7 @@ const CadastroProdutoModelo = () => {
                                                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                                                         }`}
                                                     >
-                                                        <i className="bi bi-list-ul mr-2"></i>
+                                                        <i className="bi bi-plus-circle mr-2"></i>
                                                         Produto Existente
                                                     </button>
                                                 </div>

@@ -117,7 +117,7 @@ const Produtos = () => {
                             <div className="bg-white rounded-lg shadow-md overflow-hidden">
                                 <div className="text-white px-6 py-4 flex items-center justify-between" style={{ backgroundColor: 'var(--bg-azul)' }}>
                                     <h3 className="text-lg font-semibold flex items-center gap-2">
-                                        <i className="bi bi-box"></i>
+                                        <i className="bi bi-plus"></i>
                                         Produtos
                                     </h3>
                                     <button

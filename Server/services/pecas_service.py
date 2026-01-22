@@ -1,5 +1,6 @@
-from typing import Dict, Any
+from typing import Dict, Any, List
 from Server.models import Peca
+from Server.models.database import DatabaseConnection
 
 def listar_todas():
     """Lista todas as peças"""
@@ -8,6 +9,60 @@ def listar_todas():
         return [peca.to_dict() for peca in pecas]
     except Exception as e:
         print(f'Erro ao listar peças: {e}')
+        return []
+
+def listar_todas_com_relacoes():
+    """Lista todas as peças com informações de modelo e produto em uma única query otimizada"""
+    try:
+        # Query otimizada usando DISTINCT ON para evitar duplicatas
+        # e subquery para garantir um produto por modelo
+        query = """
+            SELECT DISTINCT ON (p.peca_id)
+                p.peca_id,
+                p.codigo,
+                p.nome,
+                COALESCE(m.modelo_id, 0) as modelo_id,
+                COALESCE(m.nome, '') as modelo_nome,
+                COALESCE(
+                    (SELECT pr.produto_id 
+                     FROM produto_modelo pm2 
+                     INNER JOIN produtos pr ON pm2.produto_id = pr.produto_id 
+                     WHERE pm2.modelo_id = m.modelo_id 
+                     LIMIT 1), 
+                    0
+                ) as produto_id,
+                COALESCE(
+                    (SELECT pr.nome 
+                     FROM produto_modelo pm2 
+                     INNER JOIN produtos pr ON pm2.produto_id = pr.produto_id 
+                     WHERE pm2.modelo_id = m.modelo_id 
+                     LIMIT 1), 
+                    ''
+                ) as produto_nome
+            FROM pecas p
+            LEFT JOIN modelo_pecas mp ON p.peca_id = mp.peca_id
+            LEFT JOIN modelos m ON mp.modelo_id = m.modelo_id
+            ORDER BY p.peca_id, p.codigo
+        """
+        resultados = DatabaseConnection.execute_query(query, fetch_all=True)
+        
+        pecas_enriquecidas = []
+        if resultados:
+            for resultado in resultados:
+                peca_dict = {
+                    'id': resultado[0],
+                    'codigo': resultado[1],
+                    'nome': resultado[2],
+                    'modelo_id': resultado[3] if resultado[3] != 0 else None,
+                    'modelo_nome': resultado[4] if resultado[4] else None,
+                    'produto_id': resultado[5] if resultado[5] != 0 else None,
+                    'produto_nome': resultado[6] if resultado[6] else None
+                }
+                pecas_enriquecidas.append(peca_dict)
+        
+        return pecas_enriquecidas
+    except Exception as e:
+        print(f'Erro ao listar peças com relações: {e}')
         return []
 
 def buscar_por_id(peca_id):

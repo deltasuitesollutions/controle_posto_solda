@@ -31,82 +31,40 @@ const ListagemPecas = () => {
     const [pecas, setPecas] = useState<Peca[]>([])
     const [modelos, setModelos] = useState<Modelo[]>([])
     const [produtos, setProdutos] = useState<Produto[]>([])
-    
     const [filtroCodigo, setFiltroCodigo] = useState('')
     const [filtroProduto, setFiltroProduto] = useState('')
     const [filtroModelo, setFiltroModelo] = useState('')
-    
     const [paginaAtual, setPaginaAtual] = useState(1)
-    const [itensPorPagina] = useState(10)
     const [erro, setErro] = useState<string | null>(null)
-
-    // Estados para modal de edição unificado
+    const [carregando, setCarregando] = useState(true)
     const [modalEdicaoAberto, setModalEdicaoAberto] = useState(false)
     const [pecaEditando, setPecaEditando] = useState<Peca | null>(null)
-
-    // Estados para modal de confirmação de exclusão
+    const [modalEdicaoModeloAberto, setModalEdicaoModeloAberto] = useState(false)
+    const [modeloEditando, setModeloEditando] = useState<{ id: number; nome: string; produto_id?: number } | null>(null)
+    const [modalEdicaoProdutoAberto, setModalEdicaoProdutoAberto] = useState(false)
+    const [produtoEditando, setProdutoEditando] = useState<{ id: number; nome: string } | null>(null)
     const [modalConfirmacao, setModalConfirmacao] = useState(false)
     const [itemParaDeletar, setItemParaDeletar] = useState<Peca | null>(null)
+    const [modalErroDuplicado, setModalErroDuplicado] = useState(false)
+    const [mensagemErroDuplicado, setMensagemErroDuplicado] = useState('')
 
-    // Carregar dados ao montar
+    const itensPorPagina = 10
+
     useEffect(() => {
         carregarDados()
     }, [])
 
     const carregarDados = async () => {
         try {
+            setCarregando(true)
             setErro(null)
             
-            // Carregar peças, modelos e produtos em paralelo
-            const [pecasData, modelosData, produtosData] = await Promise.all([
-                pecasAPI.listarTodos(),
+            // Usar endpoint otimizado que retorna tudo em uma única requisição
+            const [pecasEnriquecidas, modelosData, produtosData] = await Promise.all([
+                pecasAPI.listarTodosComRelacoes(),
                 modelosAPI.listarTodos(),
                 produtosAPI.listar()
             ])
-
-            // Criar mapa de modelo -> produto através da tabela produto_modelo
-            const modeloProdutoMap = new Map<number, string>()
-            const produtosMap = new Map<number, Produto>()
-            produtosData.forEach((p: any) => {
-                produtosMap.set(p.id, p)
-            })
-            
-            // Criar mapa de modelo -> produto_id
-            const modeloProdutoIdMap = new Map<number, number>()
-            
-            // Buscar relacionamento modelo-produto através da tabela produto_modelo
-            modelosData.forEach((modelo: any) => {
-                if (modelo.produto_id) {
-                    const produto = produtosMap.get(modelo.produto_id)
-                    if (produto) {
-                        modeloProdutoMap.set(modelo.id, produto.nome)
-                        modeloProdutoIdMap.set(modelo.id, modelo.produto_id)
-                    }
-                }
-            })
-
-            // Enriquecer peças com informações de modelo
-            // Buscar peças por modelo para saber qual peça pertence a qual modelo
-            const pecasEnriquecidas: Peca[] = []
-            
-            for (const modelo of modelosData) {
-                try {
-                    const pecasModelo = await pecasAPI.buscarPorModelo(modelo.id)
-                    pecasModelo.forEach((peca: any) => {
-                        pecasEnriquecidas.push({
-                            id: peca.id,
-                            codigo: peca.codigo,
-                            nome: peca.nome,
-                            modelo_id: modelo.id,
-                            modelo_nome: modelo.nome || modelo.descricao || '',
-                            produto_nome: modeloProdutoMap.get(modelo.id),
-                            produto_id: modeloProdutoIdMap.get(modelo.id)
-                        })
-                    })
-                } catch (err) {
-                    console.error(`Erro ao buscar peças do modelo ${modelo.id}:`, err)
-                }
-            }
 
             setPecas(pecasEnriquecidas)
             setModelos(modelosData)
@@ -114,42 +72,33 @@ const ListagemPecas = () => {
         } catch (err) {
             console.error('Erro ao carregar dados:', err)
             setErro(err instanceof Error ? err.message : 'Erro ao carregar dados')
+        } finally {
+            setCarregando(false)
         }
     }
 
-    // Filtrar peças
     const pecasFiltradas = useMemo(() => {
         return pecas.filter(peca => {
-            const matchCodigo = !filtroCodigo || 
-                peca.codigo.toLowerCase().includes(filtroCodigo.toLowerCase())
-            
-            const matchModelo = !filtroModelo || 
-                (peca.modelo_nome && peca.modelo_nome.toLowerCase().includes(filtroModelo.toLowerCase()))
-            
-            const matchProduto = !filtroProduto || 
-                (peca.produto_nome && peca.produto_nome.toLowerCase().includes(filtroProduto.toLowerCase()))
-            
+            const matchCodigo = !filtroCodigo || peca.codigo.toLowerCase().includes(filtroCodigo.toLowerCase())
+            const matchModelo = !filtroModelo || (peca.modelo_nome?.toLowerCase().includes(filtroModelo.toLowerCase()) ?? false)
+            const matchProduto = !filtroProduto || (peca.produto_nome?.toLowerCase().includes(filtroProduto.toLowerCase()) ?? false)
             return matchCodigo && matchModelo && matchProduto
         })
     }, [pecas, filtroCodigo, filtroModelo, filtroProduto])
 
-    // Calcular peças da página atual
     const indiceInicio = (paginaAtual - 1) * itensPorPagina
-    const indiceFim = indiceInicio + itensPorPagina
-    const pecasPaginaAtual = pecasFiltradas.slice(indiceInicio, indiceFim)
+    const pecasPaginaAtual = pecasFiltradas.slice(indiceInicio, indiceInicio + itensPorPagina)
 
-    // Resetar página quando filtros mudarem
     useEffect(() => {
         setPaginaAtual(1)
     }, [filtroCodigo, filtroModelo, filtroProduto])
 
-    // Resetar página quando necessário
     useEffect(() => {
         const totalPaginas = Math.ceil(pecasFiltradas.length / itensPorPagina)
         if (paginaAtual > totalPaginas && totalPaginas > 0) {
             setPaginaAtual(totalPaginas)
         }
-    }, [pecasFiltradas.length, itensPorPagina, paginaAtual])
+    }, [pecasFiltradas.length, paginaAtual])
 
     const limparFiltros = () => {
         setFiltroCodigo('')
@@ -157,73 +106,189 @@ const ListagemPecas = () => {
         setFiltroModelo('')
     }
 
-    // Função para editar tudo (peça, modelo e produto)
     const handleEditar = (peca: Peca) => {
         setPecaEditando(peca)
         setModalEdicaoAberto(true)
     }
 
-    const handleSalvarTudo = async (dados: Record<string, any>) => {
+    const handleSalvarPeca = async (dados: Record<string, any>) => {
+        if (!pecaEditando) return
+
         try {
             setErro(null)
-            if (!pecaEditando) {
-                throw new Error('Dados incompletos')
-            }
-
-            // Determinar qual produto será usado
-            let produtoIdFinal: number | undefined = undefined
-            if (dados.produto_id && dados.produto_id !== '') {
-                produtoIdFinal = Number(dados.produto_id)
-            } else if (pecaEditando.produto_id) {
-                produtoIdFinal = pecaEditando.produto_id
-            }
-
-            // 1. Atualizar produto (se existe produto associado e nome foi alterado)
-            if (produtoIdFinal && dados.nome_produto) {
-                const produto = produtos.find(p => p.id === produtoIdFinal)
-                if (produto && produto.nome !== dados.nome_produto) {
-                    await produtosAPI.atualizar(produto.id, {
-                        nome: dados.nome_produto
-                    })
-                }
-            }
-
-            // 2. Atualizar modelo (se existir)
-            if (pecaEditando.modelo_id) {
-                const modelo = modelos.find(m => m.id === pecaEditando.modelo_id)
-                if (modelo) {
-                    const dadosAtualizacaoModelo: { nome: string; produto_id?: number } = {
-                        nome: dados.nome_modelo
-                    }
-                    
-                    // Associar produto ao modelo se foi selecionado
-                    if (produtoIdFinal) {
-                        dadosAtualizacaoModelo.produto_id = produtoIdFinal
-                    }
-                    
-                    await modelosAPI.atualizar(modelo.id, dadosAtualizacaoModelo)
-                }
-            }
-
-            // 3. Atualizar peça por último
+            
+            // Atualizar apenas a peça (código e nome)
             if (pecaEditando.modelo_id) {
                 await pecasAPI.atualizar(pecaEditando.id, {
                     modelo_id: pecaEditando.modelo_id,
                     codigo: dados.codigo_peca,
                     nome: dados.nome_peca
                 })
+                
+                // Atualizar estado local otimisticamente
+                setPecas(pecas.map(p => 
+                    p.id === pecaEditando.id 
+                        ? {
+                            ...p,
+                            codigo: dados.codigo_peca,
+                            nome: dados.nome_peca
+                        }
+                        : p
+                ))
             }
             
-            await carregarDados()
             setModalEdicaoAberto(false)
             setPecaEditando(null)
         } catch (err) {
-            console.error('Erro ao salvar:', err)
-            setErro(err instanceof Error ? err.message : 'Erro ao salvar')
+            console.error('Erro ao salvar peça:', err)
+            setErro(err instanceof Error ? err.message : 'Erro ao salvar peça')
+            // Em caso de erro, recarregar dados para garantir consistência
+            await carregarDados()
         }
     }
 
-    // Função para deletar tudo (peça, modelo e produto)
+    const handleEditarModelo = (peca: Peca) => {
+        if (!peca.modelo_id) return
+        const modelo = modelos.find(m => m.id === peca.modelo_id)
+        if (modelo) {
+            setModeloEditando({
+                id: modelo.id,
+                nome: modelo.nome || peca.modelo_nome || '',
+                produto_id: peca.produto_id
+            })
+            setModalEdicaoModeloAberto(true)
+        }
+    }
+
+    const handleSalvarModelo = async (dados: Record<string, any>) => {
+        if (!modeloEditando) return
+
+        try {
+            setErro(null)
+            
+            const nomeModelo = dados.nome_modelo && dados.nome_modelo.trim() !== '' 
+                ? dados.nome_modelo.trim() 
+                : modeloEditando.nome
+            
+            if (!nomeModelo) {
+                setErro('O nome do modelo não pode estar vazio')
+                return
+            }
+
+            // Verificar se o nome já existe em outro modelo (ignorando o modelo atual)
+            const modeloExistente = modelos.find(m => 
+                m.nome.toLowerCase() === nomeModelo.toLowerCase() && m.id !== modeloEditando.id
+            )
+            
+            if (modeloExistente) {
+                setMensagemErroDuplicado(`O modelo "${nomeModelo}" já está cadastrado no sistema.`)
+                setModalErroDuplicado(true)
+                return
+            }
+
+            // Verificar se o usuário alterou o produto_id
+            const produtoIdFoiAlterado = 'produto_id' in dados
+            let produtoIdFinal: number | undefined = undefined
+            
+            if (produtoIdFoiAlterado) {
+                // Usuário interagiu com o campo
+                if (dados.produto_id === '' || dados.produto_id === null || dados.produto_id === undefined) {
+                    // Tentou remover produto (selecionou "Nenhum")
+                    if (modeloEditando.produto_id) {
+                        setErro('O produto não pode ser removido do modelo. Selecione um produto ou mantenha o atual.')
+                        return
+                    }
+                    produtoIdFinal = undefined
+                } else {
+                    // Selecionou um produto válido
+                    produtoIdFinal = Number(dados.produto_id)
+                }
+            } else {
+                // Não alterou o campo, manter o original
+                produtoIdFinal = modeloEditando.produto_id
+            }
+
+            const dadosModelo: { nome: string; produto_id?: number } = { nome: nomeModelo }
+            if (produtoIdFinal) {
+                dadosModelo.produto_id = produtoIdFinal
+            }
+
+            await modelosAPI.atualizar(modeloEditando.id, dadosModelo)
+            
+            // Recarregar dados para garantir que tudo está sincronizado
+            await carregarDados()
+            
+            setModalEdicaoModeloAberto(false)
+            setModeloEditando(null)
+        } catch (err) {
+            console.error('Erro ao salvar modelo:', err)
+            setErro(err instanceof Error ? err.message : 'Erro ao salvar modelo')
+            await carregarDados()
+        }
+    }
+
+    const handleEditarProduto = (peca: Peca) => {
+        if (!peca.produto_id) return
+        const produto = produtos.find(p => p.id === peca.produto_id)
+        if (produto) {
+            setProdutoEditando({
+                id: produto.id,
+                nome: produto.nome
+            })
+            setModalEdicaoProdutoAberto(true)
+        }
+    }
+
+    const handleSalvarProduto = async (dados: Record<string, any>) => {
+        if (!produtoEditando) return
+
+        try {
+            setErro(null)
+            
+            const nomeProduto = dados.nome_produto && dados.nome_produto.trim() !== '' 
+                ? dados.nome_produto.trim() 
+                : produtoEditando.nome
+            
+            if (!nomeProduto) {
+                setErro('O nome do produto não pode estar vazio')
+                return
+            }
+
+            // Verificar se o nome já existe em outro produto (ignorando o produto atual)
+            const produtoExistente = produtos.find(p => 
+                p.nome.toLowerCase() === nomeProduto.toLowerCase() && p.id !== produtoEditando.id
+            )
+            
+            if (produtoExistente) {
+                setMensagemErroDuplicado(`O produto "${nomeProduto}" já está cadastrado no sistema.`)
+                setModalErroDuplicado(true)
+                return
+            }
+
+            await produtosAPI.atualizar(produtoEditando.id, { nome: nomeProduto })
+            
+            // Atualizar estado local otimisticamente
+            setProdutos(produtos.map(p => p.id === produtoEditando.id ? { ...p, nome: nomeProduto } : p))
+            
+            // Atualizar peças que usam este produto
+            setPecas(pecas.map(p => 
+                p.produto_id === produtoEditando.id
+                    ? {
+                        ...p,
+                        produto_nome: nomeProduto
+                    }
+                    : p
+            ))
+            
+            setModalEdicaoProdutoAberto(false)
+            setProdutoEditando(null)
+        } catch (err) {
+            console.error('Erro ao salvar produto:', err)
+            setErro(err instanceof Error ? err.message : 'Erro ao salvar produto')
+            await carregarDados()
+        }
+    }
+
     const handleDeletar = (peca: Peca) => {
         setItemParaDeletar(peca)
         setModalConfirmacao(true)
@@ -234,46 +299,34 @@ const ListagemPecas = () => {
         
         try {
             setErro(null)
-            const erros: string[] = []
             
-            // 1. Deletar peça primeiro
+            // Guardar referência para atualização otimista
+            const pecaId = itemParaDeletar.id
+            
+            // Atualizar estado local otimisticamente (remover peça imediatamente)
+            setPecas(pecas.filter(p => p.id !== pecaId))
+            
             try {
-                await pecasAPI.deletar(itemParaDeletar.id)
+                await pecasAPI.deletar(pecaId)
             } catch (err) {
-                erros.push(`Erro ao deletar peça: ${err instanceof Error ? err.message : 'Erro desconhecido'}`)
+                setErro(`Erro ao deletar peça: ${err instanceof Error ? err.message : 'Erro desconhecido'}`)
+                // Reverter atualização otimista em caso de erro
+                await carregarDados()
             }
             
-            // 2. Deletar modelo se existir (pode deletar outras peças relacionadas)
-            if (itemParaDeletar.modelo_id) {
-                try {
-                    await modelosAPI.deletar(itemParaDeletar.modelo_id)
-                } catch (err) {
-                    erros.push(`Erro ao deletar modelo: ${err instanceof Error ? err.message : 'Erro desconhecido'}`)
-                }
-            }
-            
-            // 3. Deletar produto por último (pode ter modelos relacionados, mas já deletamos o modelo)
-            if (itemParaDeletar.produto_id) {
-                try {
-                    await produtosAPI.deletar(itemParaDeletar.produto_id)
-                } catch (err) {
-                    erros.push(`Erro ao deletar produto: ${err instanceof Error ? err.message : 'Erro desconhecido'}`)
-                }
-            }
-            
-            if (erros.length > 0) {
-                setErro(erros.join('; '))
-            }
-            
-            await carregarDados()
             setModalConfirmacao(false)
             setItemParaDeletar(null)
         } catch (err) {
             console.error('Erro ao deletar:', err)
             setErro(err instanceof Error ? err.message : 'Erro ao deletar')
+            // Recarregar dados em caso de erro
+            await carregarDados()
             setModalConfirmacao(false)
         }
     }
+
+    const temFiltros = filtroCodigo || filtroProduto || filtroModelo
+    const inputClasses = "w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
 
     return (
         <div className="flex min-h-screen bg-gray-50">
@@ -283,7 +336,6 @@ const ListagemPecas = () => {
                 <div className="flex-1 p-6 pt-32 pb-20 md:pb-24 md:pl-20 transition-all duration-300">
                     <div className="max-w-[95%] mx-auto">
                         <div className="flex flex-col gap-6">
-                            {/* Cabeçalho */}
                             <div className="bg-white rounded-lg shadow-md overflow-hidden">
                                 <div className="text-white px-6 py-4" style={{ backgroundColor: 'var(--bg-azul)' }}>
                                     <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -293,7 +345,6 @@ const ListagemPecas = () => {
                                 </div>
                             </div>
 
-                            {/* Filtros */}
                             <div className="bg-white rounded-lg shadow-md overflow-hidden">
                                 <div className="p-6">
                                     <div className="flex items-center justify-between mb-4">
@@ -301,7 +352,7 @@ const ListagemPecas = () => {
                                             <i className="bi bi-funnel"></i>
                                             Filtros de Busca
                                         </h4>
-                                        {(filtroCodigo || filtroProduto || filtroModelo) && (
+                                        {temFiltros && (
                                             <button
                                                 onClick={limparFiltros}
                                                 className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
@@ -319,7 +370,7 @@ const ListagemPecas = () => {
                                             </label>
                                             <input
                                                 type="text"
-                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                className={inputClasses}
                                                 placeholder="Buscar por código..."
                                                 value={filtroCodigo}
                                                 onChange={(e) => setFiltroCodigo(e.target.value)}
@@ -332,7 +383,7 @@ const ListagemPecas = () => {
                                             </label>
                                             <input
                                                 type="text"
-                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                className={inputClasses}
                                                 placeholder="Buscar por produto..."
                                                 value={filtroProduto}
                                                 onChange={(e) => setFiltroProduto(e.target.value)}
@@ -345,7 +396,7 @@ const ListagemPecas = () => {
                                             </label>
                                             <input
                                                 type="text"
-                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                className={inputClasses}
                                                 placeholder="Buscar por modelo..."
                                                 value={filtroModelo}
                                                 onChange={(e) => setFiltroModelo(e.target.value)}
@@ -355,7 +406,6 @@ const ListagemPecas = () => {
                                 </div>
                             </div>
 
-                            {/* Mensagem de erro */}
                             {erro && (
                                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
                                     <div className="flex items-center gap-2">
@@ -371,13 +421,19 @@ const ListagemPecas = () => {
                                 </div>
                             )}
 
-                            {/* Lista de Peças */}
-                            {pecasFiltradas.length === 0 ? (
+                            {carregando ? (
+                                <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                                    <div className="p-12 flex flex-col items-center justify-center">
+                                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                                        <p className="text-gray-500 text-lg font-medium">Carregando peças...</p>
+                                    </div>
+                                </div>
+                            ) : pecasFiltradas.length === 0 ? (
                                 <div className="bg-white rounded-lg shadow-md overflow-hidden">
                                     <div className="p-12 flex flex-col items-center justify-center">
                                         <i className="bi bi-inbox text-gray-300 text-5xl mb-4"></i>
                                         <p className="text-gray-500 text-lg font-medium">
-                                            {filtroCodigo || filtroProduto || filtroModelo 
+                                            {temFiltros 
                                                 ? 'Nenhuma peça encontrada com os filtros aplicados'
                                                 : 'Nenhuma peça cadastrada'}
                                         </p>
@@ -390,44 +446,48 @@ const ListagemPecas = () => {
                                             <table className="w-full">
                                                 <thead>
                                                     <tr className="border-b border-gray-200" style={{ backgroundColor: 'var(--bg-azul)' }}>
-                                                        <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
-                                                            Código
-                                                        </th>
-                                                        <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
-                                                            Nome da Peça
-                                                        </th>
-                                                        <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
-                                                            Modelo
-                                                        </th>
-                                                        <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
-                                                            Produto
-                                                        </th>
-                                                        <th className="px-6 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">
-                                                            Ações
-                                                        </th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Código</th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Nome da Peça</th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Modelo</th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Produto</th>
+                                                        <th className="px-6 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">Ações</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="bg-white divide-y divide-gray-200">
                                                     {pecasPaginaAtual.map((peca) => (
                                                         <tr key={peca.id} className="hover:bg-gray-50">
                                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                                <div className="text-sm font-medium text-gray-900">
-                                                                    {peca.codigo}
+                                                                <div className="text-sm font-medium text-gray-900">{peca.codigo}</div>
+                                                            </td>
+                                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                                <div className="text-sm text-gray-900">{peca.nome}</div>
+                                                            </td>
+                                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-sm text-gray-900">{peca.modelo_nome || '-'}</span>
+                                                                    {peca.modelo_id && (
+                                                                        <button
+                                                                            onClick={() => handleEditarModelo(peca)}
+                                                                            className="text-blue-600 hover:text-blue-800 transition-colors"
+                                                                            title="Editar Modelo"
+                                                                        >
+                                                                            <i className="bi bi-pencil-square text-xs"></i>
+                                                                        </button>
+                                                                    )}
                                                                 </div>
                                                             </td>
                                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                                <div className="text-sm text-gray-900">
-                                                                    {peca.nome}
-                                                                </div>
-                                                            </td>
-                                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                                <div className="text-sm text-gray-900">
-                                                                    {peca.modelo_nome || '-'}
-                                                                </div>
-                                                            </td>
-                                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                                <div className="text-sm text-gray-900">
-                                                                    {peca.produto_nome || '-'}
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-sm text-gray-900">{peca.produto_nome || '-'}</span>
+                                                                    {peca.produto_id && (
+                                                                        <button
+                                                                            onClick={() => handleEditarProduto(peca)}
+                                                                            className="text-blue-600 hover:text-blue-800 transition-colors"
+                                                                            title="Editar Produto"
+                                                                        >
+                                                                            <i className="bi bi-pencil-square text-xs"></i>
+                                                                        </button>
+                                                                    )}
                                                                 </div>
                                                             </td>
                                                             <td className="px-6 py-4 whitespace-nowrap text-center">
@@ -435,14 +495,14 @@ const ListagemPecas = () => {
                                                                     <button
                                                                         onClick={() => handleEditar(peca)}
                                                                         className="text-blue-600 hover:text-blue-800 transition-colors"
-                                                                        title="Editar Tudo"
+                                                                        title="Editar Peça"
                                                                     >
                                                                         <i className="bi bi-pencil-square"></i>
                                                                     </button>
                                                                     <button
                                                                         onClick={() => handleDeletar(peca)}
                                                                         className="text-red-600 hover:text-red-800 transition-colors"
-                                                                        title="Deletar Tudo"
+                                                                        title="Deletar"
                                                                     >
                                                                         <i className="bi bi-trash"></i>
                                                                     </button>
@@ -470,7 +530,6 @@ const ListagemPecas = () => {
                 </div>
             </div>
 
-            {/* Modal de edição unificado */}
             <ModalFormulario
                 isOpen={modalEdicaoAberto}
                 onClose={() => {
@@ -478,16 +537,13 @@ const ListagemPecas = () => {
                     setPecaEditando(null)
                     setErro(null)
                 }}
-                onSave={handleSalvarTudo}
+                onSave={handleSalvarPeca}
                 itemEditando={pecaEditando ? {
                     codigo_peca: pecaEditando.codigo,
-                    nome_peca: pecaEditando.nome,
-                    nome_modelo: pecaEditando.modelo_nome || '',
-                    nome_produto: pecaEditando.produto_nome || '',
-                    produto_id: pecaEditando.produto_id?.toString() || ''
+                    nome_peca: pecaEditando.nome
                 } : null}
                 tituloNovo="Nova Peça"
-                tituloEditar="Editar Peça, Modelo e Produto"
+                tituloEditar="Editar Peça"
                 campos={[
                     {
                         nome: 'codigo_peca',
@@ -502,20 +558,34 @@ const ListagemPecas = () => {
                         tipo: 'text',
                         placeholder: 'Ex: Peça Principal',
                         required: true
-                    },
+                    }
+                ]}
+                textoBotao="Salvar"
+                icone="bi bi-boxes"
+                secaoTitulo="Informações da Peça"
+            />
+
+            <ModalFormulario
+                isOpen={modalEdicaoModeloAberto}
+                onClose={() => {
+                    setModalEdicaoModeloAberto(false)
+                    setModeloEditando(null)
+                    setErro(null)
+                }}
+                onSave={handleSalvarModelo}
+                itemEditando={modeloEditando ? {
+                    nome_modelo: modeloEditando.nome,
+                    produto_id: modeloEditando.produto_id ? modeloEditando.produto_id.toString() : ''
+                } : null}
+                tituloNovo="Novo Modelo"
+                tituloEditar="Editar Modelo"
+                campos={[
                     {
                         nome: 'nome_modelo',
                         label: 'Nome do Modelo',
                         tipo: 'text',
                         placeholder: 'Ex: Modelo A',
                         required: true
-                    },
-                    {
-                        nome: 'nome_produto',
-                        label: 'Nome do Produto',
-                        tipo: 'text',
-                        placeholder: 'Ex: Produto A',
-                        required: false
                     },
                     {
                         nome: 'produto_id',
@@ -529,12 +599,38 @@ const ListagemPecas = () => {
                         ]
                     }
                 ]}
-                textoBotao="Salvar Tudo"
-                icone="bi bi-boxes"
-                secaoTitulo="Informações Completas"
+                textoBotao="Salvar"
+                icone="bi bi-box-seam"
+                secaoTitulo="Informações do Modelo"
             />
 
-            {/* Modal de confirmação de exclusão */}
+            <ModalFormulario
+                isOpen={modalEdicaoProdutoAberto}
+                onClose={() => {
+                    setModalEdicaoProdutoAberto(false)
+                    setProdutoEditando(null)
+                    setErro(null)
+                }}
+                onSave={handleSalvarProduto}
+                itemEditando={produtoEditando ? {
+                    nome_produto: produtoEditando.nome
+                } : null}
+                tituloNovo="Novo Produto"
+                tituloEditar="Editar Produto"
+                campos={[
+                    {
+                        nome: 'nome_produto',
+                        label: 'Nome do Produto',
+                        tipo: 'text',
+                        placeholder: 'Ex: Produto A',
+                        required: true
+                    }
+                ]}
+                textoBotao="Salvar"
+                icone="bi bi-tag"
+                secaoTitulo="Informações do Produto"
+            />
+
             <ModalConfirmacao
                 isOpen={modalConfirmacao}
                 onClose={() => {
@@ -543,8 +639,8 @@ const ListagemPecas = () => {
                 }}
                 onConfirm={handleConfirmarDeletar}
                 titulo="Confirmar Exclusão"
-                mensagem="Tem certeza que deseja deletar esta peça, modelo e produto? Esta ação não pode ser desfeita."
-                textoConfirmar="Deletar Tudo"
+                mensagem="Tem certeza que deseja deletar esta peça? Esta ação não pode ser desfeita."
+                textoConfirmar="Deletar"
                 textoCancelar="Cancelar"
                 corHeader="vermelho"
                 item={itemParaDeletar ? { 
@@ -555,9 +651,25 @@ const ListagemPecas = () => {
                 camposItem={['peca', 'modelo', 'produto']}
                 mostrarDetalhes={true}
             />
+
+            <ModalConfirmacao
+                isOpen={modalErroDuplicado}
+                onClose={() => {
+                    setModalErroDuplicado(false)
+                    setMensagemErroDuplicado('')
+                }}
+                onConfirm={() => {
+                    setModalErroDuplicado(false)
+                    setMensagemErroDuplicado('')
+                }}
+                titulo="Item Já Cadastrado"
+                mensagem={mensagemErroDuplicado}
+                textoConfirmar="OK"
+                textoCancelar=""
+                corHeader="vermelho"
+            />
         </div>
     )
 }
 
 export default ListagemPecas
-

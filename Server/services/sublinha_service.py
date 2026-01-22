@@ -90,6 +90,8 @@ def listar_sublinhas(com_linha=False):
                 'linha_id': sublinha.linha_id,
                 'nome': sublinha.nome
             }
+            if com_linha and sublinha.linha_nome:
+                sublinha_info['linha_nome'] = sublinha.linha_nome
             resultado.append(sublinha_info)
         
         return resultado
