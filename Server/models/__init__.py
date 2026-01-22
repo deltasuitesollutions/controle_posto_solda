@@ -9,6 +9,9 @@ from Server.models.posto import Posto
 from Server.models.producao import ProducaoRegistro
 from Server.models.posto_configuracao import PostoConfiguracao
 from Server.models.produto import Produto
+from Server.models.usuario import Usuario
+from Server.models.audit_log import AuditLog
+from Server.models.cancelamento import CancelamentoOperacao
 __all__ = [
     'DatabaseConnection',
     'Funcionario',
@@ -18,6 +21,8 @@ __all__ = [
     'ProducaoRegistro',
     'PostoConfiguracao',
     'Subproduto',
-    'Usuario'
+    'Usuario',
+    'AuditLog',
+    'CancelamentoOperacao'
 ]
 

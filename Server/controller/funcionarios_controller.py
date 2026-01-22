@@ -1,5 +1,7 @@
 from flask import Blueprint, jsonify, request
 from Server.services import funcionarios_service
+from Server.services import audit_service
+from Server.utils.audit_helper import obter_usuario_id_da_requisicao
 
 funcionarios_bp = Blueprint('funcionarios', __name__, url_prefix='/api/funcionarios')
 
@@ -53,6 +55,18 @@ def criar_funcionario():
             operacoes_ids if operacoes_ids else None
         )
 
+        # Registrar log de auditoria
+        usuario_id_requisicao = obter_usuario_id_da_requisicao()
+        if usuario_id_requisicao:
+            audit_service.registrar_acao(
+                usuario_id=usuario_id_requisicao,
+                acao='criar',
+                entidade='funcionario',
+                entidade_id=funcionario.get('id'),
+                dados_novos={'matricula': matricula, 'nome': nome, 'ativo': ativo, 'tag_id': tag_id, 'turno': turno},
+                detalhes=f"Funcionário '{nome}' (matrícula: {matricula}) criado"
+            )
+
         return jsonify(funcionario), 201
 
     except Exception as e:
@@ -78,6 +92,10 @@ def atualizar_funcionario(funcionario_id):
         if not nome:
             return jsonify({"erro": "Nome é obrigatório"}), 400
 
+        # Buscar dados anteriores para o log
+        funcionarios_anteriores = funcionarios_service.listar_todos_funcionarios()
+        funcionario_anterior = next((f for f in funcionarios_anteriores if f.get('id') == funcionario_id), None)
+
         funcionario = funcionarios_service.atualizar_funcionario(
             funcionario_id,
             nome,
@@ -86,6 +104,31 @@ def atualizar_funcionario(funcionario_id):
             turno,
             operacoes_ids if operacoes_ids is not None else None
         )
+
+        # Registrar log de auditoria
+        usuario_id_requisicao = obter_usuario_id_da_requisicao()
+        if usuario_id_requisicao:
+            dados_novos = {}
+            if nome is not None:
+                dados_novos['nome'] = nome
+            if ativo is not None:
+                dados_novos['ativo'] = ativo
+            if tag_id is not None:
+                dados_novos['tag_id'] = tag_id
+            if turno is not None:
+                dados_novos['turno'] = turno
+            if operacoes_ids is not None:
+                dados_novos['operacoes_ids'] = operacoes_ids
+            
+            audit_service.registrar_acao(
+                usuario_id=usuario_id_requisicao,
+                acao='atualizar',
+                entidade='funcionario',
+                entidade_id=funcionario_id,
+                dados_anteriores=funcionario_anterior,
+                dados_novos=dados_novos if dados_novos else None,
+                detalhes=f"Funcionário ID {funcionario_id} atualizado"
+            )
 
         return jsonify(funcionario)
 
@@ -97,7 +140,24 @@ def atualizar_funcionario(funcionario_id):
 @funcionarios_bp.route('/<int:funcionario_id>', methods=['DELETE'])
 def deletar_funcionario(funcionario_id):
     try:
+        # Buscar dados do funcionário antes de deletar
+        funcionarios_anteriores = funcionarios_service.listar_todos_funcionarios()
+        funcionario_anterior = next((f for f in funcionarios_anteriores if f.get('id') == funcionario_id), None)
+
         funcionarios_service.deletar_funcionario(funcionario_id)
+
+        # Registrar log de auditoria
+        usuario_id_requisicao = obter_usuario_id_da_requisicao()
+        if usuario_id_requisicao:
+            audit_service.registrar_acao(
+                usuario_id=usuario_id_requisicao,
+                acao='deletar',
+                entidade='funcionario',
+                entidade_id=funcionario_id,
+                dados_anteriores=funcionario_anterior,
+                detalhes=f"Funcionário ID {funcionario_id} deletado"
+            )
+
         return jsonify({"mensagem": "Funcionário removido com sucesso"})
     except Exception as e:
         return jsonify({"erro": str(e)}), 500

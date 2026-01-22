@@ -12,6 +12,8 @@ import Produtos from "./Pages/Produtos";
 import Linhas from "./Pages/Linhas";
 import Postos from "./Pages/Postos";
 import Operacoes from "./Pages/Operacoes";
+import Usuarios from "./Pages/Usuarios";
+import Auditoria from "./Pages/Auditoria";
 
 
 function App() {
@@ -21,7 +23,14 @@ function App() {
       <Route path="/login" element={<Login />} />
       
       {/* Rotas públicas/admin */}
-      <Route path="/" element={<Dashboard />} />
+      <Route 
+        path="/" 
+        element={
+          <ProtectedRoute onlyAdmin>
+            <Dashboard />
+          </ProtectedRoute>
+        } 
+      />
       <Route 
         path="/funcionarios" 
         element={
@@ -75,6 +84,22 @@ function App() {
         element={
           <ProtectedRoute onlyAdmin>
             <Operacoes />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/usuarios" 
+        element={
+          <ProtectedRoute allowedRoles={['master']}>
+            <Usuarios />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/auditoria" 
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'master']}>
+            <Auditoria />
           </ProtectedRoute>
         } 
       />

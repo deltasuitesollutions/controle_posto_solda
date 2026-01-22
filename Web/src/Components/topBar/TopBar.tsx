@@ -18,7 +18,8 @@ const TopBar = () => {
             '/produtos': 'Produtos',
             '/linhas': 'Linhas',
             '/postos': 'Postos',
-            '/operacoes': 'Operações'
+            '/operacoes': 'Operações',
+            '/usuarios': 'Usuários'
         };
         return routeMap[location.pathname] || 'Dashboard';
     };

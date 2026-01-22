@@ -422,6 +422,27 @@ class ProducaoRegistro:
         return 0
     
     @staticmethod
+    def deletar_por_id(registro_id: int) -> bool:
+        """Deleta um registro de produção pelo ID"""
+        if not DatabaseConnection.table_exists('registros_producao'):
+            return False
+        
+        conn = DatabaseConnection.get_connection()
+        cursor = conn.cursor()
+        
+        try:
+            query = "DELETE FROM registros_producao WHERE registro_id = %s"
+            cursor.execute(query, (registro_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+        except Exception as e:
+            conn.rollback()
+            raise Exception(f"Erro ao deletar registro de produção: {str(e)}")
+        finally:
+            cursor.close()
+            conn.close()
+    
+    @staticmethod
     def criar(
         posto: str, 
         funcionario_matricula: str, 

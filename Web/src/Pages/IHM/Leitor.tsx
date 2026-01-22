@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { ihmAPI } from "../../api/api"
+import { useAuth } from "../../contexts/AuthContext"
 
 type StatusAcesso = 'idle' | 'success' | 'error'
 
@@ -9,6 +10,12 @@ const LeitorRfid = () => {
     const [status, setStatus] = useState<StatusAcesso>('idle')
     const [colaborador, setColaborador] = useState<string | null>(null)
     const navigate = useNavigate()
+    const { logout } = useAuth()
+
+    const handleLogout = () => {
+        logout()
+        navigate('/login')
+    }
 
     const resetarEstado = () => {
         setStatus('idle')
@@ -70,7 +77,14 @@ const LeitorRfid = () => {
                 </div>
             )}
 
-            <div className="pt-8 px-6 pb-6 flex items-center justify-center">
+            <div className="pt-8 px-6 pb-6 flex flex-col items-center">
+                <button
+                    onClick={handleLogout}
+                    className="px-6 py-2 text-white rounded-lg font-medium hover:opacity-90 transition-opacity mb-4"
+                    style={{ backgroundColor: '#DC2626' }}
+                >
+                    Sair
+                </button>
                 <span className="text-gray-700 font-sans text-2xl py-6">
                     Seja Bem Vindo, colaborador!
                 </span>

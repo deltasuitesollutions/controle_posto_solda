@@ -1,5 +1,7 @@
 from flask import Blueprint, request, jsonify
 from Server.services import posto_service
+from Server.services import audit_service
+from Server.utils.audit_helper import obter_usuario_id_da_requisicao
 
 postos_bp = Blueprint('postos', __name__, url_prefix='/api/postos')
 
@@ -24,6 +26,18 @@ def criar_posto():
         if 'erro' in resultado:
             return jsonify(resultado), 400
         
+        # Registrar log de auditoria
+        usuario_id_requisicao = obter_usuario_id_da_requisicao()
+        if usuario_id_requisicao:
+            audit_service.registrar_acao(
+                usuario_id=usuario_id_requisicao,
+                acao='criar',
+                entidade='posto',
+                entidade_id=resultado.get('id'),
+                dados_novos={'nome': nome, 'sublinha_id': sublinha_id, 'toten_id': toten_id},
+                detalhes=f"Posto '{nome}' criado"
+            )
+        
         return jsonify(resultado), 201
     except Exception as e:
         print(f'Erro ao criar posto: {e}')
@@ -43,9 +57,34 @@ def atualizar_posto(posto_id):
         sublinha_id = data.get('sublinha_id')
         toten_id = data.get('toten_id')
 
+        # Buscar dados anteriores para o log
+        postos_anteriores = posto_service.listar_postos()
+        posto_anterior = next((p for p in postos_anteriores if p.get('id') == posto_id), None)
+
         resultado = posto_service.atualizar_posto(posto_id, nome, sublinha_id, toten_id)
         if 'erro' in resultado:
             return jsonify(resultado), 400
+        
+        # Registrar log de auditoria
+        usuario_id_requisicao = obter_usuario_id_da_requisicao()
+        if usuario_id_requisicao:
+            dados_novos = {}
+            if nome is not None:
+                dados_novos['nome'] = nome
+            if sublinha_id is not None:
+                dados_novos['sublinha_id'] = sublinha_id
+            if toten_id is not None:
+                dados_novos['toten_id'] = toten_id
+            
+            audit_service.registrar_acao(
+                usuario_id=usuario_id_requisicao,
+                acao='atualizar',
+                entidade='posto',
+                entidade_id=posto_id,
+                dados_anteriores=posto_anterior,
+                dados_novos=dados_novos if dados_novos else None,
+                detalhes=f"Posto ID {posto_id} atualizado"
+            )
         
         return jsonify(resultado), 200
     except Exception as e:
@@ -57,10 +96,26 @@ def atualizar_posto(posto_id):
 @postos_bp.route('/<int:posto_id>', methods=['DELETE'])
 def deletar_posto(posto_id):
     try:
+        # Buscar dados do posto antes de deletar
+        postos_anteriores = posto_service.listar_postos()
+        posto_anterior = next((p for p in postos_anteriores if p.get('id') == posto_id), None)
+
         resultado = posto_service.deletar_posto(posto_id)
 
         if 'erro' in resultado:
             return jsonify(resultado), 400
+        
+        # Registrar log de auditoria
+        usuario_id_requisicao = obter_usuario_id_da_requisicao()
+        if usuario_id_requisicao:
+            audit_service.registrar_acao(
+                usuario_id=usuario_id_requisicao,
+                acao='deletar',
+                entidade='posto',
+                entidade_id=posto_id,
+                dados_anteriores=posto_anterior,
+                detalhes=f"Posto ID {posto_id} deletado"
+            )
         
         return jsonify(resultado), 200
     except Exception as e:

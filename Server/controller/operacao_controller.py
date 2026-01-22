@@ -1,5 +1,7 @@
 from flask import Blueprint, request, jsonify
 from Server.services import operacao_service
+from Server.services import audit_service
+from Server.utils.audit_helper import obter_usuario_id_da_requisicao
 
 operacoes_bp = Blueprint('operacoes', __name__, url_prefix='/api/operacoes')
 
@@ -65,6 +67,27 @@ def criar_operacao():
         if 'erro' in resultado:
             return jsonify(resultado), 400
         
+        # Registrar log de auditoria
+        usuario_id_requisicao = obter_usuario_id_da_requisicao()
+        if usuario_id_requisicao:
+            audit_service.registrar_acao(
+                usuario_id=usuario_id_requisicao,
+                acao='criar',
+                entidade='operacao',
+                entidade_id=resultado.get('id'),
+                dados_novos={
+                    'operacao': operacao,
+                    'produto': produto,
+                    'modelo': modelo,
+                    'linha': linha,
+                    'posto': posto,
+                    'totens': totens,
+                    'pecas': pecas,
+                    'codigos': codigos
+                },
+                detalhes=f"Operação '{operacao}' criada"
+            )
+        
         return jsonify(resultado), 201
     except Exception as e:
         print(f'Erro ao criar operação: {e}')
@@ -89,6 +112,10 @@ def atualizar_operacao(operacao_id):
         pecas = data.get('pecas')
         codigos = data.get('codigos')
 
+        # Buscar dados anteriores para o log
+        operacoes_anteriores = operacao_service.listar_operacoes()
+        operacao_anterior = next((o for o in operacoes_anteriores if o.get('id') == operacao_id), None)
+
         resultado = operacao_service.atualizar_operacao(
             operacao_id=operacao_id,
             operacao=operacao,
@@ -104,6 +131,37 @@ def atualizar_operacao(operacao_id):
         if 'erro' in resultado:
             return jsonify(resultado), 400
         
+        # Registrar log de auditoria
+        usuario_id_requisicao = obter_usuario_id_da_requisicao()
+        if usuario_id_requisicao:
+            dados_novos = {}
+            if operacao is not None:
+                dados_novos['operacao'] = operacao
+            if produto is not None:
+                dados_novos['produto'] = produto
+            if modelo is not None:
+                dados_novos['modelo'] = modelo
+            if linha is not None:
+                dados_novos['linha'] = linha
+            if posto is not None:
+                dados_novos['posto'] = posto
+            if totens is not None:
+                dados_novos['totens'] = totens
+            if pecas is not None:
+                dados_novos['pecas'] = pecas
+            if codigos is not None:
+                dados_novos['codigos'] = codigos
+            
+            audit_service.registrar_acao(
+                usuario_id=usuario_id_requisicao,
+                acao='atualizar',
+                entidade='operacao',
+                entidade_id=operacao_id,
+                dados_anteriores=operacao_anterior,
+                dados_novos=dados_novos if dados_novos else None,
+                detalhes=f"Operação ID {operacao_id} atualizada"
+            )
+        
         return jsonify(resultado), 200
     except Exception as e:
         print(f'Erro ao atualizar operação: {e}')
@@ -114,10 +172,26 @@ def atualizar_operacao(operacao_id):
 def deletar_operacao(operacao_id):
     """Deleta uma operação"""
     try:
+        # Buscar dados da operação antes de deletar
+        operacoes_anteriores = operacao_service.listar_operacoes()
+        operacao_anterior = next((o for o in operacoes_anteriores if o.get('id') == operacao_id), None)
+
         resultado = operacao_service.deletar_operacao(operacao_id)
 
         if 'erro' in resultado:
             return jsonify(resultado), 404
+        
+        # Registrar log de auditoria
+        usuario_id_requisicao = obter_usuario_id_da_requisicao()
+        if usuario_id_requisicao:
+            audit_service.registrar_acao(
+                usuario_id=usuario_id_requisicao,
+                acao='deletar',
+                entidade='operacao',
+                entidade_id=operacao_id,
+                dados_anteriores=operacao_anterior,
+                detalhes=f"Operação ID {operacao_id} deletada"
+            )
         
         return jsonify(resultado), 200
     except Exception as e:

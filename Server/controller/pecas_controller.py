@@ -1,5 +1,7 @@
 from flask import Blueprint, jsonify, request
 from Server.services import pecas_service
+from Server.services import audit_service
+from Server.utils.audit_helper import obter_usuario_id_da_requisicao
 
 pecas_bp = Blueprint('pecas', __name__, url_prefix='/api/pecas')
 
@@ -57,6 +59,18 @@ def criar_peca():
         if 'erro' in resultado:
             return jsonify(resultado), 400
         
+        # Registrar log de auditoria
+        usuario_id_requisicao = obter_usuario_id_da_requisicao()
+        if usuario_id_requisicao:
+            audit_service.registrar_acao(
+                usuario_id=usuario_id_requisicao,
+                acao='criar',
+                entidade='peca',
+                entidade_id=resultado.get('id'),
+                dados_novos={'modelo_id': modelo_id, 'codigo': codigo, 'nome': nome},
+                detalhes=f"Peça '{nome}' (código: {codigo}) criada"
+            )
+        
         return jsonify(resultado), 201
     except Exception as e:
         print(f"Erro ao criar peça: {e}")
@@ -75,10 +89,35 @@ def atualizar_peca(peca_id):
         codigo = data.get('codigo')
         nome = data.get('nome')
         
+        # Buscar dados anteriores para o log
+        pecas_anteriores = pecas_service.listar_todas()
+        peca_anterior = next((p for p in pecas_anteriores if p.get('id') == peca_id), None)
+        
         resultado = pecas_service.atualizar_peca(peca_id, modelo_id, codigo, nome)
         
         if 'erro' in resultado:
             return jsonify(resultado), 400
+        
+        # Registrar log de auditoria
+        usuario_id_requisicao = obter_usuario_id_da_requisicao()
+        if usuario_id_requisicao:
+            dados_novos = {}
+            if modelo_id is not None:
+                dados_novos['modelo_id'] = modelo_id
+            if codigo is not None:
+                dados_novos['codigo'] = codigo
+            if nome is not None:
+                dados_novos['nome'] = nome
+            
+            audit_service.registrar_acao(
+                usuario_id=usuario_id_requisicao,
+                acao='atualizar',
+                entidade='peca',
+                entidade_id=peca_id,
+                dados_anteriores=peca_anterior,
+                dados_novos=dados_novos if dados_novos else None,
+                detalhes=f"Peça ID {peca_id} atualizada"
+            )
         
         return jsonify(resultado)
     except Exception as e:
@@ -89,10 +128,26 @@ def atualizar_peca(peca_id):
 def deletar_peca(peca_id):
     """Deleta uma peça"""
     try:
+        # Buscar dados da peça antes de deletar
+        pecas_anteriores = pecas_service.listar_todas()
+        peca_anterior = next((p for p in pecas_anteriores if p.get('id') == peca_id), None)
+        
         resultado = pecas_service.deletar_peca(peca_id)
         
         if 'erro' in resultado:
             return jsonify(resultado), 404
+        
+        # Registrar log de auditoria
+        usuario_id_requisicao = obter_usuario_id_da_requisicao()
+        if usuario_id_requisicao:
+            audit_service.registrar_acao(
+                usuario_id=usuario_id_requisicao,
+                acao='deletar',
+                entidade='peca',
+                entidade_id=peca_id,
+                dados_anteriores=peca_anterior,
+                detalhes=f"Peça ID {peca_id} deletada"
+            )
         
         return jsonify(resultado)
     except Exception as e:

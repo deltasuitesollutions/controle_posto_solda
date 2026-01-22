@@ -45,6 +45,7 @@ const Operacao = () => {
     quantidade: false,
   });
   const redirecionadoRef = useRef(false);
+  const tinhaRegistroRef = useRef(false);
 
   const arrowIcon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E";
   const selectStyle = {
@@ -156,6 +157,7 @@ const Operacao = () => {
         try {
           const response = await producaoAPI.buscarRegistroAberto(postoAtual, funcionarioMatricula);
           if (response.registro) {
+            tinhaRegistroRef.current = true;
             setRegistroAberto(response.registro);
             // Se há registro aberto e ainda não foi redirecionado, redirecionar para o leitor de finalização
             if (!redirecionadoRef.current) {
@@ -169,15 +171,30 @@ const Operacao = () => {
               });
             }
           } else {
+            // Se havia registro aberto antes e agora não há mais (foi cancelado), redirecionar para o leitor
+            if (tinhaRegistroRef.current) {
+              tinhaRegistroRef.current = false;
+              navigate('/ihm/leitor', { replace: true });
+              return;
+            }
+            tinhaRegistroRef.current = false;
             setRegistroAberto(null);
             redirecionadoRef.current = false;
           }
         } catch (error) {
+          // Se não encontrar registro e havia um registro aberto antes (foi cancelado), redirecionar
+          if (tinhaRegistroRef.current) {
+            tinhaRegistroRef.current = false;
+            navigate('/ihm/leitor', { replace: true });
+            return;
+          }
           // Se não encontrar registro, não é erro - limpar estado
+          tinhaRegistroRef.current = false;
           setRegistroAberto(null);
           redirecionadoRef.current = false;
         }
       } else {
+        tinhaRegistroRef.current = false;
         setRegistroAberto(null);
         redirecionadoRef.current = false;
       }

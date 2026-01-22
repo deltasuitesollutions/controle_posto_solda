@@ -5,7 +5,7 @@ import { useAuth } from "../../contexts/AuthContext";
 const MenuLateral = () => {
     // Menu começa fechado no desktop, mas pode ser aberto
     const [menuAberto, setMenuAberto] = useState(false);
-    const { isOperador, isAdmin, user } = useAuth();
+    const { isOperador, isAdmin, isMaster, user } = useAuth();
 
     // Escuta evento de toggle do menu
     useEffect(() => {
@@ -54,6 +54,19 @@ const MenuLateral = () => {
     // Se não há usuário logado, mostra apenas dashboard
     if (!user) {
         // Menu vazio além do dashboard
+    } else if (isMaster) {
+        // Master tem acesso total - exceto rotas IHM (apenas para operadores)
+        menuItems.push(
+            { to: '/registros', title: 'Registros', icon: 'bi-clipboard-data', label: 'Registro de Produção' },
+            { to: '/funcionarios', title: 'Funcionarios', icon: 'bi-people', label: 'Cadastrar Funcionário' },
+            { to: '/modelos', title: 'Modelos', icon: 'bi-puzzle', label: 'Cadastro de Modelos' },
+            { to: '/produtos', title: 'Produtos', icon: 'bi-building-gear', label: 'Cadastro de Produtos' },
+            { to: '/linhas', title: 'Linhas', icon: 'bi-layers', label: 'Cadastro de Linhas' },
+            { to: '/postos', title: 'Postos', icon: 'bi-pin-map-fill', label: 'Cadastro de Postos' },
+            { to: '/operacoes', title: 'Operacoes', icon: 'bi-gear', label: 'Cadastro de Operações' },
+            { to: '/usuarios', title: 'Usuarios', icon: 'bi-person-check-fill', label: 'Cadastro de Usuários' },
+            { to: '/auditoria', title: 'Auditoria', icon: 'bi-shield-check', label: 'Operações do dia' }
+        );
     } else if (isOperador) {
         // Rotas IHM apenas para operadores - apenas leitor (fluxo sequencial)
         menuItems.push(
@@ -68,7 +81,8 @@ const MenuLateral = () => {
             { to: '/produtos', title: 'Produtos', icon: 'bi-building-gear', label: 'Cadastro de Produtos' },
             { to: '/linhas', title: 'Linhas', icon: 'bi-layers', label: 'Cadastro de Linhas' },
             { to: '/postos', title: 'Postos', icon: 'bi-pin-map-fill', label: 'Cadastro de Postos' },
-            { to: '/operacoes', title: 'Operacoes', icon: 'bi-gear', label: 'Cadastro de Operações' }
+            { to: '/operacoes', title: 'Operacoes', icon: 'bi-gear', label: 'Cadastro de Operações' },
+            { to: '/auditoria', title: 'Auditoria', icon: 'bi-shield-check', label: 'Operações do dia' }
         );
     }
 

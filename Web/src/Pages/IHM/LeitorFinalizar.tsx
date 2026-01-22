@@ -25,6 +25,38 @@ const LeitorFinalizar = () => {
         }
     }, [posto, funcionario_matricula, navigate]);
 
+    // Verificar periodicamente se o registro foi cancelado
+    useEffect(() => {
+        if (!posto || !funcionario_matricula) {
+            return;
+        }
+
+        const verificarRegistroCancelado = async () => {
+            try {
+                const registroResponse = await producaoAPI.buscarRegistroAberto(posto, funcionario_matricula);
+                if (!registroResponse.registro) {
+                    // Registro foi cancelado, redirecionar para o leitor
+                    setStatus('error');
+                    setMensagem('Operação foi cancelada');
+                    setTimeout(() => {
+                        navigate('/ihm/leitor', { replace: true });
+                    }, 2000);
+                }
+            } catch (error) {
+                // Se não encontrar registro, pode ter sido cancelado
+                setStatus('error');
+                setMensagem('Operação foi cancelada');
+                setTimeout(() => {
+                    navigate('/ihm/leitor', { replace: true });
+                }, 2000);
+            }
+        };
+
+        // Verificar a cada 5 segundos se o registro foi cancelado
+        const interval = setInterval(verificarRegistroCancelado, 5000);
+        return () => clearInterval(interval);
+    }, [posto, funcionario_matricula, navigate]);
+
     const resetarEstado = () => {
         setStatus('idle')
         setColaborador(null)
@@ -63,16 +95,18 @@ const LeitorFinalizar = () => {
                 try {
                     const registroResponse = await producaoAPI.buscarRegistroAberto(posto, funcionario_matricula);
                     if (!registroResponse.registro) {
+                        // Registro foi cancelado ou não existe mais, redirecionar para o leitor
                         setStatus('error')
-                        setMensagem('Não há registro aberto para finalizar')
+                        setMensagem('Operação foi cancelada')
                         setTimeout(() => {
                             navigate('/ihm/leitor', { replace: true });
                         }, 2000);
                         return;
                     }
                 } catch (error) {
+                    // Se não encontrar registro, pode ter sido cancelado
                     setStatus('error')
-                    setMensagem('Erro ao verificar registro')
+                    setMensagem('Operação foi cancelada')
                     setTimeout(() => {
                         navigate('/ihm/leitor', { replace: true });
                     }, 2000);

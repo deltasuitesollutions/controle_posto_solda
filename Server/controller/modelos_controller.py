@@ -1,5 +1,7 @@
 from flask import Blueprint, request, jsonify
 from Server.services import modelos_service
+from Server.services import audit_service
+from Server.utils.audit_helper import obter_usuario_id_da_requisicao
 
 modelos_bp = Blueprint('modelos', __name__, url_prefix='/api/modelos')
 
@@ -50,6 +52,18 @@ def criar_modelo():
         if 'erro' in resultado:
             return jsonify(resultado), 400
         
+        # Registrar log de auditoria
+        usuario_id_requisicao = obter_usuario_id_da_requisicao()
+        if usuario_id_requisicao:
+            audit_service.registrar_acao(
+                usuario_id=usuario_id_requisicao,
+                acao='criar',
+                entidade='modelo',
+                entidade_id=resultado.get('id'),
+                dados_novos={'codigo': codigo, 'nome': nome, 'pecas': pecas},
+                detalhes=f"Modelo '{nome}' (código: {codigo}) criado"
+            )
+        
         return jsonify(resultado)
     except Exception as e:
         print(f"Erro ao criar modelo: {e}")
@@ -68,10 +82,35 @@ def atualizar_modelo(modelo_id):
         nome = data.get('nome')
         pecas = data.get('pecas')
 
+        # Buscar dados anteriores para o log
+        modelos_anteriores = modelos_service.listar_modelos()
+        modelo_anterior = next((m for m in modelos_anteriores if m.get('id') == modelo_id), None)
+
         resultado = modelos_service.atualizar_modelo(modelo_id, codigo, nome, pecas)
 
         if 'erro' in resultado:
             return jsonify(resultado), 400
+        
+        # Registrar log de auditoria
+        usuario_id_requisicao = obter_usuario_id_da_requisicao()
+        if usuario_id_requisicao:
+            dados_novos = {}
+            if codigo is not None:
+                dados_novos['codigo'] = codigo
+            if nome is not None:
+                dados_novos['nome'] = nome
+            if pecas is not None:
+                dados_novos['pecas'] = pecas
+            
+            audit_service.registrar_acao(
+                usuario_id=usuario_id_requisicao,
+                acao='atualizar',
+                entidade='modelo',
+                entidade_id=modelo_id,
+                dados_anteriores=modelo_anterior,
+                dados_novos=dados_novos if dados_novos else None,
+                detalhes=f"Modelo ID {modelo_id} atualizado"
+            )
         
         return jsonify(resultado)
     except Exception as e:
@@ -82,10 +121,26 @@ def atualizar_modelo(modelo_id):
 def deletar_modelo(modelo_id):
     """Deleta um modelo"""
     try:
+        # Buscar dados do modelo antes de deletar
+        modelos_anteriores = modelos_service.listar_modelos()
+        modelo_anterior = next((m for m in modelos_anteriores if m.get('id') == modelo_id), None)
+
         resultado = modelos_service.deletar_modelo(modelo_id)
 
         if 'erro' in resultado:
             return jsonify(resultado), 404
+        
+        # Registrar log de auditoria
+        usuario_id_requisicao = obter_usuario_id_da_requisicao()
+        if usuario_id_requisicao:
+            audit_service.registrar_acao(
+                usuario_id=usuario_id_requisicao,
+                acao='deletar',
+                entidade='modelo',
+                entidade_id=modelo_id,
+                dados_anteriores=modelo_anterior,
+                detalhes=f"Modelo ID {modelo_id} deletado"
+            )
         
         return jsonify(resultado)
     except Exception as e:

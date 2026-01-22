@@ -2,12 +2,31 @@ const API_BASE_URL = 'http://localhost:8000/api'
 
 // Função auxiliar para fazer requisições
 async function fetchAPI(endpoint: string, options: RequestInit = {}) {
+  // Obter usuario_id do localStorage se disponível
+  let usuarioId: string | null = null
+  try {
+    const userStr = localStorage.getItem('user')
+    if (userStr) {
+      const user = JSON.parse(userStr)
+      usuarioId = user.id?.toString() || user.usuario_id?.toString() || null
+    }
+  } catch {
+    // Ignorar erros ao ler localStorage
+  }
+
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  }
+
+  // Adicionar usuario_id no header se disponível
+  if (usuarioId) {
+    headers['X-User-Id'] = usuarioId
+  }
+
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
+    headers,
     credentials: 'include',
   })
   
@@ -336,4 +355,130 @@ export const registrosAPI = {
 
 export const dashboardAPI = {
   obterDados: () => fetchAPI('/dashboard'),
+}
+
+// CHAMADA PARA USUARIOS_CONTROLLER.PY
+
+export const usuariosAPI = {
+  login: (data: { username: string; senha: string }) =>
+    fetchAPI('/usuarios/login', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  listar: () => fetchAPI('/usuarios'),
+  listarTodos: () => fetchAPI('/usuarios/todos'),
+  criar: (data: { username: string; nome: string; senha: string; role: 'admin' | 'operador' | 'master'; ativo?: boolean }) => 
+    fetchAPI('/usuarios', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  atualizar: (id: number, data: { username?: string; nome?: string; senha?: string; role?: 'admin' | 'operador' | 'master'; ativo?: boolean }) =>
+    fetchAPI(`/usuarios/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  deletar: (id: number) =>
+    fetchAPI(`/usuarios/${id}`, {
+      method: 'DELETE',
+    }),
+}
+
+// CHAMADA PARA AUDIT_CONTROLLER.PY
+
+export const auditAPI = {
+  listar: (params?: {
+    limit?: number
+    offset?: number
+    usuario_id?: number
+    entidade?: string
+    acao?: string
+    data_inicio?: string
+    data_fim?: string
+  }) => {
+    const queryParams = new URLSearchParams()
+    if (params?.limit) queryParams.append('limit', params.limit.toString())
+    if (params?.offset) queryParams.append('offset', params.offset.toString())
+    if (params?.usuario_id) queryParams.append('usuario_id', params.usuario_id.toString())
+    if (params?.entidade) queryParams.append('entidade', params.entidade)
+    if (params?.acao) queryParams.append('acao', params.acao)
+    if (params?.data_inicio) queryParams.append('data_inicio', params.data_inicio)
+    if (params?.data_fim) queryParams.append('data_fim', params.data_fim)
+    
+    const queryString = queryParams.toString()
+    return fetchAPI(`/audit${queryString ? `?${queryString}` : ''}`)
+  },
+}
+
+// CHAMADA PARA CANCELAMENTO_CONTROLLER.PY
+
+export const cancelamentoAPI = {
+  listarOperacoesIniciadas: (params?: {
+    data?: string
+    limit?: number
+    offset?: number
+  }) => {
+    const queryParams = new URLSearchParams()
+    if (params?.data) queryParams.append('data', params.data)
+    if (params?.limit) queryParams.append('limit', params.limit.toString())
+    if (params?.offset) queryParams.append('offset', params.offset.toString())
+    
+    const queryString = queryParams.toString()
+    return fetchAPI(`/cancelamentos/operacoes-iniciadas${queryString ? `?${queryString}` : ''}`)
+  },
+  cancelar: (data: { registro_id: number; motivo: string }) =>
+    fetchAPI('/cancelamentos', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  listarCancelamentos: (params?: {
+    limit?: number
+    offset?: number
+    data_inicio?: string
+    data_fim?: string
+  }) => {
+    const queryParams = new URLSearchParams()
+    if (params?.limit) queryParams.append('limit', params.limit.toString())
+    if (params?.offset) queryParams.append('offset', params.offset.toString())
+    if (params?.data_inicio) queryParams.append('data_inicio', params.data_inicio)
+    if (params?.data_fim) queryParams.append('data_fim', params.data_fim)
+    
+    const queryString = queryParams.toString()
+    return fetchAPI(`/cancelamentos${queryString ? `?${queryString}` : ''}`)
+  },
+  exportarCSV: (params?: {
+    data_inicio?: string
+    data_fim?: string
+  }) => {
+    const queryParams = new URLSearchParams()
+    if (params?.data_inicio) queryParams.append('data_inicio', params.data_inicio)
+    if (params?.data_fim) queryParams.append('data_fim', params.data_fim)
+    
+    const queryString = queryParams.toString()
+    const url = `${API_BASE_URL}/cancelamentos/exportar-csv${queryString ? `?${queryString}` : ''}`
+    
+    // Para download de arquivo, usar fetch direto
+    return fetch(url, {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'X-User-Id': localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}').id?.toString() || '' : ''
+      }
+    }).then(response => {
+      if (!response.ok) {
+        return response.json().then(data => {
+          throw new Error(data.erro || 'Erro ao exportar')
+        })
+      }
+      return response.blob().then(blob => {
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `cancelamentos_${params?.data_inicio || 'todos'}.csv`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+      })
+    })
+  },
 }

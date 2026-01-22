@@ -135,21 +135,61 @@ def criar_banco_dados(force_recreate=False):
             CREATE TABLE IF NOT EXISTS usuarios (
                 id SERIAL PRIMARY KEY,
                 username TEXT UNIQUE NOT NULL,
-                email TEXT UNIQUE NOT NULL,
                 senha_hash TEXT NOT NULL,
                 nome TEXT NOT NULL,
+                role TEXT DEFAULT 'admin' NOT NULL,
                 ativo BOOLEAN DEFAULT TRUE,
                 data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
         
+        # Verificar se a coluna role existe, se não existir, adicionar
+        cursor.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.columns 
+                WHERE table_schema = 'public' 
+                AND table_name = 'usuarios' 
+                AND column_name = 'role'
+            )
+        """)
+        role_existe = cursor.fetchone()[0]
+        
+        if not role_existe:
+            cursor.execute("""
+                ALTER TABLE usuarios 
+                ADD COLUMN role TEXT DEFAULT 'admin' NOT NULL
+            """)
+            cursor.execute("""
+                UPDATE usuarios 
+                SET role = 'admin' 
+                WHERE role IS NULL OR role = ''
+            """)
+        
+        # Remover coluna email se existir
+        cursor.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.columns 
+                WHERE table_schema = 'public' 
+                AND table_name = 'usuarios' 
+                AND column_name = 'email'
+            )
+        """)
+        email_existe = cursor.fetchone()[0]
+        
+        if email_existe:
+            try:
+                cursor.execute("DROP INDEX IF EXISTS idx_usuarios_email;")
+            except:
+                pass
+            cursor.execute("""
+                ALTER TABLE usuarios 
+                DROP COLUMN IF EXISTS email
+            """)
+        
         # Criar índices para usuários
         cursor.execute('''
             CREATE INDEX IF NOT EXISTS idx_usuarios_username ON usuarios(username);
-        ''')
-        cursor.execute('''
-            CREATE INDEX IF NOT EXISTS idx_usuarios_email ON usuarios(email);
         ''')
         
         # Verificar se precisa migrar de modelo_codigo para produto
