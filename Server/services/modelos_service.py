@@ -4,17 +4,20 @@ from Server.models.database import DatabaseConnection
 from Server.services import pecas_service  
 
 def listar_modelos():
-    """Lista todos os modelos com suas peças"""
+    """Lista todos os modelos com suas peças e produto relacionado"""
     try: 
         modelos = Modelo.listar_todos()
         resultado = []
         for modelo in modelos:
             # Buscar peças do modelo usando o service
             pecas = pecas_service.buscar_por_modelo_id(modelo.id)
+            # Buscar produto relacionado
+            produto_id = Modelo.buscar_produto_por_modelo_id(modelo.id)
             resultado.append({
                 'id': modelo.id,
                 'codigo': modelo.codigo,
                 'nome': modelo.descricao,  # Usar descricao ao invés de nome
+                'produto_id': produto_id,
                 'pecas': pecas
             })
         return resultado
@@ -44,18 +47,16 @@ def buscar_modelo_por_codigo(codigo):
         print(f'Erro ao buscar modelo: {erro}')
         return {'erro': 'Não foi possível buscar o modelo'}
     
-def criar_modelo(codigo, nome, pecas=None):
-    """Cria um novo modelo com as suas peças"""
+def criar_modelo(codigo, nome, pecas=None, produto_id=None):
+    """Cria um novo modelo com as suas peças e produto relacionado"""
     try:
-        # Verificar se já existe modelo com o mesmo nome
-        query = "SELECT modelo_id FROM modelos WHERE nome = %s"
-        resultado = DatabaseConnection.execute_query(query, (nome,), fetch_one=True)
-        if resultado:
-            return {'erro': f'Já existe um modelo com o nome {nome}'}
-        
         # Criar modelo (codigo não é salvo no banco, apenas nome)
         novo_modelo = Modelo(codigo=codigo, descricao=nome)
         novo_modelo.save()
+
+        # Associar produto se fornecido
+        if produto_id and novo_modelo.id:
+            Modelo.associar_produto(novo_modelo.id, produto_id)
 
         # Criar peças se houver usando o service
         if pecas and novo_modelo.id:
@@ -69,6 +70,7 @@ def criar_modelo(codigo, nome, pecas=None):
         return {
             'sucesso': True, 
             'modelo_id': novo_modelo.id,
+            'id': novo_modelo.id,
             'mensagem': f'Modelo {codigo} criado com sucesso'
         }
     
@@ -100,8 +102,8 @@ def deletar_modelo(modelo_id):
         traceback.print_exc()
         return {'erro': f'Não foi possível deletar o modelo {modelo_id}: {str(erro)}'}
     
-def atualizar_modelo(modelo_id, codigo=None, nome=None, pecas=None):
-    """Atualiza um modelo existente e suas peças"""
+def atualizar_modelo(modelo_id, codigo=None, nome=None, pecas=None, produto_id=None):
+    """Atualiza um modelo existente, suas peças e produto relacionado"""
     try:
         modelo = Modelo.buscar_por_id(modelo_id)
         if not modelo:
@@ -111,17 +113,19 @@ def atualizar_modelo(modelo_id, codigo=None, nome=None, pecas=None):
         if codigo:
             modelo.codigo = codigo
         
-        # Verificar se nome foi alterado e se já existe outro modelo com esse nome
-        if nome and nome != modelo.descricao:
-            query = "SELECT modelo_id FROM modelos WHERE nome = %s AND modelo_id != %s"
-            resultado = DatabaseConnection.execute_query(query, (nome, modelo.id), fetch_one=True)
-            if resultado:
-                return {'erro': f'Outro modelo já usa o nome {nome}'}
-            modelo.descricao = nome
-        elif nome:
+        # Atualizar nome
+        if nome:
             modelo.descricao = nome
         
         modelo.save()
+
+        # Atualizar relacionamento com produto se fornecido
+        if produto_id is not None and modelo.id:
+            if produto_id:
+                Modelo.associar_produto(modelo.id, produto_id)
+            else:
+                # Remover associação se produto_id for None ou 0
+                Modelo.remover_associacao_produto(modelo.id)
 
         # Atualizar peças se fornecidas
         if pecas is not None and modelo.id:

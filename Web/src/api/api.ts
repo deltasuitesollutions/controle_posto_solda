@@ -52,12 +52,12 @@ export const modelosAPI = {
   listar: () => fetchAPI('/modelos'),
   listarTodos: () => fetchAPI('/modelos'),
   buscarPorCodigo: (codigo: string) => fetchAPI(`/modelos/${codigo}`),
-  criar: (data: { nome: string; pecas?: Array<{codigo: string; nome: string}>}) => 
+  criar: (data: { nome: string; pecas?: Array<{codigo: string; nome: string}>; produto_id?: number}) => 
     fetchAPI('/modelos', {
       method: 'POST',
       body: JSON.stringify({ ...data, codigo: data.nome }), 
     }),
-  atualizar: (id: number, data: {nome: string; pecas?: Array<{id?: number; codigo: string; nome: string}>}) =>
+  atualizar: (id: number, data: {nome: string; pecas?: Array<{id?: number; codigo: string; nome: string}>; produto_id?: number}) =>
     fetchAPI(`/modelos/${id}`, {
       method: 'PUT',
       body: JSON.stringify({ ...data, codigo: data.nome }), 
@@ -407,6 +407,26 @@ export const auditAPI = {
     const queryString = queryParams.toString()
     return fetchAPI(`/audit${queryString ? `?${queryString}` : ''}`)
   },
+}
+
+// CHAMADA PARA TAGS_TEMPORARIAS_CONTROLLER.PY
+
+export const tagsTemporariasAPI = {
+  criar: (data: { funcionario_id: number; tag_id: string; horas_duracao?: number }) =>
+    fetchAPI('/tags-temporarias', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  listarPorFuncionario: (funcionario_id: number) =>
+    fetchAPI(`/tags-temporarias/funcionario/${funcionario_id}`),
+  excluir: (tag_id: string) =>
+    fetchAPI(`/tags-temporarias/${tag_id}`, {
+      method: 'DELETE',
+    }),
+  limparExpiradas: () =>
+    fetchAPI('/tags-temporarias/limpar-expiradas', {
+      method: 'POST',
+    }),
 }
 
 // CHAMADA PARA CANCELAMENTO_CONTROLLER.PY

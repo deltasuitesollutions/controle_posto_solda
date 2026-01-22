@@ -102,4 +102,52 @@ class Modelo:
         """Método estático para criar um novo modelo"""
         modelo = Modelo(codigo=codigo, descricao=descricao)
         return modelo.save()
+    
+    @staticmethod
+    def buscar_produto_por_modelo_id(modelo_id: int) -> Optional[int]:
+        """Busca o produto_id relacionado a um modelo através da tabela produto_modelo"""
+        try:
+            query = "SELECT produto_id FROM produto_modelo WHERE modelo_id = %s LIMIT 1"
+            resultado = DatabaseConnection.execute_query(query, (modelo_id,), fetch_one=True)
+            if resultado:
+                return resultado[0]
+            return None
+        except Exception as e:
+            # Se a tabela não existir, retornar None
+            print(f"Aviso: Não foi possível buscar produto por modelo_id: {e}")
+            return None
+    
+    @staticmethod
+    def associar_produto(modelo_id: int, produto_id: int) -> None:
+        """Associa um produto a um modelo na tabela produto_modelo"""
+        try:
+            # Verificar se já existe
+            query_check = "SELECT 1 FROM produto_modelo WHERE modelo_id = %s AND produto_id = %s"
+            existe = DatabaseConnection.execute_query(query_check, (modelo_id, produto_id), fetch_one=True)
+            
+            if not existe:
+                # Criar relação
+                query_insert = "INSERT INTO produto_modelo (modelo_id, produto_id) VALUES (%s, %s)"
+                DatabaseConnection.execute_query(query_insert, (modelo_id, produto_id))
+            else:
+                # Atualizar relação existente (remover outras e manter apenas esta)
+                query_delete = "DELETE FROM produto_modelo WHERE modelo_id = %s AND produto_id != %s"
+                DatabaseConnection.execute_query(query_delete, (modelo_id, produto_id))
+        except Exception as e:
+            # Se a tabela não existir, apenas ignorar
+            print(f"Aviso: Não foi possível associar produto ao modelo: {e}")
+    
+    @staticmethod
+    def remover_associacao_produto(modelo_id: int, produto_id: Optional[int] = None) -> None:
+        """Remove a associação de um modelo com um produto"""
+        try:
+            if produto_id:
+                query = "DELETE FROM produto_modelo WHERE modelo_id = %s AND produto_id = %s"
+                DatabaseConnection.execute_query(query, (modelo_id, produto_id))
+            else:
+                # Remove todas as associações do modelo
+                query = "DELETE FROM produto_modelo WHERE modelo_id = %s"
+                DatabaseConnection.execute_query(query, (modelo_id,))
+        except Exception as e:
+            print(f"Aviso: Não foi possível remover associação produto-modelo: {e}")
 

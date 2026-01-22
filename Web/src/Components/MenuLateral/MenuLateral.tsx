@@ -59,8 +59,8 @@ const MenuLateral = () => {
         menuItems.push(
             { to: '/registros', title: 'Registros', icon: 'bi-clipboard-data', label: 'Registro de Produção' },
             { to: '/funcionarios', title: 'Funcionarios', icon: 'bi-people', label: 'Cadastrar Funcionário' },
-            { to: '/modelos', title: 'Modelos', icon: 'bi-puzzle', label: 'Cadastro de Modelos' },
-            { to: '/produtos', title: 'Produtos', icon: 'bi-building-gear', label: 'Cadastro de Produtos' },
+            { to: '/cadastro-produto-modelo', title: 'CadastroProdutoModelo', icon: 'bi-box-seam', label: 'Cadastro Produto/Modelo' },
+            { to: '/listagem-pecas', title: 'ListagemPecas', icon: 'bi-boxes', label: 'Listagem de Peças' },
             { to: '/linhas', title: 'Linhas', icon: 'bi-layers', label: 'Cadastro de Linhas' },
             { to: '/postos', title: 'Postos', icon: 'bi-pin-map-fill', label: 'Cadastro de Postos' },
             { to: '/operacoes', title: 'Operacoes', icon: 'bi-gear', label: 'Cadastro de Operações' },
@@ -77,8 +77,8 @@ const MenuLateral = () => {
         menuItems.push(
             { to: '/registros', title: 'Registros', icon: 'bi-clipboard-data', label: 'Registro de Produção' },
             { to: '/funcionarios', title: 'Funcionarios', icon: 'bi-people', label: 'Cadastrar Funcionário' },
-            { to: '/modelos', title: 'Modelos', icon: 'bi-puzzle', label: 'Cadastro de Modelos' },
-            { to: '/produtos', title: 'Produtos', icon: 'bi-building-gear', label: 'Cadastro de Produtos' },
+            { to: '/cadastro-produto-modelo', title: 'CadastroProdutoModelo', icon: 'bi-box-seam', label: 'Cadastro Produto/Modelo' },
+            { to: '/listagem-pecas', title: 'ListagemPecas', icon: 'bi-boxes', label: 'Listagem de Peças' },
             { to: '/linhas', title: 'Linhas', icon: 'bi-layers', label: 'Cadastro de Linhas' },
             { to: '/postos', title: 'Postos', icon: 'bi-pin-map-fill', label: 'Cadastro de Postos' },
             { to: '/operacoes', title: 'Operacoes', icon: 'bi-gear', label: 'Cadastro de Operações' },

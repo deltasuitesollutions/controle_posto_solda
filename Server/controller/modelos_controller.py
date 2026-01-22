@@ -39,6 +39,7 @@ def criar_modelo():
         codigo = data.get('codigo')
         nome = data.get('nome')
         pecas = data.get('pecas', [])
+        produto_id = data.get('produto_id')
 
         if not nome:
             return jsonify({"erro": "Nome é obrigatório"}), 400
@@ -47,7 +48,7 @@ def criar_modelo():
         if not codigo:
             codigo = nome
         
-        resultado = modelos_service.criar_modelo(codigo, nome, pecas)
+        resultado = modelos_service.criar_modelo(codigo, nome, pecas, produto_id)
 
         if 'erro' in resultado:
             return jsonify(resultado), 400
@@ -81,12 +82,13 @@ def atualizar_modelo(modelo_id):
         codigo = data.get('codigo')
         nome = data.get('nome')
         pecas = data.get('pecas')
+        produto_id = data.get('produto_id')
 
         # Buscar dados anteriores para o log
         modelos_anteriores = modelos_service.listar_modelos()
         modelo_anterior = next((m for m in modelos_anteriores if m.get('id') == modelo_id), None)
 
-        resultado = modelos_service.atualizar_modelo(modelo_id, codigo, nome, pecas)
+        resultado = modelos_service.atualizar_modelo(modelo_id, codigo, nome, pecas, produto_id)
 
         if 'erro' in resultado:
             return jsonify(resultado), 400
@@ -101,6 +103,8 @@ def atualizar_modelo(modelo_id):
                 dados_novos['nome'] = nome
             if pecas is not None:
                 dados_novos['pecas'] = pecas
+            if produto_id is not None:
+                dados_novos['produto_id'] = produto_id
             
             audit_service.registrar_acao(
                 usuario_id=usuario_id_requisicao,

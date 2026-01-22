@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { operacoesAPI } from '../../api/api'
+import { operacoesAPI, tagsTemporariasAPI } from '../../api/api'
 
 interface OperacaoHabilitada {
     operacao_habilitada_id: number
@@ -38,6 +38,9 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
     const [operacoesSelecionadas, setOperacoesSelecionadas] = useState<number[]>([])
     const [operacoesDropdownAberto, setOperacoesDropdownAberto] = useState(false)
     const operacoesDropdownRef = useRef<HTMLDivElement>(null)
+    const [tagTemporaria, setTagTemporaria] = useState('')
+    const [tagsTemporariasAtivas, setTagsTemporariasAtivas] = useState<Array<{id: number; tag_id: string; data_expiracao: string}>>([])
+    const [carregandoTags, setCarregandoTags] = useState(false)
 
     useEffect(() => {
         carregarOperacoes()
@@ -50,6 +53,7 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
             setTag(funcionarioEditando.tag || '')
             setAtivo(funcionarioEditando.ativo !== undefined ? funcionarioEditando.ativo : true)
             setTurno(funcionarioEditando.turno || '')
+            setTagTemporaria('')
             // Carregar operações habilitadas
             if (funcionarioEditando.operacoes_habilitadas) {
                 const ids = funcionarioEditando.operacoes_habilitadas.map(op => op.operacao_id)
@@ -57,6 +61,8 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
             } else {
                 setOperacoesSelecionadas([])
             }
+            // Carregar tags temporárias ativas
+            carregarTagsTemporarias()
         } else {
             setMatricula('')
             setNome('')
@@ -64,8 +70,67 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
             setAtivo(true)
             setTurno('')
             setOperacoesSelecionadas([])
+            setTagTemporaria('')
+            setTagsTemporariasAtivas([])
         }
     }, [funcionarioEditando])
+
+    const carregarTagsTemporarias = async () => {
+        if (!funcionarioEditando?.id) return
+        
+        setCarregandoTags(true)
+        try {
+            const tags = await tagsTemporariasAPI.listarPorFuncionario(funcionarioEditando.id)
+            setTagsTemporariasAtivas(Array.isArray(tags) ? tags : [])
+        } catch (error: any) {
+            console.error('Erro ao carregar tags temporárias:', error)
+            setTagsTemporariasAtivas([])
+        } finally {
+            setCarregandoTags(false)
+        }
+    }
+
+    const handleCriarTagTemporaria = async () => {
+        if (!funcionarioEditando?.id) {
+            alert('Erro: ID do funcionário não encontrado')
+            return
+        }
+
+        if (!tagTemporaria.trim()) {
+            alert('Por favor, informe o código da tag temporária')
+            return
+        }
+
+        try {
+            await tagsTemporariasAPI.criar({
+                funcionario_id: funcionarioEditando.id,
+                tag_id: tagTemporaria.trim(),
+                horas_duracao: 10
+            })
+            
+            setTagTemporaria('')
+            await carregarTagsTemporarias()
+            alert('Tag temporária cadastrada com sucesso! Ela será válida por 10 horas.')
+        } catch (error: any) {
+            const errorMessage = error?.message || 'Erro ao cadastrar tag temporária. Tente novamente.'
+            alert(`Erro ao cadastrar tag temporária: ${errorMessage}`)
+        }
+    }
+
+    const handleExcluirTagTemporaria = async (tagId: string) => {
+        if (!confirm('Tem certeza que deseja excluir esta tag temporária?')) {
+            return
+        }
+
+        try {
+            await tagsTemporariasAPI.excluir(tagId)
+            await carregarTagsTemporarias()
+            alert('Tag temporária excluída com sucesso!')
+        } catch (error: any) {
+            const errorMessage = error?.message || 'Erro ao excluir tag temporária. Tente novamente.'
+            alert(`Erro ao excluir tag temporária: ${errorMessage}`)
+        }
+    }
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -179,8 +244,69 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
                                         onChange={(e) => setTag(e.target.value)}
                                     />
                                     <p className="text-xs text-gray-500 mt-1.5">
-                                        Código da tag RFID do funcionário (opcional)
+                                        Código da tag RFID permanente do funcionário (opcional)
                                     </p>
+                                </div>
+
+                                {/* Seção de Tag Temporária */}
+                                <div className="border-t border-gray-200 pt-4 mt-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Tag Temporária
+                                    </label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+                                            placeholder="Código da tag temporária"
+                                            value={tagTemporaria}
+                                            onChange={(e) => setTagTemporaria(e.target.value)}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={handleCriarTagTemporaria}
+                                            className="px-4 py-2.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-medium text-sm"
+                                        >
+                                            <i className="bi bi-plus-circle mr-1"></i>
+                                            Cadastrar
+                                        </button>
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-1.5">
+                                        Tag temporária válida por 10 horas. Use quando o operador esquecer o crachá.
+                                    </p>
+                                    
+                                    {/* Lista de tags temporárias ativas */}
+                                    {carregandoTags ? (
+                                        <p className="text-xs text-gray-500 mt-2">Carregando...</p>
+                                    ) : tagsTemporariasAtivas.length > 0 ? (
+                                        <div className="mt-3 space-y-2">
+                                            <p className="text-xs font-medium text-gray-700">Tags temporárias ativas:</p>
+                                            {tagsTemporariasAtivas.map((tagTemp) => {
+                                                const dataExpiracao = new Date(tagTemp.data_expiracao)
+                                                const agora = new Date()
+                                                const horasRestantes = Math.max(0, Math.floor((dataExpiracao.getTime() - agora.getTime()) / (1000 * 60 * 60)))
+                                                const minutosRestantes = Math.max(0, Math.floor((dataExpiracao.getTime() - agora.getTime()) / (1000 * 60)) % 60)
+                                                
+                                                return (
+                                                    <div key={tagTemp.id} className="flex items-center justify-between p-2 bg-orange-50 border border-orange-200 rounded-lg">
+                                                        <div className="flex-1">
+                                                            <p className="text-xs font-medium text-gray-800">{tagTemp.tag_id}</p>
+                                                            <p className="text-xs text-gray-600">
+                                                                Expira em: {horasRestantes}h {minutosRestantes}m
+                                                            </p>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleExcluirTagTemporaria(tagTemp.tag_id)}
+                                                            className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+                                                            title="Excluir tag temporária"
+                                                        >
+                                                            <i className="bi bi-trash text-sm"></i>
+                                                        </button>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    ) : null}
                                 </div>
                                 
                                 <div>

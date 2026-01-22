@@ -1,6 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import Funcionarios from "./Pages/Funcionarios";
-import Modelos from "./Pages/Modelos";
 import Registros from "./Pages/Registros";
 import Dashboard from "./Pages/Dashboard";
 import Login from "./Pages/Login";
@@ -8,12 +7,13 @@ import LeitorIHM from "./Pages/IHM/Leitor";
 import OperacaoIHM from "./Pages/IHM/Operacao";
 import LeitorFinalizar from "./Pages/IHM/LeitorFinalizar";
 import ProtectedRoute from "./Components/ProtectedRoute";
-import Produtos from "./Pages/Produtos";
 import Linhas from "./Pages/Linhas";
 import Postos from "./Pages/Postos";
 import Operacoes from "./Pages/Operacoes";
 import Usuarios from "./Pages/Usuarios";
 import Auditoria from "./Pages/Auditoria";
+import CadastroProdutoModelo from "./Pages/CadastroProdutoModelo";
+import ListagemPecas from "./Pages/ListagemPecas";
 
 
 function App() {
@@ -40,10 +40,18 @@ function App() {
         } 
       />
       <Route 
-        path="/modelos" 
+        path="/cadastro-produto-modelo" 
         element={
           <ProtectedRoute onlyAdmin>
-            <Modelos />
+            <CadastroProdutoModelo />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/listagem-pecas" 
+        element={
+          <ProtectedRoute onlyAdmin>
+            <ListagemPecas />
           </ProtectedRoute>
         } 
       />
@@ -52,14 +60,6 @@ function App() {
         element={
           <ProtectedRoute onlyAdmin>
             <Registros />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/produtos" 
-        element={
-          <ProtectedRoute onlyAdmin>
-            <Produtos />
           </ProtectedRoute>
         } 
       />

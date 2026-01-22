@@ -4,10 +4,6 @@ from Server.models import Produto
 def criar_produto(nome):
     # CRIAR
     try: 
-        produto_existente = Produto.buscarNome(nome)
-        if produto_existente:
-            return {'erro': f'Já existe um produto com o nome {nome}'}
-        
         novo_produto = Produto(nome=nome)
         novo_produto.salvar()
 
@@ -29,12 +25,7 @@ def atualizar_produto(produto_id, nome=None):
         if not produto:
             return {'erro': f'Produto com ID {produto_id} não encontrado'}
         
-        if nome and nome != produto.nome:
-            produto_com_mesmo_nome = Produto.buscarNome(nome)
-            if produto_com_mesmo_nome and produto_com_mesmo_nome.id != produto_id:
-                return {'erro': f'Outro produto já usa o nome {nome}'}
-            produto.nome = nome
-        elif nome:
+        if nome:
             produto.nome = nome
 
         produto.salvar()

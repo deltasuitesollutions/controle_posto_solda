@@ -45,8 +45,13 @@ def validar_rfid() -> Union[Response, Tuple[Response, int]]:
         
         codigo = data.get('codigo', '').strip()
         
-        # Buscar funcionário pela tag
-        funcionario = funcionarios_service.buscar_funcionario_por_tag(codigo)
+        # Primeiro verificar se é uma tag temporária
+        from Server.services import tags_temporarias_service
+        funcionario = tags_temporarias_service.buscar_funcionario_por_tag_temporaria(codigo)
+        
+        # Se não for tag temporária, buscar tag permanente
+        if not funcionario:
+            funcionario = funcionarios_service.buscar_funcionario_por_tag(codigo)
         
         if not funcionario:
             return jsonify({

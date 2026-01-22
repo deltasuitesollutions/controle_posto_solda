@@ -6,9 +6,18 @@ from Server.models.funcionario import Funcionario
 def processar_leitura_rfid(tag_id: str, posto: Optional[str] = None) -> Dict[str, Any]:
     from Server.models import PostoConfiguracao, ProducaoRegistro
     from Server.services import producao_service
+    from Server.services import tags_temporarias_service
     
-    # Buscar funcionário diretamente pela tag
-    funcionario = Funcionario.buscar_por_tag(tag_id)
+    # Primeiro verificar se é uma tag temporária
+    funcionario_dict = tags_temporarias_service.buscar_funcionario_por_tag_temporaria(tag_id)
+    
+    if funcionario_dict:
+        # É uma tag temporária, buscar o funcionário pelo ID
+        funcionario = Funcionario.buscar_por_id(funcionario_dict.get('id') or funcionario_dict.get('funcionario_id'))
+    else:
+        # Buscar funcionário diretamente pela tag permanente
+        funcionario = Funcionario.buscar_por_tag(tag_id)
+    
     if not funcionario:
         raise Exception(f"Tag RFID '{tag_id}' não está associada a nenhum funcionário.")
     

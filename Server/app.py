@@ -64,7 +64,8 @@ def register_blueprints(app: Flask):
         dashboard_controller,
         usuarios_controller,
         audit_controller,
-        cancelamento_controller
+        cancelamento_controller,
+        tags_temporarias_controller
     )
     
     app.register_blueprint(producao_controller.producao_bp)
@@ -85,6 +86,7 @@ def register_blueprints(app: Flask):
     app.register_blueprint(usuarios_controller.usuarios_bp)
     app.register_blueprint(audit_controller.audit_bp)
     app.register_blueprint(cancelamento_controller.cancelamento_bp)
+    app.register_blueprint(tags_temporarias_controller.tags_temporarias_bp)
 
 def register_web_routes(app: Flask):
     @app.route('/', defaults={'path': ''})
@@ -119,6 +121,12 @@ app = create_app()
 if __name__ != '__main__' and os.getenv('FLASK_ENV') != 'test':
     setup_logging()
     inicializar_banco_dados()
+    # Limpar tags temporárias expiradas na inicialização
+    try:
+        from Server.services import tags_temporarias_service
+        tags_temporarias_service.limpar_tags_expiradas_automaticamente()
+    except Exception as e:
+        logging.warning(f"Erro ao limpar tags temporárias expiradas na inicialização: {e}")
 
 
 if __name__ == '__main__':
@@ -127,6 +135,14 @@ if __name__ == '__main__':
     
     if not inicializar_banco_dados():
         logger.warning("Banco de dados não inicializado")
+    
+    # Limpar tags temporárias expiradas na inicialização
+    try:
+        from Server.services import tags_temporarias_service
+        tags_temporarias_service.limpar_tags_expiradas_automaticamente()
+        logger.info("Tags temporárias expiradas limpas na inicialização")
+    except Exception as e:
+        logger.warning(f"Erro ao limpar tags temporárias expiradas na inicialização: {e}")
     
     host = os.getenv('FLASK_HOST', '0.0.0.0')
     port = int(os.getenv('FLASK_PORT', '8000'))

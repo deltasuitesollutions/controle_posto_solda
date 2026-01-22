@@ -33,11 +33,11 @@ def buscar_por_modelo_id(modelo_id):
 def criar_peca(modelo_id, codigo, nome):
     """Cria uma nova peça"""
     try:
-        # Verificar se peça já existe para este modelo
+        # Verificar se peça já existe para este modelo (código E nome)
         pecas_existentes = Peca.buscar_por_modelo_id(modelo_id)
         for peca in pecas_existentes:
-            if peca.codigo == codigo:
-                return {'erro': f'Já existe uma peça com código {codigo} neste modelo'}
+            if peca.codigo.lower() == codigo.lower() and peca.nome.lower() == nome.lower():
+                return {'erro': 'Peça e código existente já cadastrado'}
         
         nova_peca = Peca(
             modelo_id=modelo_id,
