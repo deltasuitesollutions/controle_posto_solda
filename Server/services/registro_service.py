@@ -101,7 +101,8 @@ def listar_registros(
         tem_coluna_nome_operacao = cursor.fetchone() is not None
         
         # Preparar filtros para a query
-        where_conditions = ["1=1"]
+        # Filtrar apenas registros concluídos (com fim preenchido)
+        where_conditions = ["r.fim IS NOT NULL"]
         params = []
         
         # Resolver posto_id se posto for fornecido

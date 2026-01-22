@@ -6,7 +6,6 @@ interface CardProps {
     mod: string;
     peca_nome: string;
     qtd_real: number;
-    pecas: string;
     operador: string;
     habilitado: boolean;
     turno?: string;
@@ -16,7 +15,7 @@ interface CardProps {
 }
 
 
-const Card = ({posto, mod, peca_nome, qtd_real, operador, habilitado, turno, comentario: comentarioInicial, comentario_aviso, registro_id}: CardProps) => {
+const Card = ({posto, mod, peca_nome, operador, habilitado, turno, comentario: comentarioInicial, comentario_aviso, registro_id}: CardProps) => {
   const [comentario, setComentario] = useState(comentarioInicial || '');
   const [salvando, setSalvando] = useState(false);
   const [mensagemSucesso, setMensagemSucesso] = useState(false);
@@ -78,12 +77,7 @@ const Card = ({posto, mod, peca_nome, qtd_real, operador, habilitado, turno, com
           </div>
         </div>
 
-        <div className='grid grid-cols-2 gap-2'>
-          <div className='bg-blue-50 rounded p-2 border border-blue-200'>
-            <p className='text-xs text-gray-600 mb-1'>Peças</p>
-            <p className='text-sm font-semibold text-gray-800'>{qtd_real || 0}</p>
-          </div>
-          
+        <div className='grid grid-cols-1 gap-2'>
           <div className='bg-orange-50 rounded p-2 border border-orange-200'>
             <p className='text-xs text-gray-600 mb-1'>Turno</p>
             <p className='text-sm font-semibold text-gray-800'>{turno || 'Não definido'}</p>

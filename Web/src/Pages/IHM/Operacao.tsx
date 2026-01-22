@@ -128,6 +128,114 @@ const Operacao = () => {
     carregarDados();
   }, [operador]);
 
+  // Preencher campos quando os dados forem carregados e já houver uma operação selecionada
+  useEffect(() => {
+    if (operacao && operacoes.length > 0 && operacoesCompletas.length > 0 && modelos.length > 0) {
+      // Buscar dados completos da operação
+      const operacaoIHM = operacoes.find((op) => op.codigo === operacao);
+      
+      let operacaoEncontrada: any = null;
+      
+      // Normalizar strings para comparação (remover espaços e converter para minúsculas)
+      const normalizar = (str: string | undefined) => (str || '').trim().toLowerCase();
+      
+      if (operacaoIHM && operacaoIHM.posto) {
+        // Se temos o posto, buscar pela combinação de operação e posto (mais preciso)
+        operacaoEncontrada = operacoesCompletas.find((op: any) => {
+          // Comparar operação (pode ser código ou nome)
+          const matchOperacao = normalizar(op.operacao) === normalizar(operacao);
+          // Comparar posto
+          const matchPosto = normalizar(op.posto) === normalizar(operacaoIHM.posto);
+          return matchOperacao && matchPosto;
+        });
+      }
+      
+      // Se ainda não encontrou, tentar apenas pelo campo operacao (sem posto)
+      if (!operacaoEncontrada) {
+        operacaoEncontrada = operacoesCompletas.find((op: any) => {
+          return normalizar(op.operacao) === normalizar(operacao);
+        });
+      }
+      
+      // Se ainda não encontrou e temos posto, tentar buscar apenas pelo posto
+      if (!operacaoEncontrada && operacaoIHM && operacaoIHM.posto) {
+        // Última tentativa: buscar pelo posto (pode haver apenas uma operação por posto)
+        const operacoesComPosto = operacoesCompletas.filter((op: any) => 
+          normalizar(op.posto) === normalizar(operacaoIHM.posto)
+        );
+        if (operacoesComPosto.length === 1) {
+          operacaoEncontrada = operacoesComPosto[0];
+        } else if (operacoesComPosto.length > 1) {
+          // Se houver múltiplas operações no mesmo posto, tentar encontrar pela operação
+          operacaoEncontrada = operacoesComPosto.find((op: any) => 
+            normalizar(op.operacao) === normalizar(operacao)
+          ) || operacoesComPosto[0]; // Se não encontrar, usar a primeira
+        }
+      }
+      
+      if (operacaoEncontrada) {
+        // Preencher produto
+        const produtoEncontrado = operacaoEncontrada.produto || '';
+        setProduto(produtoEncontrado);
+        
+        // Buscar código do modelo pela descrição ou nome
+        const descricaoModelo = operacaoEncontrada.modelo || '';
+        
+        // Tentar encontrar modelo por descrição ou código
+        const modeloEncontrado = modelos.find(m => 
+          normalizar(m.descricao) === normalizar(descricaoModelo) || 
+          normalizar(m.codigo) === normalizar(descricaoModelo)
+        );
+        
+        if (modeloEncontrado) {
+          setModelo(modeloEncontrado.codigo); // Código para envio
+          setModeloDescricao(modeloEncontrado.descricao || modeloEncontrado.codigo); // Descrição para exibição
+        } else {
+          // Se não encontrou, usar a descrição diretamente
+          setModelo(descricaoModelo);
+          setModeloDescricao(descricaoModelo);
+        }
+        
+        // Preencher peça (pegar a primeira peça se houver)
+        if (operacaoEncontrada.pecas && operacaoEncontrada.pecas.length > 0) {
+          const primeiraPeca = operacaoEncontrada.pecas[0];
+          setPeca(primeiraPeca);
+        } else {
+          setPeca('');
+        }
+        
+        // Preencher código (pegar o primeiro código se houver)
+        if (operacaoEncontrada.codigos && operacaoEncontrada.codigos.length > 0) {
+          const primeiroCodigo = operacaoEncontrada.codigos[0];
+          setCodigo(primeiroCodigo);
+        } else {
+          setCodigo('');
+        }
+        
+        // Definir posto
+        if (operacaoEncontrada.posto) {
+          setPostoAtual(operacaoEncontrada.posto);
+        } else if (operacaoIHM && operacaoIHM.posto) {
+          setPostoAtual(operacaoIHM.posto);
+        } else {
+          setPostoAtual('');
+        }
+      } else {
+        // Se não encontrou na lista completa, tentar apenas buscar posto da lista IHM
+        if (operacaoIHM && operacaoIHM.posto) {
+          setPostoAtual(operacaoIHM.posto);
+        } else {
+          setPostoAtual('');
+        }
+        // Limpar campos se não encontrou operação completa
+        setProduto('');
+        setModelo('');
+        setModeloDescricao('');
+        setPeca('');
+        setCodigo('');
+      }
+    }
+  }, [operacao, operacoes, operacoesCompletas, modelos]);
 
   // Verificar registro aberto quando operação e matrícula estiverem disponíveis
   useEffect(() => {
@@ -316,14 +424,15 @@ const Operacao = () => {
                 return;
               }
               
-              console.log('Buscando operação:', codigoOperacao);
-              console.log('Operações IHM:', operacoes);
-              console.log('Operações completas:', operacoesCompletas);
+              // Se os dados ainda não foram carregados, apenas atualizar o estado da operação
+              // O useEffect vai preencher os campos quando os dados estiverem prontos
+              if (operacoes.length === 0 || operacoesCompletas.length === 0 || modelos.length === 0) {
+                return;
+              }
               
+              // Se os dados estão carregados, preencher os campos imediatamente
               // Buscar dados completos da operação
-              // Primeiro, buscar a operação na lista IHM para obter o posto
               const operacaoIHM = operacoes.find((op) => op.codigo === codigoOperacao);
-              console.log('Operação IHM encontrada:', operacaoIHM);
               
               let operacaoEncontrada: any = null;
               
@@ -364,20 +473,13 @@ const Operacao = () => {
                 }
               }
               
-              console.log('Operação completa encontrada:', operacaoEncontrada);
-              
               if (operacaoEncontrada) {
-                console.log('Preenchendo campos com:', operacaoEncontrada);
-                
                 // Preencher produto
                 const produtoEncontrado = operacaoEncontrada.produto || '';
                 setProduto(produtoEncontrado);
-                console.log('Produto definido:', produtoEncontrado);
                 
                 // Buscar código do modelo pela descrição ou nome
                 const descricaoModelo = operacaoEncontrada.modelo || '';
-                console.log('Buscando modelo:', descricaoModelo);
-                console.log('Modelos disponíveis:', modelos);
                 
                 // Tentar encontrar modelo por descrição ou código
                 const modeloEncontrado = modelos.find(m => 
@@ -388,51 +490,40 @@ const Operacao = () => {
                 if (modeloEncontrado) {
                   setModelo(modeloEncontrado.codigo); // Código para envio
                   setModeloDescricao(modeloEncontrado.descricao || modeloEncontrado.codigo); // Descrição para exibição
-                  console.log('Modelo encontrado:', modeloEncontrado);
                 } else {
                   // Se não encontrou, usar a descrição diretamente
                   setModelo(descricaoModelo);
                   setModeloDescricao(descricaoModelo);
-                  console.log('Modelo não encontrado na lista, usando descrição:', descricaoModelo);
                 }
                 
                 // Preencher peça (pegar a primeira peça se houver)
                 if (operacaoEncontrada.pecas && operacaoEncontrada.pecas.length > 0) {
                   const primeiraPeca = operacaoEncontrada.pecas[0];
                   setPeca(primeiraPeca);
-                  console.log('Peça definida:', primeiraPeca);
                 } else {
                   setPeca('');
-                  console.log('Nenhuma peça encontrada');
                 }
                 
                 // Preencher código (pegar o primeiro código se houver)
                 if (operacaoEncontrada.codigos && operacaoEncontrada.codigos.length > 0) {
                   const primeiroCodigo = operacaoEncontrada.codigos[0];
                   setCodigo(primeiroCodigo);
-                  console.log('Código definido:', primeiroCodigo);
                 } else {
                   setCodigo('');
-                  console.log('Nenhum código encontrado');
                 }
                 
                 // Definir posto
                 if (operacaoEncontrada.posto) {
                   setPostoAtual(operacaoEncontrada.posto);
-                  console.log('Posto definido:', operacaoEncontrada.posto);
                 } else if (operacaoIHM && operacaoIHM.posto) {
                   setPostoAtual(operacaoIHM.posto);
-                  console.log('Posto definido da lista IHM:', operacaoIHM.posto);
                 } else {
                   setPostoAtual('');
-                  console.log('Nenhum posto encontrado');
                 }
               } else {
-                console.log('Operação completa não encontrada, tentando apenas definir posto');
                 // Se não encontrou na lista completa, tentar apenas buscar posto da lista IHM
                 if (operacaoIHM && operacaoIHM.posto) {
                   setPostoAtual(operacaoIHM.posto);
-                  console.log('Posto definido da lista IHM:', operacaoIHM.posto);
                 } else {
                   setPostoAtual('');
                 }
@@ -442,7 +533,6 @@ const Operacao = () => {
                 setModeloDescricao('');
                 setPeca('');
                 setCodigo('');
-                console.log('Campos limpos - operação não encontrada');
               }
             }}
             className={`w-full px-5 py-4 text-xl border-4 rounded-lg focus:outline-none bg-white appearance-none cursor-pointer ${erros.operacao ? 'border-red-500' : 'border-gray-400 focus:border-blue-500'}`}

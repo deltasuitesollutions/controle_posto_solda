@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { io, Socket } from 'socket.io-client';
 import Card from '../Components/dashboard/Card';
 import MenuLateral from '../Components/MenuLateral/MenuLateral';
 import TopBar from '../Components/topBar/TopBar';
@@ -10,7 +11,6 @@ interface CardProps {
   mod: string;
   peca_nome: string;
   qtd_real: number;
-  pecas: string;
   operador: string;
   habilitado: boolean;
   turno?: string;
@@ -54,17 +54,78 @@ const Dashboard = () => {
     operadoresAtivos: 0
   });
   const [carregando, setCarregando] = useState(true);
+  const [conectado, setConectado] = useState(false);
+  const socketRef = useRef<Socket | null>(null);
 
-  // Carregar dados do dashboard
+  // Carregar dados iniciais do dashboard
   useEffect(() => {
     carregarDadosDashboard();
-    
-    // Atualizar a cada 30 segundos
-    const interval = setInterval(() => {
-      carregarDadosDashboard();
-    }, 30000);
+  }, []);
 
-    return () => clearInterval(interval);
+  // Configurar WebSocket
+  useEffect(() => {
+    // URL do servidor WebSocket (mesma do API)
+    const socketUrl = 'http://localhost:8000';
+    
+    // Criar conexão WebSocket
+    const socket = io(socketUrl, {
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
+    });
+
+    socketRef.current = socket;
+
+    // Evento de conexão
+    socket.on('connect', () => {
+      console.log('✅ Conectado ao WebSocket do dashboard');
+      setConectado(true);
+      // Se inscrever para receber atualizações
+      console.log('📡 Enviando subscribe_dashboard...');
+      socket.emit('subscribe_dashboard');
+    });
+
+    // Evento de desconexão
+    socket.on('disconnect', () => {
+      console.log('Desconectado do WebSocket do dashboard');
+      setConectado(false);
+    });
+
+    // Evento de erro de conexão
+    socket.on('connect_error', (error) => {
+      console.error('Erro ao conectar ao WebSocket:', error);
+      setConectado(false);
+    });
+
+    // Receber atualizações do dashboard
+    socket.on('dashboard_update', (dados: any) => {
+      console.log('📊 Atualização recebida via WebSocket:', dados);
+      
+      if (dados.metricas) {
+        console.log('📈 Atualizando métricas:', dados.metricas);
+        setMetricas(dados.metricas);
+      }
+      
+      if (dados.sublinhas) {
+        console.log('📋 Atualizando sublinhas:', dados.sublinhas.length, 'sublinhas');
+        setSublinhas(dados.sublinhas);
+      }
+      
+      setCarregando(false);
+    });
+
+    // Evento de confirmação de conexão
+    socket.on('connected', (data: any) => {
+      console.log('Confirmação de conexão:', data);
+    });
+
+    // Cleanup ao desmontar o componente
+    return () => {
+      if (socket) {
+        socket.disconnect();
+      }
+    };
   }, []);
 
   const carregarDadosDashboard = async () => {
@@ -81,6 +142,10 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error('Erro ao carregar dados do dashboard:', error);
+      // Em caso de erro, tentar novamente após alguns segundos
+      setTimeout(() => {
+        carregarDadosDashboard();
+      }, 5000);
     } finally {
       setCarregando(false);
     }
@@ -201,7 +266,6 @@ const Dashboard = () => {
                       mod={item.mod}
                       peca_nome={item.peca_nome || 'Sem peça'}
                       qtd_real={item.qtd_real || 0}
-                      pecas={item.pecas}
                       operador={item.operador}
                       habilitado={item.habilitado}
                       turno={item.turno}

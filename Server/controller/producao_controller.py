@@ -31,6 +31,13 @@ def registrar_entrada() -> Union[Response, Tuple[Response, int]]:
             quantidade=data.get('quantidade')
         )
         
+        # Notificar mudança via WebSocket
+        try:
+            from Server.services import dashboard_websocket_service
+            dashboard_websocket_service.notificar_mudanca_registro()
+        except Exception as ws_error:
+            print(f"Erro ao notificar via WebSocket: {ws_error}")
+        
         return jsonify({
             "status": "success", 
             "message": f"Entrada registrada para {resultado.get('funcionario_matricula', 'operador')}",
@@ -64,6 +71,13 @@ def registrar_saida() -> Union[Response, Tuple[Response, int]]:
             funcionario_matricula=data.get('funcionario_matricula'),
             quantidade=data.get('quantidade')
         )
+        
+        # Notificar mudança via WebSocket
+        try:
+            from Server.services import dashboard_websocket_service
+            dashboard_websocket_service.notificar_mudanca_registro()
+        except Exception as ws_error:
+            print(f"Erro ao notificar via WebSocket: {ws_error}")
         
         return jsonify({
             "status": "success", 

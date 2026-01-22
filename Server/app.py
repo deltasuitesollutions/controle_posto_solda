@@ -14,8 +14,12 @@ from typing import Optional
 
 from flask import Flask, send_from_directory
 from flask_cors import CORS
+from flask_socketio import SocketIO
 
 WEB_DIR = BASE_DIR / 'Web' / 'dist'
+
+# Instância global do SocketIO (será inicializada no create_app)
+socketio = None
 
 
 def setup_logging():
@@ -97,7 +101,42 @@ def register_web_routes(app: Flask):
         return send_from_directory(WEB_DIR, 'index.html')
 
 
-def create_app(config: Optional[dict] = None) -> Flask:
+def register_socketio_events(socketio_instance: SocketIO):
+    """Registra os eventos do WebSocket"""
+    from Server.services import dashboard_websocket_service
+    from flask_socketio import emit
+    
+    @socketio_instance.on('connect')
+    def handle_connect(auth):
+        """Cliente conectado"""
+        from flask import request
+        logging.info(f'✅ Cliente WebSocket conectado (SID: {request.sid})')
+        emit('connected', {'status': 'connected', 'message': 'Conectado ao servidor'})
+    
+    @socketio_instance.on('disconnect')
+    def handle_disconnect():
+        """Cliente desconectado"""
+        from flask import request
+        logging.info(f'❌ Cliente WebSocket desconectado (SID: {request.sid})')
+    
+    @socketio_instance.on('subscribe_dashboard')
+    def handle_subscribe_dashboard():
+        """Cliente se inscreve para receber atualizações do dashboard"""
+        from flask import request
+        logging.info(f'📡 Cliente se inscreveu para atualizações do dashboard (SID: {request.sid})')
+        # Enviar dados iniciais imediatamente
+        try:
+            dashboard_websocket_service.enviar_atualizacao_dashboard(socketio_instance)
+            logging.info(f'✅ Dados iniciais enviados ao cliente (SID: {request.sid})')
+        except Exception as e:
+            logging.error(f'❌ Erro ao enviar dados iniciais: {e}')
+            import traceback
+            logging.error(traceback.format_exc())
+
+
+def create_app(config: Optional[dict] = None):
+    global socketio
+    
     app = Flask(__name__)
     
     app.secret_key = os.getenv('SECRET_KEY', secrets.token_hex(32))
@@ -109,14 +148,30 @@ def create_app(config: Optional[dict] = None) -> Flask:
     if config:
         app.config.update(config)
     
+    # Configurar CORS para SocketIO
+    is_prod = os.getenv('FLASK_ENV') == 'production'
+    cors_allowed_origins = ['http://localhost:5173', 'http://127.0.0.1:5173'] if is_prod else '*'
+    
+    # Inicializar SocketIO
+    socketio = SocketIO(
+        app,
+        cors_allowed_origins=cors_allowed_origins,
+        async_mode='threading',
+        logger=True,
+        engineio_logger=False
+    )
+    
     configure_cors(app)
     register_blueprints(app)
     register_web_routes(app)
     
-    return app
+    # Registrar eventos do SocketIO
+    register_socketio_events(socketio)
+    
+    return app, socketio
 
 
-app = create_app()
+app, socketio = create_app()
 
 if __name__ != '__main__' and os.getenv('FLASK_ENV') != 'test':
     setup_logging()
@@ -150,4 +205,13 @@ if __name__ == '__main__':
     
     logger.info(f"Servidor iniciando em http://{host}:{port}")
     
-    app.run(debug=debug, host=host, port=port)
+    # Iniciar serviço de monitoramento do dashboard
+    try:
+        from Server.services import dashboard_websocket_service
+        dashboard_websocket_service.iniciar_monitoramento(socketio)
+        logger.info("Serviço de monitoramento do dashboard iniciado")
+    except Exception as e:
+        logger.warning(f"Erro ao iniciar serviço de monitoramento: {e}")
+    
+    # Usar socketio.run em vez de app.run para suportar WebSockets
+    socketio.run(app, debug=debug, host=host, port=port, allow_unsafe_werkzeug=True)
