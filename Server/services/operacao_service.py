@@ -64,11 +64,14 @@ def listar_operacoes() -> List[Dict[str, Any]]:
                 """
                 pecas_rows = DatabaseConnection.execute_query(query_pecas, (operacao.operacao_id,), fetch_all=True)
                 pecas_relacionadas = [Peca.buscar_por_id(row[0]) for row in pecas_rows] if pecas_rows else []
+                # Retornar códigos e nomes das peças
+                pecas_codigos = [p.codigo for p in pecas_relacionadas if p]
                 pecas_nomes = [p.nome for p in pecas_relacionadas if p]
                 
                 # Se não houver peças na tabela de relacionamento, usar peças do modelo (compatibilidade)
-                if not pecas_nomes and modelo:
+                if not pecas_codigos and modelo:
                     pecas_modelo = Peca.buscar_por_modelo_id(modelo.id)
+                    pecas_codigos = list(set([p.codigo for p in pecas_modelo]))
                     pecas_nomes = list(set([p.nome for p in pecas_modelo]))
                 
                 # Buscar códigos da tabela de relacionamento
@@ -80,9 +83,9 @@ def listar_operacoes() -> List[Dict[str, Any]]:
                 codigos_rows = DatabaseConnection.execute_query(query_codigos, (operacao.operacao_id,), fetch_all=True)
                 codigos_list = [row[0] for row in codigos_rows] if codigos_rows else []
                 
-                # Se não houver códigos na tabela de relacionamento, usar codigo_operacao (compatibilidade)
-                if not codigos_list and operacao.codigo_operacao:
-                    codigos_list = [operacao.codigo_operacao]
+                # Se não houver códigos na tabela de relacionamento, usar código da primeira peça (compatibilidade)
+                if not codigos_list and pecas_codigos:
+                    codigos_list = [pecas_codigos[0]]
                 
                 operacoes_agrupadas[chave] = {
                     'id': str(operacao.operacao_id),  # Usar o primeiro ID
@@ -92,7 +95,8 @@ def listar_operacoes() -> List[Dict[str, Any]]:
                     'linha': linha.nome if linha else '',
                     'posto': posto.nome if posto else '',
                     'totens': totens,
-                    'pecas': pecas_nomes,
+                    'pecas': pecas_codigos,
+                    'pecas_nomes': pecas_nomes,  # Nomes das peças
                     'codigos': codigos_list
                 }
         
@@ -159,11 +163,14 @@ def buscar_operacao_por_id(operacao_id: int) -> Dict[str, Any]:
         """
         pecas_rows = DatabaseConnection.execute_query(query_pecas, (operacao.operacao_id,), fetch_all=True)
         pecas_relacionadas = [Peca.buscar_por_id(row[0]) for row in pecas_rows] if pecas_rows else []
+        # Retornar códigos e nomes das peças
+        pecas_codigos = [p.codigo for p in pecas_relacionadas if p]
         pecas_nomes = [p.nome for p in pecas_relacionadas if p]
         
         # Se não houver peças na tabela de relacionamento, usar peças do modelo (compatibilidade)
-        if not pecas_nomes and modelo:
+        if not pecas_codigos and modelo:
             pecas_modelo = Peca.buscar_por_modelo_id(modelo.id)
+            pecas_codigos = [p.codigo for p in pecas_modelo]
             pecas_nomes = [p.nome for p in pecas_modelo]
         
         # Buscar códigos da tabela de relacionamento
@@ -175,9 +182,9 @@ def buscar_operacao_por_id(operacao_id: int) -> Dict[str, Any]:
         codigos_rows = DatabaseConnection.execute_query(query_codigos, (operacao.operacao_id,), fetch_all=True)
         codigos = [row[0] for row in codigos_rows] if codigos_rows else []
         
-        # Se não houver códigos na tabela de relacionamento, usar codigo_operacao (compatibilidade)
-        if not codigos and operacao.codigo_operacao:
-            codigos = [operacao.codigo_operacao]
+        # Se não houver códigos na tabela de relacionamento, usar código da primeira peça (compatibilidade)
+        if not codigos and pecas_codigos:
+            codigos = [pecas_codigos[0]]
         
         return {
             'id': str(operacao.operacao_id),
@@ -187,7 +194,8 @@ def buscar_operacao_por_id(operacao_id: int) -> Dict[str, Any]:
             'linha': linha.nome if linha else '',
             'posto': posto.nome if posto else '',
             'totens': totens,
-            'pecas': pecas_nomes,
+            'pecas': pecas_codigos,
+            'pecas_nomes': pecas_nomes,  # Nomes das peças
             'codigos': codigos
         }
     except Exception as erro:

@@ -71,8 +71,8 @@ def atualizar_comentario_registro(registro_id: int) -> Union[Response, Tuple[Res
         
         # Notificar mudança via WebSocket
         try:
-            from Server.services import dashboard_websocket_service
-            dashboard_websocket_service.notificar_mudanca_registro()
+            from Server.websocket_manager import enviar_atualizacao_dashboard
+            enviar_atualizacao_dashboard()
         except Exception as ws_error:
             print(f"Erro ao notificar via WebSocket: {ws_error}")
         

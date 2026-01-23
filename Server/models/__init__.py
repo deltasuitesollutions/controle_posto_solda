@@ -21,7 +21,6 @@ __all__ = [
     'Posto',
     'ProducaoRegistro',
     'PostoConfiguracao',
-    'Subproduto',
     'Usuario',
     'AuditLog',
     'CancelamentoOperacao',
