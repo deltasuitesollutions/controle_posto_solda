@@ -11,6 +11,8 @@ from flask_cors import CORS
 from flask_socketio import SocketIO
 
 # Adiciona o diretório raiz ao path
+# No Docker: /app/Server/app.py -> /app deve estar no path
+# Localmente: projeto/Server/app.py -> projeto deve estar no path
 BASE_DIR = Path(__file__).parent.parent.resolve()
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
@@ -90,6 +92,7 @@ def register_blueprints(app: Flask):
         cancelamento_controller,
         tags_temporarias_controller
     )
+    
     
     # Registra todos os blueprints
     app.register_blueprint(producao_controller.producao_bp)
