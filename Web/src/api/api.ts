@@ -535,4 +535,9 @@ export const cancelamentoAPI = {
       })
     })
   },
+  atualizarComentario: (registroId: number, comentario: string) =>
+    fetchAPI(`/cancelamentos/${registroId}/comentario`, {
+      method: 'PUT',
+      body: JSON.stringify({ comentario }),
+    }),
 }

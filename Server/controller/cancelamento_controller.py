@@ -154,3 +154,20 @@ def exportar_cancelamentos_csv() -> Union[dict, Tuple[dict, int]]:
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
 
+
+@cancelamento_bp.route('/<int:registro_id>/comentario', methods=['PUT'])
+def atualizar_comentario_cancelamento(registro_id: int) -> Union[dict, Tuple[dict, int]]:
+    """Atualiza o comentário de uma operação cancelada
+    
+    Body:
+        comentario: Texto do comentário a ser salvo
+    """
+    try:
+        data = request.get_json()
+        comentario = data.get('comentario', '') if data else ''
+        
+        resultado = cancelamento_service.atualizar_comentario_cancelamento(registro_id, comentario)
+        
+        return jsonify(resultado), 200
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500

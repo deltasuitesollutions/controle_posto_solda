@@ -119,7 +119,7 @@ class CancelamentoOperacao:
         data_inicio: Optional[str] = None,
         data_fim: Optional[str] = None
     ) -> List['CancelamentoOperacao']:
-        """Lista todos os cancelamentos com filtros"""
+        """Lista todos os cancelamentos com filtros pela data de início da operação"""
         if not DatabaseConnection.table_exists('operacoes_canceladas'):
             return []
         
@@ -127,21 +127,23 @@ class CancelamentoOperacao:
         cursor = conn.cursor()
         
         try:
+            # Fazer JOIN com registros_producao para filtrar pela data de início da operação
             query = """
-                SELECT id, registro_id, motivo, cancelado_por_usuario_id, data_cancelamento
-                FROM operacoes_canceladas
+                SELECT c.id, c.registro_id, c.motivo, c.cancelado_por_usuario_id, c.data_cancelamento
+                FROM operacoes_canceladas c
+                INNER JOIN registros_producao r ON c.registro_id = r.registro_id
                 WHERE 1=1
             """
             params = []
             
             if data_inicio:
-                query += " AND DATE(data_cancelamento) >= %s"
+                query += " AND DATE(r.data_inicio) >= %s"
                 params.append(data_inicio)
             if data_fim:
-                query += " AND DATE(data_cancelamento) <= %s"
+                query += " AND DATE(r.data_inicio) <= %s"
                 params.append(data_fim)
             
-            query += " ORDER BY data_cancelamento DESC LIMIT %s OFFSET %s"
+            query += " ORDER BY r.data_inicio DESC, r.hora_inicio DESC LIMIT %s OFFSET %s"
             params.extend([limit, offset])
             
             cursor.execute(query, tuple(params))
@@ -155,7 +157,7 @@ class CancelamentoOperacao:
     
     @staticmethod
     def contar(data_inicio: Optional[str] = None, data_fim: Optional[str] = None) -> int:
-        """Conta o total de cancelamentos"""
+        """Conta o total de cancelamentos filtrados pela data de início da operação"""
         if not DatabaseConnection.table_exists('operacoes_canceladas'):
             return 0
         
@@ -163,14 +165,20 @@ class CancelamentoOperacao:
         cursor = conn.cursor()
         
         try:
-            query = "SELECT COUNT(*) FROM operacoes_canceladas WHERE 1=1"
+            # Fazer JOIN com registros_producao para filtrar pela data de início da operação
+            query = """
+                SELECT COUNT(*)
+                FROM operacoes_canceladas c
+                INNER JOIN registros_producao r ON c.registro_id = r.registro_id
+                WHERE 1=1
+            """
             params = []
             
             if data_inicio:
-                query += " AND DATE(data_cancelamento) >= %s"
+                query += " AND DATE(r.data_inicio) >= %s"
                 params.append(data_inicio)
             if data_fim:
-                query += " AND DATE(data_cancelamento) <= %s"
+                query += " AND DATE(r.data_inicio) <= %s"
                 params.append(data_fim)
             
             cursor.execute(query, tuple(params))

@@ -6,7 +6,7 @@ import logging
 from datetime import timedelta
 from typing import Optional
 
-from flask import Flask
+from flask import Flask, request
 from flask_cors import CORS
 from flask_socketio import SocketIO
 
@@ -38,12 +38,35 @@ def configure_cors(app: Flask):
         else:
             cors_origins = ['http://localhost:5173', 'http://127.0.0.1:5173']
             
-        CORS(app, origins=cors_origins, supports_credentials=True)
+        CORS(app, 
+             origins=cors_origins, 
+             supports_credentials=True,
+             methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+             allow_headers=['Content-Type', 'Authorization', 'X-User-Id'],
+             expose_headers=['Content-Type'])
         logging.info(f"CORS configurado para produção: {cors_origins}")
     else:
-        # Desenvolvimento: aceita tudo
-        CORS(app, origins='*', supports_credentials=True)
-        logging.info("CORS configurado para desenvolvimento (qualquer origem)")
+        # Desenvolvimento: aceita origens comuns de desenvolvimento
+        # Lista de origens comuns para desenvolvimento local
+        cors_origins = [
+            'http://localhost:5173',
+            'http://127.0.0.1:5173',
+            'http://localhost:3000',
+            'http://127.0.0.1:3000',
+            'http://localhost:5174',
+            'http://127.0.0.1:5174',
+            'http://localhost:8080',
+            'http://127.0.0.1:8080'
+        ]
+        
+        CORS(app, 
+             origins=cors_origins,
+             supports_credentials=True,
+             methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+             allow_headers=['Content-Type', 'Authorization', 'X-User-Id'],
+             expose_headers=['Content-Type'],
+             max_age=3600)
+        logging.info(f"CORS configurado para desenvolvimento: {cors_origins}")
 
 
 def register_blueprints(app: Flask):
@@ -110,8 +133,8 @@ def create_app(config: Optional[dict] = None):
     
     # Configuração CORS para SocketIO
     is_prod = os.getenv('FLASK_ENV') == 'production'
+    cors_origins_env = os.getenv('CORS_ORIGINS', '')
     if is_prod:
-        cors_origins_env = os.getenv('CORS_ORIGINS', '')
         if cors_origins_env:
             cors_allowed_origins = [origin.strip() for origin in cors_origins_env.split(',')]
         else:
