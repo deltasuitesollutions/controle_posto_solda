@@ -72,20 +72,20 @@ const LeitorRfid = () => {
                 </div>
             )}
 
-            <div className="pt-8 px-6 pb-6 flex flex-col items-center">
+            <div className="pt-4 px-6 pb-2 flex flex-row items-center relative">
+                <span className="text-gray-700 font-sans text-4xl font-bold tracking-wide flex-1 text-center">
+                    Seja Bem Vindo!
+                </span>
                 <button
                     onClick={handleLogout}
-                    className="px-6 py-2 text-white rounded-lg font-medium hover:opacity-90 transition-opacity mb-4"
+                    className="px-6 py-2 text-white rounded-lg font-medium hover:opacity-90 transition-opacity absolute right-6"
                     style={{ backgroundColor: '#DC2626' }}
                 >
                     Sair
                 </button>
-                <span className="text-gray-700 font-sans text-4xl font-bold py-6 tracking-wide">
-                    Seja Bem Vindo!
-                </span>
             </div>
 
-            <div className="pt-8 px-6 pb-20 flex items-center justify-center">
+            <div className="pt-4 px-6 pb-20 flex items-center justify-center">
                 <div className="w-full max-w-2xl">
                     <div className="bg-white rounded-lg shadow-lg p-8">
                         <div

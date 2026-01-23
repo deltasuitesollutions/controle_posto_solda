@@ -158,21 +158,24 @@ const FinalizarProducao = () => {
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen flex flex-col items-center justify-start pt-12 p-6">
+    <div className="bg-gray-50 min-h-screen flex flex-col items-center justify-start pt-6 p-6">
       {erro && (
         <div className="mb-6 px-6 py-4 bg-red-100 border border-red-400 text-red-700 rounded-lg text-xl">
           {erro}
         </div>
       )}
 
-      <div className="w-full max-w-4xl flex items-end justify-center gap-6">
-        <div className="flex-1 max-w-xs">
-          <label className="block text-gray-700 text-3xl font-bold mb-4 text-center">
-            QUANTIDADE DE PEÇAS
+      <div className="w-full max-w-4xl flex flex-col items-center justify-center gap-6">
+        <div className="flex flex-col items-center justify-center">
+          <label className="block text-gray-700 text-xl font-bold text-center">
+            QTD DE PEÇAS PRODUZIDAS
           </label>
-          <p className="text-sm text-gray-600 mb-2 text-center">
+          <p className="text-base text-gray-600 text-center mt-1">
             (Digite 0 para cancelar a operação)
           </p>
+        </div>
+
+        <div className="flex items-center justify-center gap-6">
           <input
             type="number"
             value={quantidade}
@@ -181,26 +184,25 @@ const FinalizarProducao = () => {
               setErro(null);
             }}
             onKeyDown={handleKeyDown}
-            className="w-full px-6 py-5 text-3xl border-4 border-gray-400 rounded-lg focus:outline-none focus:border-blue-500 text-center"
-            style={{ minHeight: '80px' }}
-            placeholder="0"
+            className="px-6 py-5 text-3xl border-4 border-gray-400 rounded-lg focus:outline-none focus:border-blue-500 text-center"
+            style={{ minHeight: '80px', minWidth: '200px' }}
             autoFocus
             disabled={carregando}
             min="0"
           />
-        </div>
 
-        <button
-          onClick={handleConcluir}
-          disabled={carregando || !quantidade.trim()}
-          className="px-12 py-6 text-white text-3xl font-bold rounded-lg shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-green-600 hover:bg-green-700"
-          style={{ 
-            minHeight: '80px',
-            minWidth: '250px'
-          }}
-        >
-          {carregando ? 'Concluindo...' : 'Concluir'}
-        </button>
+          <button
+            onClick={handleConcluir}
+            disabled={carregando || !quantidade.trim()}
+            className="px-12 py-6 text-white text-3xl font-bold rounded-lg shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-green-600 hover:bg-green-700"
+            style={{ 
+              minHeight: '80px',
+              minWidth: '250px'
+            }}
+          >
+            {carregando ? 'Concluindo...' : 'Concluir'}
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -54,7 +54,6 @@ const Dashboard = () => {
     operadoresAtivos: 0
   });
   const [carregando, setCarregando] = useState(true);
-  const [conectado, setConectado] = useState(false);
   const socketRef = useRef<Socket | null>(null);
 
   // Carregar dados iniciais do dashboard
@@ -64,8 +63,9 @@ const Dashboard = () => {
 
   // Configurar WebSocket
   useEffect(() => {
-    // URL do servidor WebSocket (mesma do API)
-    const socketUrl = 'http://localhost:8000';
+    // URL do servidor WebSocket - usa mesma URL da API
+    // Configurável via variável de ambiente VITE_API_URL
+    const socketUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
     
     // Criar conexão WebSocket
     const socket = io(socketUrl, {
@@ -76,27 +76,6 @@ const Dashboard = () => {
     });
 
     socketRef.current = socket;
-
-    // Evento de conexão
-    socket.on('connect', () => {
-      console.log('✅ Conectado ao WebSocket do dashboard');
-      setConectado(true);
-      // Se inscrever para receber atualizações
-      console.log('📡 Enviando subscribe_dashboard...');
-      socket.emit('subscribe_dashboard');
-    });
-
-    // Evento de desconexão
-    socket.on('disconnect', () => {
-      console.log('Desconectado do WebSocket do dashboard');
-      setConectado(false);
-    });
-
-    // Evento de erro de conexão
-    socket.on('connect_error', (error) => {
-      console.error('Erro ao conectar ao WebSocket:', error);
-      setConectado(false);
-    });
 
     // Receber atualizações do dashboard
     socket.on('dashboard_update', (dados: any) => {
@@ -113,11 +92,6 @@ const Dashboard = () => {
       }
       
       setCarregando(false);
-    });
-
-    // Evento de confirmação de conexão
-    socket.on('connected', (data: any) => {
-      console.log('Confirmação de conexão:', data);
     });
 
     // Cleanup ao desmontar o componente

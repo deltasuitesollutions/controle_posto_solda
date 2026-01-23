@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import TopBar from '../Components/topBar/TopBar'
 import MenuLateral from '../Components/MenuLateral/MenuLateral'
 import { Paginacao } from '../Components/Compartilhados/paginacao'
-import { operacoesAPI, produtosAPI, modelosAPI, linhasAPI, postosAPI } from '../api/api'
+import { operacoesAPI, produtosAPI, modelosAPI, linhasAPI, postosAPI, sublinhasAPI, pecasAPI } from '../api/api'
 
 interface Operacao {
     id: string
@@ -13,7 +13,6 @@ interface Operacao {
     posto: string
     totens: string[]
     pecas: string[]
-    codigos: string[]
 }
 
 interface Produto {
@@ -29,6 +28,28 @@ interface Modelo {
 interface Linha {
     linha_id: number
     nome: string
+}
+
+interface Sublinha {
+    sublinha_id: number
+    linha_id: number
+    nome: string
+    linha_nome?: string
+}
+
+interface LinhaComSublinha {
+    linha_id: number
+    linha_nome: string
+    sublinha_id: number
+    sublinha_nome: string
+    display: string
+}
+
+interface Peca {
+    id: number
+    codigo: string
+    nome: string
+    modelo_id: number
 }
 
 interface Posto {
@@ -50,25 +71,23 @@ const Operacoes = () => {
     const [erro, setErro] = useState<string | null>(null)
 
     const [operacao, setOperacao] = useState('')
-    const [operacaoSelecionadaId, setOperacaoSelecionadaId] = useState('')
     const [produto, setProduto] = useState('')
     const [modelo, setModelo] = useState('')
     const [linha, setLinha] = useState('')
     const [posto, setPosto] = useState('')
     const [totens, setTotens] = useState<string[]>([])
     const [pecas, setPecas] = useState<string[]>([])
-    const [codigos, setCodigos] = useState<string[]>([])
     const [totenTemp, setTotenTemp] = useState('')
     const [pecaTemp, setPecaTemp] = useState('')
-    const [codigoTemp, setCodigoTemp] = useState('')
     const [operacaoEditandoId, setOperacaoEditandoId] = useState<string | null>(null)
 
     // Dados para os dropdowns
     const [produtos, setProdutos] = useState<Produto[]>([])
     const [modelos, setModelos] = useState<Modelo[]>([])
-    const [linhas, setLinhas] = useState<Linha[]>([])
+    const [linhasComSublinhas, setLinhasComSublinhas] = useState<LinhaComSublinha[]>([])
     const [postos, setPostos] = useState<Posto[]>([])
     const [totensDisponiveis, setTotensDisponiveis] = useState<Toten[]>([])
+    const [pecasDisponiveis, setPecasDisponiveis] = useState<Peca[]>([])
 
     // Carregar dados ao montar o componente
     useEffect(() => {
@@ -78,12 +97,19 @@ const Operacoes = () => {
         }
     }, [abaAtiva])
 
-    // Carregar operações quando mudar para aba de cadastrar para popular o dropdown
+    // Carregar peças quando modelo mudar
     useEffect(() => {
-        if (abaAtiva === 'cadastrar') {
-            carregarOperacoes()
+        if (modelo) {
+            carregarPecasPorModelo()
+            // Limpar peças selecionadas quando modelo mudar
+            setPecas([])
+            setPecaTemp('')
+        } else {
+            setPecasDisponiveis([])
+            setPecas([])
+            setPecaTemp('')
         }
-    }, [abaAtiva])
+    }, [modelo])
 
     const carregarDadosDropdowns = async () => {
         try {
@@ -95,9 +121,8 @@ const Operacoes = () => {
             const modelosData = await modelosAPI.listarTodos()
             setModelos(modelosData.map((m: any) => ({ id: m.id, nome: m.nome })))
 
-            // Carregar linhas
-            const linhasData = await linhasAPI.listarTodos()
-            setLinhas(linhasData.map((l: any) => ({ linha_id: l.linha_id, nome: l.nome })))
+            // Carregar linhas e sublinhas
+            await carregarLinhasComSublinhas()
 
             // Carregar postos
             const postosData = await postosAPI.listarTodos()
@@ -108,6 +133,78 @@ const Operacoes = () => {
             setTotensDisponiveis(totensData)
         } catch (error) {
             console.error('Erro ao carregar dados dos dropdowns:', error)
+        }
+    }
+
+    const carregarLinhasComSublinhas = async () => {
+        try {
+            // Carregar linhas
+            const linhasData = await linhasAPI.listarTodos()
+            
+            // Carregar sublinhas com informações de linha
+            const sublinhasData = await sublinhasAPI.listarTodos(true)
+            
+            // Combinar linhas e sublinhas
+            const linhasComSublinhasList: LinhaComSublinha[] = []
+            
+            // Adicionar linhas sem sublinhas
+            for (const linha of linhasData) {
+                const sublinhasDaLinha = sublinhasData.filter((s: Sublinha) => s.linha_id === linha.linha_id)
+                
+                if (sublinhasDaLinha.length === 0) {
+                    // Linha sem sublinhas
+                    linhasComSublinhasList.push({
+                        linha_id: linha.linha_id,
+                        linha_nome: linha.nome,
+                        sublinha_id: 0,
+                        sublinha_nome: '',
+                        display: linha.nome
+                    })
+                } else {
+                    // Linha com sublinhas
+                    for (const sublinha of sublinhasDaLinha) {
+                        linhasComSublinhasList.push({
+                            linha_id: linha.linha_id,
+                            linha_nome: linha.nome,
+                            sublinha_id: sublinha.sublinha_id,
+                            sublinha_nome: sublinha.nome,
+                            display: `${linha.nome} - ${sublinha.nome}`
+                        })
+                    }
+                }
+            }
+            
+            setLinhasComSublinhas(linhasComSublinhasList)
+        } catch (error) {
+            console.error('Erro ao carregar linhas com sublinhas:', error)
+        }
+    }
+
+    const carregarPecasPorModelo = async () => {
+        try {
+            if (!modelo) {
+                setPecasDisponiveis([])
+                return
+            }
+
+            // Encontrar o modelo selecionado
+            const modeloSelecionado = modelos.find(m => m.nome === modelo)
+            if (!modeloSelecionado) {
+                setPecasDisponiveis([])
+                return
+            }
+
+            // Buscar peças do modelo
+            const pecasData = await pecasAPI.buscarPorModelo(modeloSelecionado.id)
+            setPecasDisponiveis(pecasData.map((p: any) => ({
+                id: p.id,
+                codigo: p.codigo,
+                nome: p.nome,
+                modelo_id: p.modelo_id
+            })))
+        } catch (error) {
+            console.error('Erro ao carregar peças do modelo:', error)
+            setPecasDisponiveis([])
         }
     }
 
@@ -124,8 +221,7 @@ const Operacoes = () => {
                 linha: op.linha,
                 posto: op.posto,
                 totens: op.totens || [],
-                pecas: op.pecas || [],
-                codigos: op.codigos || []
+                pecas: op.pecas || []
             })))
         } catch (error) {
             console.error('Erro ao carregar operações:', error)
@@ -146,8 +242,18 @@ const Operacoes = () => {
     }
 
     const adicionarPeca = () => {
-        if (!pecaTemp.trim() || pecas.includes(pecaTemp.trim())) return
-        setPecas([...pecas, pecaTemp.trim()])
+        if (!pecaTemp.trim()) return
+        
+        // pecaTemp está no formato "nome|codigo"
+        const [nome, codigo] = pecaTemp.split('|')
+        if (!nome || !codigo) return
+        
+        const display = `${nome} - ${codigo}`
+        
+        // Verificar se já existe (comparar pelo display completo)
+        if (pecas.includes(display)) return
+        
+        setPecas([...pecas, display])
         setPecaTemp('')
     }
 
@@ -155,73 +261,27 @@ const Operacoes = () => {
         setPecas(pecas.filter((_, i) => i !== index))
     }
 
-    const adicionarCodigo = () => {
-        if (!codigoTemp.trim() || codigos.includes(codigoTemp.trim())) return
-        setCodigos([...codigos, codigoTemp.trim()])
-        setCodigoTemp('')
-    }
-
-    const removerCodigo = (index: number) => {
-        setCodigos(codigos.filter((_, i) => i !== index))
-    }
-
     const limparFormulario = () => {
         setOperacao('')
-        setOperacaoSelecionadaId('')
         setProduto('')
         setModelo('')
         setLinha('')
         setPosto('')
         setTotens([])
         setPecas([])
-        setCodigos([])
         setTotenTemp('')
         setPecaTemp('')
-        setCodigoTemp('')
         setOperacaoEditandoId(null)
     }
 
-    const carregarDadosOperacao = async (operacaoId: string) => {
-        if (!operacaoId) {
-            limparFormulario()
-            return
-        }
 
-        try {
-            setCarregando(true)
-            const dados = await operacoesAPI.buscarPorId(parseInt(operacaoId))
-            
-            if (dados && !dados.erro) {
-                setOperacao(dados.operacao || '')
-                setProduto(dados.produto || '')
-                setModelo(dados.modelo || '')
-                setLinha(dados.linha || '')
-                setPosto(dados.posto || '')
-                setTotens(dados.totens || [])
-                setPecas(dados.pecas || [])
-                setCodigos(dados.codigos || [])
-                setOperacaoEditandoId(operacaoId)
-            } else {
-                alert('Erro ao carregar dados da operação')
-                limparFormulario()
-            }
-        } catch (error) {
-            console.error('Erro ao carregar dados da operação:', error)
-            alert(`Erro ao carregar dados da operação: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
-            limparFormulario()
-        } finally {
-            setCarregando(false)
+    const extrairNomeLinha = (display: string): string => {
+        // Se o display contém " - ", extrair apenas a parte da linha (antes do " - ")
+        // Caso contrário, retornar o display completo
+        if (display.includes(' - ')) {
+            return display.split(' - ')[0]
         }
-    }
-
-    const handleSelecionarOperacao = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const operacaoId = e.target.value
-        setOperacaoSelecionadaId(operacaoId)
-        if (operacaoId) {
-            carregarDadosOperacao(operacaoId)
-        } else {
-            limparFormulario()
-        }
+        return display
     }
 
     const handleSalvar = async (e: React.FormEvent) => {
@@ -236,15 +296,17 @@ const Operacoes = () => {
             setErro(null)
             setCarregando(true)
 
+            // Extrair apenas o nome da linha do display
+            const nomeLinha = extrairNomeLinha(linha)
+
             const dadosOperacao = {
                 operacao: operacao.trim(),
                 produto,
                 modelo,
-                linha,
+                linha: nomeLinha,
                 posto,
                 totens: totens.length > 0 ? totens : undefined,
-                pecas: pecas.length > 0 ? pecas : undefined,
-                codigos: codigos.length > 0 ? codigos : undefined
+                pecas: pecas.length > 0 ? pecas : undefined
             }
 
             if (operacaoEditandoId) {
@@ -286,18 +348,45 @@ const Operacoes = () => {
         }
     }
 
-    const handleEditarOperacao = (op: Operacao) => {
-        setOperacaoSelecionadaId(op.id)
+    const handleEditarOperacao = async (op: Operacao) => {
+        // Garantir que as linhas com sublinhas estejam carregadas
+        if (linhasComSublinhas.length === 0) {
+            await carregarLinhasComSublinhas()
+        }
+        
         setOperacao(op.operacao)
         setProduto(op.produto)
         setModelo(op.modelo)
-        setLinha(op.linha)
+        
+        // Encontrar o display correspondente ao nome da linha salvo
+        // Se a linha salva for apenas o nome, tentar encontrar o display completo
+        const linhaSalva = op.linha
+        const linhaEncontrada = linhasComSublinhas.find(l => 
+            l.linha_nome === linhaSalva || l.display === linhaSalva
+        )
+        // Se encontrou, usar o display. Se não, usar o primeiro item que corresponde à linha
+        // ou apenas o nome da linha se não houver sublinhas
+        if (linhaEncontrada) {
+            setLinha(linhaEncontrada.display)
+        } else {
+            // Tentar encontrar qualquer item com o mesmo nome de linha
+            const primeiraLinha = linhasComSublinhas.find(l => l.linha_nome === linhaSalva)
+            setLinha(primeiraLinha ? primeiraLinha.display : linhaSalva)
+        }
+        
         setPosto(op.posto)
         setTotens([...op.totens])
         setPecas([...op.pecas])
-        setCodigos([...op.codigos])
         setOperacaoEditandoId(op.id)
         setAbaAtiva('cadastrar')
+        
+        // Carregar peças do modelo se houver modelo selecionado
+        if (op.modelo) {
+            const modeloSelecionado = modelos.find(m => m.nome === op.modelo)
+            if (modeloSelecionado) {
+                await carregarPecasPorModelo()
+            }
+        }
     }
 
     const indiceInicio = (paginaAtual - 1) * itensPorPagina
@@ -350,22 +439,6 @@ const Operacoes = () => {
                                 {abaAtiva === 'cadastrar' ? (
                                     <form onSubmit={handleSalvar}>
                                         <div className="space-y-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                    Selecionar Operação Existente
-                                                </label>
-                                                <select
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
-                                                    value={operacaoSelecionadaId}
-                                                    onChange={handleSelecionarOperacao}
-                                                >
-                                                    <option value="">Selecione uma operação para editar ou deixe em branco para criar nova</option>
-                                                    {operacoes.map((op) => (
-                                                        <option key={op.id} value={op.id}>{op.operacao}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                                     Operação *
@@ -425,8 +498,10 @@ const Operacoes = () => {
                                                     required
                                                 >
                                                     <option value="">Selecione</option>
-                                                    {linhas.map((l) => (
-                                                        <option key={l.linha_id} value={l.nome}>{l.nome}</option>
+                                                    {linhasComSublinhas.map((l) => (
+                                                        <option key={`${l.linha_id}-${l.sublinha_id}`} value={l.display}>
+                                                            {l.display}
+                                                        </option>
                                                     ))}
                                                 </select>
                                             </div>
@@ -495,23 +570,33 @@ const Operacoes = () => {
                                                     Peça
                                                 </label>
                                                 <div className="flex gap-2">
-                                                    <input
-                                                        type="text"
+                                                    <select
                                                         className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                        placeholder="Nome da peça"
                                                         value={pecaTemp}
                                                         onChange={(e) => setPecaTemp(e.target.value)}
-                                                        onKeyDown={(e) => {
-                                                            if (e.key === 'Enter' && pecaTemp.trim()) {
-                                                                e.preventDefault()
-                                                                adicionarPeca()
-                                                            }
-                                                        }}
-                                                    />
+                                                        disabled={!modelo || pecasDisponiveis.length === 0}
+                                                    >
+                                                        <option value="">
+                                                            {!modelo 
+                                                                ? 'Selecione um modelo primeiro' 
+                                                                : pecasDisponiveis.length === 0 
+                                                                ? 'Nenhuma peça disponível para este modelo'
+                                                                : 'Selecione uma peça'}
+                                                        </option>
+                                                        {pecasDisponiveis.map((p) => {
+                                                            const display = `${p.nome} - ${p.codigo}`
+                                                            const value = `${p.nome}|${p.codigo}`
+                                                            return (
+                                                                <option key={p.id} value={value}>
+                                                                    {display}
+                                                                </option>
+                                                            )
+                                                        })}
+                                                    </select>
                                                     <button
                                                         type="button"
                                                         onClick={adicionarPeca}
-                                                        disabled={!pecaTemp.trim() || pecas.includes(pecaTemp.trim())}
+                                                        disabled={!pecaTemp.trim()}
                                                         className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
                                                     >
                                                         <i className="bi bi-plus-lg"></i>
@@ -526,51 +611,6 @@ const Operacoes = () => {
                                                                     type="button"
                                                                     onClick={() => removerPeca(index)}
                                                                     className="text-green-600 hover:text-green-800"
-                                                                >
-                                                                    <i className="bi bi-x"></i>
-                                                                </button>
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                    Código
-                                                </label>
-                                                <div className="flex gap-2">
-                                                    <input
-                                                        type="text"
-                                                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                        placeholder="Ex: AAA-B5550-10"
-                                                        value={codigoTemp}
-                                                        onChange={(e) => setCodigoTemp(e.target.value)}
-                                                        onKeyDown={(e) => {
-                                                            if (e.key === 'Enter' && codigoTemp.trim()) {
-                                                                e.preventDefault()
-                                                                adicionarCodigo()
-                                                            }
-                                                        }}
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        onClick={adicionarCodigo}
-                                                        disabled={!codigoTemp.trim() || codigos.includes(codigoTemp.trim())}
-                                                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-                                                    >
-                                                        <i className="bi bi-plus-lg"></i>
-                                                    </button>
-                                                </div>
-                                                {codigos.length > 0 && (
-                                                    <div className="mt-2 flex flex-wrap gap-2">
-                                                        {codigos.map((codigo, index) => (
-                                                            <span key={index} className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-800 rounded text-sm">
-                                                                {codigo}
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => removerCodigo(index)}
-                                                                    className="text-purple-600 hover:text-purple-800"
                                                                 >
                                                                     <i className="bi bi-x"></i>
                                                                 </button>
@@ -611,7 +651,6 @@ const Operacoes = () => {
                                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Posto</th>
                                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Totens</th>
                                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Peças</th>
-                                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Códigos</th>
                                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ações</th>
                                                         </tr>
                                                     </thead>
@@ -642,19 +681,6 @@ const Operacoes = () => {
                                                                             {op.pecas.map((peca, idx) => (
                                                                                 <span key={idx} className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">
                                                                                     {peca}
-                                                                                </span>
-                                                                            ))}
-                                                                        </div>
-                                                                    ) : (
-                                                                        <span className="text-gray-400">-</span>
-                                                                    )}
-                                                                </td>
-                                                                <td className="px-4 py-4 text-sm text-gray-900">
-                                                                    {op.codigos && op.codigos.length > 0 ? (
-                                                                        <div className="flex flex-wrap gap-1">
-                                                                            {op.codigos.map((codigo, idx) => (
-                                                                                <span key={idx} className="px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs">
-                                                                                    {codigo}
                                                                                 </span>
                                                                             ))}
                                                                         </div>

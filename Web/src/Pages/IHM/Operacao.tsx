@@ -155,14 +155,20 @@ const Operacao = () => {
     const normalizar = (str: string | undefined) => (str || '').trim().toLowerCase();
     const chaveOperacao = normalizar(codigoOperacao);
     
-    // Buscar operação IHM para obter o posto
+    // Buscar operação IHM para obter o posto e nome
     const operacaoIHM = operacoes.find((op) => op.codigo === codigoOperacao);
     const chavePosto = operacaoIHM?.posto ? normalizar(operacaoIHM.posto) : '';
     const chaveCombinada = `${chaveOperacao}_${chavePosto}`;
     
     // Buscar operação completa usando índice (O(1))
+    // Primeiro tenta pelo código + posto, depois pelo código, depois pelo nome da operação
+    const nomeOperacao = operacaoIHM?.nome ? normalizar(operacaoIHM.nome) : '';
+    const chaveCombinadaNome = nomeOperacao ? `${nomeOperacao}_${chavePosto}` : '';
+    
     let operacaoEncontrada = operacoesMapRef.current.get(chaveCombinada) || 
-                              operacoesMapRef.current.get(chaveOperacao);
+                              operacoesMapRef.current.get(chaveOperacao) ||
+                              (chaveCombinadaNome ? operacoesMapRef.current.get(chaveCombinadaNome) : null) ||
+                              (nomeOperacao ? operacoesMapRef.current.get(nomeOperacao) : null);
     
     if (operacaoEncontrada) {
       // Preencher produto
@@ -181,11 +187,23 @@ const Operacao = () => {
         setModeloDescricao(descricaoModelo);
       }
       
-      // Preencher peça (primeira peça se houver)
-      setPeca(operacaoEncontrada.pecas?.[0] || '');
+      // Preencher peça com o nome da peça (primeira peça se houver)
+      const nomePeca = operacaoEncontrada.pecas_nomes?.[0] || '';
+      const codigoPeca = operacaoEncontrada.pecas?.[0] || '';
+      setPeca(nomePeca);  // Campo PEÇA mostra o nome da peça
       
-      // Preencher código (primeiro código se houver)
-      setCodigo(operacaoEncontrada.codigos?.[0] || '');
+      // Preencher código: usar o primeiro código da lista de códigos, ou o código da peça como fallback
+      // NUNCA usar o nome da operação (operacaoEncontrada.operacao)
+      // Verificar se o código não é o nome da operação (caso tenha sido salvo incorretamente)
+      const nomeOperacao = operacaoEncontrada.operacao || '';
+      const primeiroCodigo = operacaoEncontrada.codigos?.[0] || '';
+      
+      // Se o código da lista for igual ao nome da operação, usar o código da peça ao invés
+      const codigoParaUsar = (primeiroCodigo && primeiroCodigo !== nomeOperacao) 
+        ? primeiroCodigo 
+        : (codigoPeca || '');
+      
+      setCodigo(codigoParaUsar);
       
       // Definir posto
       setPostoAtual(operacaoEncontrada.posto || operacaoIHM?.posto || '');
@@ -373,7 +391,7 @@ const Operacao = () => {
                 preencherCamposOperacao(codigoOperacao);
               }
             }}
-            className={`w-full px-5 py-4 text-xl border-4 rounded-lg focus:outline-none bg-white appearance-none cursor-pointer ${erros.operacao ? 'border-red-500' : 'border-gray-400 focus:border-blue-500'}`}
+            className={`w-full px-5 py-4 text-base border-4 rounded-lg focus:outline-none bg-white appearance-none cursor-pointer ${erros.operacao ? 'border-red-500' : 'border-gray-400 focus:border-blue-500'}`}
             style={{
               backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
               backgroundRepeat: 'no-repeat',
@@ -395,54 +413,54 @@ const Operacao = () => {
 
       <div className="grid grid-cols-4 gap-6 mb-8">
         <div>
-          <label className="text-gray-700 text-2xl font-bold mb-4 block">
+          <label className="text-gray-700 text-xl font-bold mb-3 block">
             PRODUTO
           </label>
           <input
             type="text"
             value={produto}
             readOnly
-            className={`w-full px-6 py-5 text-2xl border-4 rounded-lg focus:outline-none bg-gray-100 cursor-not-allowed ${erros.produto ? 'border-red-500' : 'border-gray-400'}`}
-            style={{ minHeight: '70px' }}
+            className={`w-full px-4 py-3 text-base border-2 rounded-lg focus:outline-none bg-gray-100 cursor-not-allowed ${erros.produto ? 'border-red-500' : 'border-gray-400'}`}
+            style={{ minHeight: '55px' }}
           />
         </div>
 
         <div>
-          <label className="text-gray-700 text-2xl font-bold mb-4 block">
+          <label className="text-gray-700 text-xl font-bold mb-3 block">
             MODELO
           </label>
           <input
             type="text"
             value={modeloDescricao}
             readOnly
-            className={`w-full px-6 py-5 text-2xl border-4 rounded-lg focus:outline-none bg-gray-100 cursor-not-allowed ${erros.modelo ? 'border-red-500' : 'border-gray-400'}`}
-            style={{ minHeight: '70px' }}
+            className={`w-full px-4 py-3 text-base border-2 rounded-lg focus:outline-none bg-gray-100 cursor-not-allowed ${erros.modelo ? 'border-red-500' : 'border-gray-400'}`}
+            style={{ minHeight: '55px' }}
           />
         </div>
 
         <div>
-          <label className="text-gray-700 text-2xl font-bold mb-4 block">
+          <label className="text-gray-700 text-xl font-bold mb-3 block">
             PEÇA
           </label>
           <input
             type="text"
             value={peca}
             readOnly
-            className={`w-full px-6 py-5 text-2xl border-4 rounded-lg focus:outline-none bg-gray-100 cursor-not-allowed ${erros.peca ? 'border-red-500' : 'border-gray-400'}`}
-            style={{ minHeight: '70px' }}
+            className={`w-full px-4 py-3 text-base border-2 rounded-lg focus:outline-none bg-gray-100 cursor-not-allowed ${erros.peca ? 'border-red-500' : 'border-gray-400'}`}
+            style={{ minHeight: '55px' }}
           />
         </div>
 
         <div>
-          <label className="text-gray-700 text-2xl font-bold mb-4 block">
+          <label className="text-gray-700 text-xl font-bold mb-3 block">
             CÓDIGO
           </label>
           <input
             type="text"
             value={codigo}
             readOnly
-            className={`w-full px-6 py-5 text-2xl border-4 rounded-lg focus:outline-none bg-gray-100 cursor-not-allowed ${erros.codigo ? 'border-red-500' : 'border-gray-400'}`}
-            style={{ minHeight: '70px' }}
+            className={`w-full px-4 py-3 text-base border-2 rounded-lg focus:outline-none bg-gray-100 cursor-not-allowed ${erros.codigo ? 'border-red-500' : 'border-gray-400'}`}
+            style={{ minHeight: '55px' }}
           />
         </div>
       </div>
@@ -457,7 +475,7 @@ const Operacao = () => {
               type="text"
               value={operador}
               readOnly
-              className="w-full px-4 py-3 text-lg border-2 border-gray-400 rounded-lg bg-gray-100 cursor-not-allowed"
+              className="w-full px-4 py-3 text-base border-2 border-gray-400 rounded-lg bg-gray-100 cursor-not-allowed"
               style={{ minHeight: '50px' }}
             />
           </div>

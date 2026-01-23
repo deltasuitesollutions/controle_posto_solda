@@ -65,7 +65,7 @@ const MenuLateral = () => {
             { to: '/postos', title: 'Postos', icon: 'bi-pin-map-fill', label: 'Cadastro de Postos' },
             { to: '/operacoes', title: 'Operacoes', icon: 'bi-gear', label: 'Cadastro de Operações' },
             { to: '/usuarios', title: 'Usuarios', icon: 'bi-person-check-fill', label: 'Cadastro de Usuários' },
-            { to: '/auditoria', title: 'Auditoria', icon: 'bi-shield-check', label: 'Operações do dia' }
+            { to: '/operacoesCanceladas', title: 'Operações Canceladas', icon: 'bi-shield-check', label: 'Operações do dia' }
         );
     } else if (isOperador) {
         // Rotas IHM apenas para operadores - apenas leitor (fluxo sequencial)
@@ -82,7 +82,7 @@ const MenuLateral = () => {
             { to: '/linhas', title: 'Linhas', icon: 'bi-layers', label: 'Cadastro de Linhas' },
             { to: '/postos', title: 'Postos', icon: 'bi-pin-map-fill', label: 'Cadastro de Postos' },
             { to: '/operacoes', title: 'Operacoes', icon: 'bi-gear', label: 'Cadastro de Operações' },
-            { to: '/auditoria', title: 'Auditoria', icon: 'bi-shield-check', label: 'Operações do dia' }
+            { to: '/operacoesCanceladas', title: 'Operações Canceladas', icon: 'bi-shield-check', label: 'Operações do dia' }
         );
     }
 

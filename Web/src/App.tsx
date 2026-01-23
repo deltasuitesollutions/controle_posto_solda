@@ -12,7 +12,6 @@ import Linhas from "./Pages/Linhas";
 import Postos from "./Pages/Postos";
 import Operacoes from "./Pages/Operacoes";
 import Usuarios from "./Pages/Usuarios";
-import Auditoria from "./Pages/Auditoria";
 import OperacoesCanceladas from "./Pages/OperacoesCanceladas";
 import CadastroProdutoModelo from "./Pages/CadastroProdutoModelo";
 import ListagemPecas from "./Pages/ListagemPecas";
@@ -98,20 +97,14 @@ function App() {
         } 
       />
       <Route 
-        path="/auditoria" 
+        path="/operacoesCanceladas" 
         element={
           <ProtectedRoute allowedRoles={['admin', 'master']}>
-            <Auditoria />
-          </ProtectedRoute>
-        }
-      />
-      <Route 
-        path="/operacoes-canceladas" 
-        element={
-          <ProtectedRoute onlyAdmin>
             <OperacoesCanceladas />
           </ProtectedRoute>
         }
+      />
+      <Route     
       />
       
       {/* Rotas IHM - apenas para operadores (fluxo sequencial) */}

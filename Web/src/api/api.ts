@@ -15,7 +15,12 @@
  * 3. Use a função no componente React
  */
 
-const API_BASE_URL = 'http://localhost:8000/api'
+// URL base da API - configurável via variável de ambiente
+// Em desenvolvimento, usa localhost:8000 por padrão
+// Em produção, configure VITE_API_URL no arquivo .env
+const API_BASE_URL = import.meta.env.VITE_API_URL 
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : 'http://localhost:8000/api'
 
 /**
  * Função auxiliar para fazer requisições HTTP à API
@@ -502,7 +507,8 @@ export const cancelamentoAPI = {
     if (params?.data_fim) queryParams.append('data_fim', params.data_fim)
     
     const queryString = queryParams.toString()
-    const url = `${API_BASE_URL}/cancelamentos/exportar-csv${queryString ? `?${queryString}` : ''}`
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+    const url = `${baseUrl}/api/cancelamentos/exportar-csv${queryString ? `?${queryString}` : ''}`
     
     // Para download de arquivo, usar fetch direto
     return fetch(url, {
