@@ -1,6 +1,3 @@
-"""
-Função auxiliar para obter o ID do usuário da requisição
-"""
 from flask import request
 from typing import Optional
 

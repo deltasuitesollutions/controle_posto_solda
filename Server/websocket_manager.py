@@ -1,6 +1,3 @@
-"""
-WebSocket Manager - Gerencia atualizações em tempo real do dashboard
-"""
 import time
 import logging
 from typing import Optional
@@ -13,16 +10,14 @@ _socketio_instance: Optional[SocketIO] = None
 _last_update_time = 0
 _throttle_interval = 3
 
-
+# REGISTRA E INICIA
 def register_socketio_events(socketio_instance: SocketIO):
-    """Registra e inicializa o WebSocket Manager"""
     global _socketio_instance
     _socketio_instance = socketio_instance
     logger.info("WebSocket Manager inicializado")
 
-
+# ENVIAR ATUALIZAÇÃO
 def enviar_atualizacao_dashboard():
-    """Envia atualização do dashboard para todos os clientes conectados"""
     global _socketio_instance, _last_update_time
     
     if not _socketio_instance:

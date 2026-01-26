@@ -1,7 +1,5 @@
 from flask import Blueprint, jsonify, request
 from Server.services import tags_temporarias_service
-from Server.services import audit_service
-from Server.utils.audit_helper import obter_usuario_id_da_requisicao
 
 tags_temporarias_bp = Blueprint('tags_temporarias', __name__, url_prefix='/api/tags-temporarias')
 
@@ -31,25 +29,13 @@ def criar_tag_temporaria():
             horas_duracao=horas_duracao
         )
 
-        # Registrar log de auditoria
-        usuario_id_requisicao = obter_usuario_id_da_requisicao()
-        if usuario_id_requisicao:
-            audit_service.registrar_acao(
-                usuario_id=usuario_id_requisicao,
-                acao='criar',
-                entidade='tag_temporaria',
-                entidade_id=tag.get('id'),
-                dados_novos={'funcionario_id': funcionario_id, 'tag_id': tag_id, 'horas_duracao': horas_duracao},
-                detalhes=f"Tag temporária '{tag_id}' criada para funcionário ID {funcionario_id}"
-            )
-
         return jsonify(tag), 201
 
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
 
 
-# Listar tags temporárias de um funcionário
+# Listar tags temporárias 
 @tags_temporarias_bp.route('/funcionario/<int:funcionario_id>', methods=['GET'])
 def listar_tags_temporarias_funcionario(funcionario_id):
     try:
@@ -66,20 +52,7 @@ def excluir_tag_temporaria(tag_id):
         # Buscar tag antes de excluir para auditoria
         from Server.models.tag_temporaria import TagTemporaria
         tag = TagTemporaria.buscar_por_tag_id(tag_id)
-        
         tags_temporarias_service.excluir_tag_temporaria(tag_id)
-
-        # Registrar log de auditoria
-        usuario_id_requisicao = obter_usuario_id_da_requisicao()
-        if usuario_id_requisicao and tag:
-            audit_service.registrar_acao(
-                usuario_id=usuario_id_requisicao,
-                acao='deletar',
-                entidade='tag_temporaria',
-                entidade_id=tag.id if tag else None,
-                dados_anteriores={'tag_id': tag_id, 'funcionario_id': tag.funcionario_id if tag else None},
-                detalhes=f"Tag temporária '{tag_id}' excluída"
-            )
 
         return jsonify({"mensagem": "Tag temporária removida com sucesso"})
     except Exception as e:

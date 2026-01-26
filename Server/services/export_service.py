@@ -1,6 +1,3 @@
-"""
-Service para exportação de dados
-"""
 from typing import Optional, List, Tuple, Dict, Any, Union
 from datetime import datetime, date
 from Server.models import ProducaoRegistro, DatabaseConnection, Funcionario, Modelo

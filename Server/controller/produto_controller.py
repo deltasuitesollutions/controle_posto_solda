@@ -1,7 +1,5 @@
 from flask import Blueprint, request, jsonify
 from Server.services import produto_service
-from Server.services import audit_service
-from Server.utils.audit_helper import obter_usuario_id_da_requisicao
 
 produtos_bp = Blueprint('produtos', __name__, url_prefix='/api/produtos')
 

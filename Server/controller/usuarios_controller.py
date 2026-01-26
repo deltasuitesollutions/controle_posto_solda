@@ -1,7 +1,5 @@
 from flask import Blueprint, jsonify, request
 from Server.services import usuarios_service
-from Server.services import audit_service
-from Server.utils.audit_helper import obter_usuario_id_da_requisicao
 
 usuarios_bp = Blueprint('usuarios', __name__, url_prefix='/api/usuarios')
 
@@ -78,20 +76,7 @@ def criar_usuario():
             ativo
         )
 
-        # Registrar log de auditoria
-        usuario_id_requisicao = obter_usuario_id_da_requisicao()
-        if usuario_id_requisicao:
-            audit_service.registrar_acao(
-                usuario_id=usuario_id_requisicao,
-                acao='criar',
-                entidade='usuario',
-                entidade_id=usuario.get('id'),
-                dados_novos={'username': username, 'nome': nome, 'role': role, 'ativo': ativo},
-                detalhes=f"Usuário '{username}' criado"
-            )
-
         return jsonify(usuario), 201
-
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
 
@@ -124,33 +109,7 @@ def atualizar_usuario(usuario_id):
             senha
         )
 
-        # Registrar log de auditoria
-        usuario_id_requisicao = obter_usuario_id_da_requisicao()
-        if usuario_id_requisicao:
-            dados_novos = {}
-            if username is not None:
-                dados_novos['username'] = username
-            if nome is not None:
-                dados_novos['nome'] = nome
-            if role is not None:
-                dados_novos['role'] = role
-            if ativo is not None:
-                dados_novos['ativo'] = ativo
-            if senha is not None:
-                dados_novos['senha'] = '***'  # Não registrar senha
-            
-            audit_service.registrar_acao(
-                usuario_id=usuario_id_requisicao,
-                acao='atualizar',
-                entidade='usuario',
-                entidade_id=usuario_id,
-                dados_anteriores=usuario_anterior_dict,
-                dados_novos=dados_novos if dados_novos else None,
-                detalhes=f"Usuário ID {usuario_id} atualizado"
-            )
-
         return jsonify(usuario), 200
-
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
 
@@ -164,19 +123,6 @@ def deletar_usuario(usuario_id):
         usuario_anterior_dict = next((u for u in usuario_anterior if u.get('id') == usuario_id), None)
 
         usuarios_service.deletar_usuario(usuario_id)
-
-        # Registrar log de auditoria
-        usuario_id_requisicao = obter_usuario_id_da_requisicao()
-        if usuario_id_requisicao:
-            audit_service.registrar_acao(
-                usuario_id=usuario_id_requisicao,
-                acao='deletar',
-                entidade='usuario',
-                entidade_id=usuario_id,
-                dados_anteriores=usuario_anterior_dict,
-                detalhes=f"Usuário ID {usuario_id} deletado"
-            )
-
         return jsonify({"mensagem": "Usuário deletado com sucesso"}), 200
 
     except Exception as e:

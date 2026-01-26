@@ -45,9 +45,9 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
     // Ignorar erros ao ler localStorage
   }
 
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...options.headers,
+    ...(options.headers as Record<string, string> || {}),
   }
 
   // Adicionar usuario_id no header se disponível
@@ -465,20 +465,10 @@ export const tagsTemporariasAPI = {
 // CHAMADA PARA CANCELAMENTO_CONTROLLER.PY
 
 export const cancelamentoAPI = {
-  listarOperacoesIniciadas: (params?: {
-    data?: string
-    limit?: number
-    offset?: number
-  }) => {
-    const queryParams = new URLSearchParams()
-    if (params?.data) queryParams.append('data', params.data)
-    if (params?.limit) queryParams.append('limit', params.limit.toString())
-    if (params?.offset) queryParams.append('offset', params.offset.toString())
-    
-    const queryString = queryParams.toString()
-    return fetchAPI(`/cancelamentos/operacoes-iniciadas${queryString ? `?${queryString}` : ''}`)
-  },
-  cancelar: (data: { registro_id: number; motivo: string }) =>
+  cancelar: (data: {
+    registro_id: number
+    motivo: string
+  }) =>
     fetchAPI('/cancelamentos', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -486,58 +476,19 @@ export const cancelamentoAPI = {
   listarCancelamentos: (params?: {
     limit?: number
     offset?: number
-    data_inicio?: string
-    data_fim?: string
+    data?: string
   }) => {
     const queryParams = new URLSearchParams()
     if (params?.limit) queryParams.append('limit', params.limit.toString())
     if (params?.offset) queryParams.append('offset', params.offset.toString())
-    if (params?.data_inicio) queryParams.append('data_inicio', params.data_inicio)
-    if (params?.data_fim) queryParams.append('data_fim', params.data_fim)
+    if (params?.data) queryParams.append('data', params.data)
     
     const queryString = queryParams.toString()
     return fetchAPI(`/cancelamentos${queryString ? `?${queryString}` : ''}`)
   },
-  exportarCSV: (params?: {
-    data_inicio?: string
-    data_fim?: string
-  }) => {
-    const queryParams = new URLSearchParams()
-    if (params?.data_inicio) queryParams.append('data_inicio', params.data_inicio)
-    if (params?.data_fim) queryParams.append('data_fim', params.data_fim)
-    
-    const queryString = queryParams.toString()
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
-    const url = `${baseUrl}/api/cancelamentos/exportar-csv${queryString ? `?${queryString}` : ''}`
-    
-    // Para download de arquivo, usar fetch direto
-    return fetch(url, {
-      method: 'GET',
-      credentials: 'include',
-      headers: {
-        'X-User-Id': localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}').id?.toString() || '' : ''
-      }
-    }).then(response => {
-      if (!response.ok) {
-        return response.json().then(data => {
-          throw new Error(data.erro || 'Erro ao exportar')
-        })
-      }
-      return response.blob().then(blob => {
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `cancelamentos_${params?.data_inicio || 'todos'}.csv`
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
-      })
-    })
-  },
-  atualizarComentario: (registroId: number, comentario: string) =>
-    fetchAPI(`/cancelamentos/${registroId}/comentario`, {
+  atualizarMotivo: (cancelamentoId: number, motivo: string) =>
+    fetchAPI(`/cancelamentos/${cancelamentoId}/motivo`, {
       method: 'PUT',
-      body: JSON.stringify({ comentario }),
+      body: JSON.stringify({ motivo }),
     }),
 }

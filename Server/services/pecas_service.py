@@ -2,8 +2,8 @@ from typing import Dict, Any, List
 from Server.models import Peca
 from Server.models.database import DatabaseConnection
 
+# LISTAR
 def listar_todas():
-    """Lista todas as peças"""
     try:
         pecas = Peca.listar_todas()
         return [peca.to_dict() for peca in pecas]
@@ -11,11 +11,10 @@ def listar_todas():
         print(f'Erro ao listar peças: {e}')
         return []
 
+
 def listar_todas_com_relacoes():
     """Lista todas as peças com informações de modelo e produto em uma única query otimizada"""
     try:
-        # Query otimizada usando DISTINCT ON para evitar duplicatas
-        # e subquery para garantir um produto por modelo
         query = """
             SELECT DISTINCT ON (p.peca_id)
                 p.peca_id,
@@ -65,8 +64,8 @@ def listar_todas_com_relacoes():
         print(f'Erro ao listar peças com relações: {e}')
         return []
 
+# BUSCAR POR ID
 def buscar_por_id(peca_id):
-    """Busca uma peça pelo ID"""
     try:
         peca = Peca.buscar_por_id(peca_id)
         if peca:
@@ -76,8 +75,8 @@ def buscar_por_id(peca_id):
         print(f'Erro ao buscar peça: {e}')
         return None
 
+# BUSCAR MODELO ID
 def buscar_por_modelo_id(modelo_id):
-    """Busca peças por modelo ID"""
     try:
         pecas = Peca.buscar_por_modelo_id(modelo_id)
         return [peca.to_dict() for peca in pecas]
@@ -85,10 +84,9 @@ def buscar_por_modelo_id(modelo_id):
         print(f'Erro ao buscar peças do modelo: {e}')
         return []
 
+# CRIAR
 def criar_peca(modelo_id, codigo, nome):
-    """Cria uma nova peça"""
     try:
-        # Verificar se peça já existe para este modelo (código E nome)
         pecas_existentes = Peca.buscar_por_modelo_id(modelo_id)
         for peca in pecas_existentes:
             if peca.codigo.lower() == codigo.lower() and peca.nome.lower() == nome.lower():
@@ -110,8 +108,8 @@ def criar_peca(modelo_id, codigo, nome):
         print(f'Erro ao criar peça: {e}')
         return {'erro': 'Não foi possível criar a peça'}
 
+# ATUALIZAR
 def atualizar_peca(peca_id, modelo_id, codigo, nome):
-    """Atualiza uma peça existente"""
     try:
         peca = Peca.buscar_por_id(peca_id)
         if not peca:
@@ -130,8 +128,8 @@ def atualizar_peca(peca_id, modelo_id, codigo, nome):
         print(f'Erro ao atualizar peça: {e}')
         return {'erro': 'Não foi possível atualizar a peça'}
 
+# DELETAR
 def deletar_peca(peca_id):
-    """Deleta uma peça"""
     try:
         peca = Peca.buscar_por_id(peca_id)
         if not peca:

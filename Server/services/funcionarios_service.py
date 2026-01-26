@@ -10,14 +10,14 @@ def listar_funcionarios() -> List[Dict[str, Any]]:
     
     for f in funcionarios:
         item = {
-            "id": f.funcionario_id,  # Adiciona 'id' para compatibilidade com frontend
+            "id": f.funcionario_id,  
             "funcionario_id": f.funcionario_id,
             "matricula": f.matricula, 
             "nome": f.nome,
-            "ativo": f.ativo  # Adiciona campo ativo que estava faltando
+            "ativo": f.ativo  
         }
         if f.tag_id:
-            item["tag"] = f.tag_id  # Adiciona 'tag' para compatibilidade com frontend
+            item["tag"] = f.tag_id  
             item["tag_id"] = f.tag_id
         if f.turno:
             item["turno"] = f.turno
@@ -62,7 +62,6 @@ def criar_funcionario(
     
     if tag_id:
         tag_id = tag_id.strip()
-        # Verificar se a tag já está em uso por outro funcionário
         funcionario_com_tag = Funcionario.buscar_por_tag(tag_id)
         if funcionario_com_tag:
             raise Exception(f"Tag RFID '{tag_id}' já está em uso pelo funcionário {funcionario_com_tag.nome}")
@@ -160,7 +159,6 @@ def buscar_por_matricula(matricula: str) -> Optional[Dict[str, Any]]:
 
 # Função para buscar operações habilitadas de um funcionário
 def buscar_operacoes_habilitadas(funcionario_id: int) -> List[Dict[str, Any]]:
-    """Busca todas as operações habilitadas para um funcionário"""
     try:
         query = """
             SELECT 
@@ -197,14 +195,6 @@ def buscar_operacoes_habilitadas(funcionario_id: int) -> List[Dict[str, Any]]:
 
 # Função para atualizar operações habilitadas de um funcionário
 def atualizar_operacoes_habilitadas(funcionario_id: int, operacoes_ids: List[int]) -> None:
-    """
-    Atualiza as operações habilitadas de um funcionário.
-    Remove todas as operações existentes e adiciona as novas.
-    
-    Args:
-        funcionario_id: ID do funcionário
-        operacoes_ids: Lista de IDs das operações a serem habilitadas
-    """
     from datetime import datetime
     
     # Verificar se o funcionário existe
@@ -212,7 +202,6 @@ def atualizar_operacoes_habilitadas(funcionario_id: int, operacoes_ids: List[int
     if not funcionario:
         raise Exception(f"Funcionário com ID {funcionario_id} não encontrado")
     
-    # Remover todas as operações habilitadas existentes
     query_delete = "DELETE FROM operacoes_habilitadas WHERE funcionario_id = %s"
     DatabaseConnection.execute_query(query_delete, (funcionario_id,))
     

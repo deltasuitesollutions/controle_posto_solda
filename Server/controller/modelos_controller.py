@@ -1,13 +1,11 @@
 from flask import Blueprint, request, jsonify
 from Server.services import modelos_service
-from Server.services import audit_service
-from Server.utils.audit_helper import obter_usuario_id_da_requisicao
 
 modelos_bp = Blueprint('modelos', __name__, url_prefix='/api/modelos')
 
+# LISTAR
 @modelos_bp.route('', methods=['GET'])
 def listar_modelos():
-    """Lista todos os modelos"""
     try:
         modelos = modelos_service.listar_modelos()
         return jsonify(modelos)
@@ -15,9 +13,9 @@ def listar_modelos():
         print(f'Erro ao listar modelos: {e}')
         return jsonify({'erro': 'Erro ao buscar modelos'}), 500
     
+# BUSCAR
 @modelos_bp.route('/<string:codigo>', methods=['GET'])
 def buscar_modelo(codigo):
-    """Busca um modelo pelo código"""
     try:
         modelo = modelos_service.buscar_modelo_por_codigo(codigo)
         if 'erro' in modelo:
@@ -26,10 +24,10 @@ def buscar_modelo(codigo):
     except Exception as e:
         print(f'Erro ao buscar modelo: {e}')
         return jsonify({'erro': 'Erro ao buscar modelo'}), 500
-    
+
+# CRIAR  
 @modelos_bp.route('', methods=['POST'])
 def criar_modelo():
-    """Cria um novo modelo"""
     try:
         data = request.get_json()
 
@@ -44,7 +42,6 @@ def criar_modelo():
         if not nome:
             return jsonify({"erro": "Nome é obrigatório"}), 400
         
-        # Se codigo não for fornecido, usar nome como codigo
         if not codigo:
             codigo = nome
         
@@ -53,26 +50,14 @@ def criar_modelo():
         if 'erro' in resultado:
             return jsonify(resultado), 400
         
-        # Registrar log de auditoria
-        usuario_id_requisicao = obter_usuario_id_da_requisicao()
-        if usuario_id_requisicao:
-            audit_service.registrar_acao(
-                usuario_id=usuario_id_requisicao,
-                acao='criar',
-                entidade='modelo',
-                entidade_id=resultado.get('id'),
-                dados_novos={'codigo': codigo, 'nome': nome, 'pecas': pecas},
-                detalhes=f"Modelo '{nome}' (código: {codigo}) criado"
-            )
-        
         return jsonify(resultado)
     except Exception as e:
         print(f"Erro ao criar modelo: {e}")
         return jsonify({"erro": "Erro ao criar modelo"}), 500
-    
+
+# ATUALIZAR 
 @modelos_bp.route('/<int:modelo_id>', methods=['PUT'])
 def atualizar_modelo(modelo_id):
-    """Atualiza um modelo existente"""
     try:
         data = request.get_json()
 
@@ -83,8 +68,6 @@ def atualizar_modelo(modelo_id):
         nome = data.get('nome')
         pecas = data.get('pecas')
         produto_id = data.get('produto_id')
-
-        # Buscar dados anteriores para o log
         modelos_anteriores = modelos_service.listar_modelos()
         modelo_anterior = next((m for m in modelos_anteriores if m.get('id') == modelo_id), None)
 
@@ -93,39 +76,15 @@ def atualizar_modelo(modelo_id):
         if 'erro' in resultado:
             return jsonify(resultado), 400
         
-        # Registrar log de auditoria
-        usuario_id_requisicao = obter_usuario_id_da_requisicao()
-        if usuario_id_requisicao:
-            dados_novos = {}
-            if codigo is not None:
-                dados_novos['codigo'] = codigo
-            if nome is not None:
-                dados_novos['nome'] = nome
-            if pecas is not None:
-                dados_novos['pecas'] = pecas
-            if produto_id is not None:
-                dados_novos['produto_id'] = produto_id
-            
-            audit_service.registrar_acao(
-                usuario_id=usuario_id_requisicao,
-                acao='atualizar',
-                entidade='modelo',
-                entidade_id=modelo_id,
-                dados_anteriores=modelo_anterior,
-                dados_novos=dados_novos if dados_novos else None,
-                detalhes=f"Modelo ID {modelo_id} atualizado"
-            )
-        
         return jsonify(resultado)
     except Exception as e:
         print(f'Erro ao atualizar modelo: {e}')
         return jsonify({'erro': 'Erro ao atualizar modelo'}), 500
-    
+
+# DELETAR
 @modelos_bp.route('/<int:modelo_id>', methods=['DELETE'])
 def deletar_modelo(modelo_id):
-    """Deleta um modelo"""
     try:
-        # Buscar dados do modelo antes de deletar
         modelos_anteriores = modelos_service.listar_modelos()
         modelo_anterior = next((m for m in modelos_anteriores if m.get('id') == modelo_id), None)
 
@@ -133,18 +92,6 @@ def deletar_modelo(modelo_id):
 
         if 'erro' in resultado:
             return jsonify(resultado), 404
-        
-        # Registrar log de auditoria
-        usuario_id_requisicao = obter_usuario_id_da_requisicao()
-        if usuario_id_requisicao:
-            audit_service.registrar_acao(
-                usuario_id=usuario_id_requisicao,
-                acao='deletar',
-                entidade='modelo',
-                entidade_id=modelo_id,
-                dados_anteriores=modelo_anterior,
-                detalhes=f"Modelo ID {modelo_id} deletado"
-            )
         
         return jsonify(resultado)
     except Exception as e:

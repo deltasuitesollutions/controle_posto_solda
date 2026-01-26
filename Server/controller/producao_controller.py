@@ -1,16 +1,12 @@
-"""
-Controller para rotas de produção
-"""
 from typing import Union, Tuple
 from flask import Blueprint, jsonify, request, Response
 from Server.services import producao_service
 
 producao_bp = Blueprint('producao', __name__, url_prefix='/api/producao')
 
-
+# ENTRADA
 @producao_bp.route('/entrada', methods=['POST'])
 def registrar_entrada() -> Union[Response, Tuple[Response, int]]:
-    """Registra entrada do operador na cabine"""
     data = request.json
     
     if not data or not data.get('posto'):
@@ -46,10 +42,9 @@ def registrar_entrada() -> Union[Response, Tuple[Response, int]]:
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-
+# SAIDA
 @producao_bp.route('/saida', methods=['POST'])
 def registrar_saida() -> Union[Response, Tuple[Response, int]]:
-    """Registra saída do operador da cabine"""
     data = request.json
     
     if not data:
@@ -90,10 +85,9 @@ def registrar_saida() -> Union[Response, Tuple[Response, int]]:
             "message": str(e)
         }), 500
 
-
+# BUSCAR REGISTRO
 @producao_bp.route('/registro-aberto', methods=['GET'])
 def buscar_registro_aberto() -> Union[Response, Tuple[Response, int]]:
-    """Busca registro aberto para um posto e funcionário"""
     posto = request.args.get('posto')
     funcionario_matricula = request.args.get('funcionario_matricula')
     
@@ -127,5 +121,4 @@ def buscar_registro_aberto() -> Union[Response, Tuple[Response, int]]:
 
 @producao_bp.route('/', methods=['POST'])
 def registrar_producao() -> Union[Response, Tuple[Response, int]]:
-    """Endpoint de compatibilidade - registra entrada"""
     return registrar_entrada()

@@ -1,6 +1,3 @@
-"""
-Controller para rotas de planilhas
-"""
 from typing import Tuple, Union
 from flask import Blueprint, Response, request, jsonify
 from Server.services import csv_service
@@ -12,6 +9,7 @@ except ImportError:
 
 csv_bp = Blueprint('csv', __name__, url_prefix='/api/exportar')
 
+#CSV
 @csv_bp.route('/csv', methods=['GET'])
 def exportar_csv() -> Union[Response, Tuple[Response, int]]:
     try:
@@ -38,6 +36,7 @@ def exportar_csv() -> Union[Response, Tuple[Response, int]]:
         print(f"Erro ao exportar CSV: {e}")
         return jsonify({"error": str(e)}), 500
 
+# EXCEL
 @csv_bp.route('/excel', methods=['GET'])
 def exportar_excel() -> Union[Response, Tuple[Response, int]]:
     if excel_service is None:

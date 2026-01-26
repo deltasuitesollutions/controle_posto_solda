@@ -1,12 +1,10 @@
 from flask import Blueprint, jsonify, request
 from Server.services import funcionarios_service
-from Server.services import audit_service
-from Server.utils.audit_helper import obter_usuario_id_da_requisicao
 
 funcionarios_bp = Blueprint('funcionarios', __name__, url_prefix='/api/funcionarios')
 
 
-# Lista funcionários ativos
+# LISTAR ATIVOS
 @funcionarios_bp.route('', methods=['GET'])
 def listar_funcionarios():
     try:
@@ -16,7 +14,7 @@ def listar_funcionarios():
         return jsonify({"erro": str(e)}), 500
 
 
-# Lista todos os funcionários
+# LISTAR TODOS
 @funcionarios_bp.route('/todos', methods=['GET'])
 def listar_todos_funcionarios():
     try:
@@ -26,7 +24,7 @@ def listar_todos_funcionarios():
         return jsonify({"erro": str(e)}), 500
 
 
-# Cria funcionário
+# CRIAR
 @funcionarios_bp.route('', methods=['POST'])
 def criar_funcionario():
     try:
@@ -55,25 +53,12 @@ def criar_funcionario():
             operacoes_ids if operacoes_ids else None
         )
 
-        # Registrar log de auditoria
-        usuario_id_requisicao = obter_usuario_id_da_requisicao()
-        if usuario_id_requisicao:
-            audit_service.registrar_acao(
-                usuario_id=usuario_id_requisicao,
-                acao='criar',
-                entidade='funcionario',
-                entidade_id=funcionario.get('id'),
-                dados_novos={'matricula': matricula, 'nome': nome, 'ativo': ativo, 'tag_id': tag_id, 'turno': turno},
-                detalhes=f"Funcionário '{nome}' (matrícula: {matricula}) criado"
-            )
-
         return jsonify(funcionario), 201
 
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
 
-
-# Editar funcionário
+# EDITAR
 @funcionarios_bp.route('/<int:funcionario_id>', methods=['PUT'])
 def atualizar_funcionario(funcionario_id):
     try:
@@ -105,38 +90,13 @@ def atualizar_funcionario(funcionario_id):
             operacoes_ids if operacoes_ids is not None else None
         )
 
-        # Registrar log de auditoria
-        usuario_id_requisicao = obter_usuario_id_da_requisicao()
-        if usuario_id_requisicao:
-            dados_novos = {}
-            if nome is not None:
-                dados_novos['nome'] = nome
-            if ativo is not None:
-                dados_novos['ativo'] = ativo
-            if tag_id is not None:
-                dados_novos['tag_id'] = tag_id
-            if turno is not None:
-                dados_novos['turno'] = turno
-            if operacoes_ids is not None:
-                dados_novos['operacoes_ids'] = operacoes_ids
-            
-            audit_service.registrar_acao(
-                usuario_id=usuario_id_requisicao,
-                acao='atualizar',
-                entidade='funcionario',
-                entidade_id=funcionario_id,
-                dados_anteriores=funcionario_anterior,
-                dados_novos=dados_novos if dados_novos else None,
-                detalhes=f"Funcionário ID {funcionario_id} atualizado"
-            )
-
         return jsonify(funcionario)
 
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
 
 
-# Deleta funcionário
+# DELETAR
 @funcionarios_bp.route('/<int:funcionario_id>', methods=['DELETE'])
 def deletar_funcionario(funcionario_id):
     try:
@@ -146,24 +106,12 @@ def deletar_funcionario(funcionario_id):
 
         funcionarios_service.deletar_funcionario(funcionario_id)
 
-        # Registrar log de auditoria
-        usuario_id_requisicao = obter_usuario_id_da_requisicao()
-        if usuario_id_requisicao:
-            audit_service.registrar_acao(
-                usuario_id=usuario_id_requisicao,
-                acao='deletar',
-                entidade='funcionario',
-                entidade_id=funcionario_id,
-                dados_anteriores=funcionario_anterior,
-                detalhes=f"Funcionário ID {funcionario_id} deletado"
-            )
-
         return jsonify({"mensagem": "Funcionário removido com sucesso"})
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
 
 
-# Busca por tag RFID
+# BUSCAR POR TAG
 @funcionarios_bp.route('/tag/<string:tag_id>', methods=['GET'])
 def buscar_por_tag(tag_id):
     try:
@@ -178,7 +126,7 @@ def buscar_por_tag(tag_id):
         return jsonify({"erro": str(e)}), 500
 
 
-# Busca por matrícula
+# BUSCAR POR MATRÍCULA
 @funcionarios_bp.route('/matricula/<string:matricula>', methods=['GET'])
 def buscar_por_matricula(matricula):
     try:
@@ -193,7 +141,7 @@ def buscar_por_matricula(matricula):
         return jsonify({"erro": str(e)}), 500
 
 
-# Busca operações habilitadas de um funcionário
+# BUSCAR OPERAÇÕES HABILITADAS
 @funcionarios_bp.route('/<int:funcionario_id>/operacoes-habilitadas', methods=['GET'])
 def buscar_operacoes_habilitadas(funcionario_id):
     try:
@@ -203,7 +151,7 @@ def buscar_operacoes_habilitadas(funcionario_id):
         return jsonify({"erro": str(e)}), 500
 
 
-# Atualiza operações habilitadas de um funcionário
+# ATUALIZA OPERAÇÕES HABILITADAS
 @funcionarios_bp.route('/<int:funcionario_id>/operacoes-habilitadas', methods=['PUT'])
 def atualizar_operacoes_habilitadas(funcionario_id):
     try:

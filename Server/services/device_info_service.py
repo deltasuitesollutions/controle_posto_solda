@@ -1,6 +1,3 @@
-"""
-Serviço para gerenciar informações do dispositivo (Raspberry Pi)
-"""
 import uuid
 import os
 import platform
@@ -13,7 +10,6 @@ def get_raspberry_serial() -> Optional[str]:
     Obtém o serial do Raspberry Pi
     """
     try:
-        # Tentar ler do /proc/cpuinfo (Linux/Raspberry Pi)
         if os.path.exists('/proc/cpuinfo'):
             with open('/proc/cpuinfo', 'r') as f:
                 for line in f:

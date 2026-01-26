@@ -1,7 +1,6 @@
 from typing import Dict, Any, List, Optional
 from Server.models import Usuario
 
-
 # Lista todos os usuários ativos
 def listar_usuarios() -> List[Dict[str, Any]]:
     usuarios = Usuario.listar_ativos()
@@ -127,10 +126,6 @@ def deletar_usuario(usuario_id: int) -> bool:
 
 # Autentica um usuário
 def autenticar_usuario(username: str, senha: str) -> Optional[Dict[str, Any]]:
-    """
-    Autentica um usuário com username e senha.
-    Retorna os dados do usuário se a autenticação for bem-sucedida, None caso contrário.
-    """
     if not username or not username.strip():
         raise Exception("Username é obrigatório")
     
@@ -138,21 +133,16 @@ def autenticar_usuario(username: str, senha: str) -> Optional[Dict[str, Any]]:
         raise Exception("Senha é obrigatória")
     
     username = username.strip()
-    
-    # Buscar usuário por username
     usuario = Usuario.buscar_por_username(username)
     
     if not usuario:
         return None
     
-    # Verificar se o usuário está ativo
     if not usuario.ativo:
         raise Exception("Usuário inativo")
     
-    # Verificar senha
     senha_hash = Usuario.hash_senha(senha)
     if usuario.senha_hash != senha_hash:
         return None
     
-    # Retornar dados do usuário (sem a senha)
     return usuario.to_dict()

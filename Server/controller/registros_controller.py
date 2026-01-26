@@ -4,20 +4,9 @@ from Server.services import registro_service
 
 registros_bp = Blueprint('registros', __name__, url_prefix='/api/registros')
 
+# LISTAR
 @registros_bp.route('', methods=['GET'])
 def listar_registros() -> Union[Response, Tuple[Response, int]]:
-    """Lista registros de produção com filtros
-    
-    Query parameters:
-        limit: Limite de registros por página (padrão: 100)
-        offset: Offset para paginação (padrão: 0)
-        data: Filtro por data (formato YYYY-MM-DD)
-        posto: Filtro por nome do posto
-        operacao: Filtro por código da operação
-        turno: Filtro por turno (matutino, vespertino, noturno) - pode ser uma lista separada por vírgula
-        hora_inicio: Filtro por hora de início (formato HH:MM)
-        hora_fim: Filtro por hora de fim (formato HH:MM)
-    """
     try:
         limit = request.args.get('limit', 100, type=int)
         offset = request.args.get('offset', 0, type=int)
@@ -28,7 +17,6 @@ def listar_registros() -> Union[Response, Tuple[Response, int]]:
         hora_inicio_filtro = request.args.get('hora_inicio')
         hora_fim_filtro = request.args.get('hora_fim')
         
-        # Converter turno para lista se for string separada por vírgula
         turnos_list = None
         if turno_filtro:
             if isinstance(turno_filtro, str):
@@ -55,14 +43,9 @@ def listar_registros() -> Union[Response, Tuple[Response, int]]:
         print(f"Erro ao listar registros: {error_details}")
         return jsonify({"error": str(e), "details": error_details}), 500
 
-
+# ATUALIZAR COMENTÁRIO
 @registros_bp.route('/<int:registro_id>/comentario', methods=['PUT'])
 def atualizar_comentario_registro(registro_id: int) -> Union[Response, Tuple[Response, int]]:
-    """Atualiza o comentário de um registro de produção
-    
-    Body:
-        comentario: Texto do comentário a ser salvo
-    """
     try:
         data = request.get_json()
         comentario = data.get('comentario', '') if data else ''

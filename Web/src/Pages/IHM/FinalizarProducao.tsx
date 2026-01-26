@@ -115,10 +115,10 @@ const FinalizarProducao = () => {
         }
 
         try {
-          // Cancelar operação com motivo padrão - isso salva na tabela operacoes_canceladas
+          // Cancelar operação sem motivo - o admin preencherá depois
           await cancelamentoAPI.cancelar({
             registro_id: registroIdAtual,
-            motivo: 'Operação cancelada pelo operador (quantidade zero)'
+            motivo: '' // Motivo vazio - será preenchido pelo admin
           });
 
           // Sucesso - registro foi salvo na tabela operacoes_canceladas

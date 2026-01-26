@@ -3,20 +3,18 @@ from Server.models import Modelo
 from Server.models.database import DatabaseConnection
 from Server.services import pecas_service  
 
+# LISTAR
 def listar_modelos():
-    """Lista todos os modelos com suas peças e produto relacionado"""
     try: 
         modelos = Modelo.listar_todos()
         resultado = []
         for modelo in modelos:
-            # Buscar peças do modelo usando o service
             pecas = pecas_service.buscar_por_modelo_id(modelo.id)
-            # Buscar produto relacionado
             produto_id = Modelo.buscar_produto_por_modelo_id(modelo.id)
             resultado.append({
                 'id': modelo.id,
                 'codigo': modelo.codigo,
-                'nome': modelo.descricao,  # Usar descricao ao invés de nome
+                'nome': modelo.descricao,  
                 'produto_id': produto_id,
                 'pecas': pecas
             })
@@ -26,39 +24,35 @@ def listar_modelos():
         import traceback
         traceback.print_exc()
         return []
-    
+
+# BUSCAR MODELO  
 def buscar_modelo_por_codigo(codigo):  
-    """Busca um modelo pelo código com suas peças"""
     try:
         modelo = Modelo.buscar_por_codigo(codigo)
         if not modelo:
             return {'erro': f'Modelo com código {codigo} não encontrado'}
         
-        # Buscar peças do modelo usando o service
         pecas = pecas_service.buscar_por_modelo_id(modelo.id)
         
         return {
             'id': modelo.id,
             'codigo': modelo.codigo,
-            'nome': modelo.descricao,  # Usar descricao ao invés de nome
+            'nome': modelo.descricao,  
             'pecas': pecas
         }
     except Exception as erro:
         print(f'Erro ao buscar modelo: {erro}')
         return {'erro': 'Não foi possível buscar o modelo'}
     
+# CRIAR
 def criar_modelo(codigo, nome, pecas=None, produto_id=None):
-    """Cria um novo modelo com as suas peças e produto relacionado"""
     try:
-        # Criar modelo (codigo não é salvo no banco, apenas nome)
         novo_modelo = Modelo(codigo=codigo, descricao=nome)
         novo_modelo.save()
 
-        # Associar produto se fornecido
         if produto_id and novo_modelo.id:
             Modelo.associar_produto(novo_modelo.id, produto_id)
 
-        # Criar peças se houver usando o service
         if pecas and novo_modelo.id:
             for peca_info in pecas:
                 pecas_service.criar_peca(
@@ -77,9 +71,9 @@ def criar_modelo(codigo, nome, pecas=None, produto_id=None):
     except Exception as erro:
         print(f'Erro ao criar modelo: {erro}')
         return {'erro': f'Não foi possível criar o modelo: {str(erro)}'}
-    
+
+# DELETAR 
 def deletar_modelo(modelo_id):
-    """Deleta um modelo"""
     try:
         print(f'Tentando deletar modelo com ID: {modelo_id} (tipo: {type(modelo_id)})')
         modelo = Modelo.buscar_por_id(modelo_id)
@@ -101,51 +95,41 @@ def deletar_modelo(modelo_id):
         import traceback
         traceback.print_exc()
         return {'erro': f'Não foi possível deletar o modelo {modelo_id}: {str(erro)}'}
-    
+
+# ATUALIZAR  
 def atualizar_modelo(modelo_id, codigo=None, nome=None, pecas=None, produto_id=None):
-    """Atualiza um modelo existente, suas peças e produto relacionado"""
     try:
         modelo = Modelo.buscar_por_id(modelo_id)
         if not modelo:
             return {'erro': f'Modelo com ID {modelo_id} não encontrado'}
-        
-        # Atualizar codigo no objeto (não é salvo no banco, apenas para compatibilidade da API)
+       
         if codigo is not None:
             modelo.codigo = codigo
         
-        # Atualizar nome - sempre atualizar se fornecido (mesmo que seja string vazia)
         if nome is not None:
             modelo.descricao = nome
         
-        # Sempre salvar se nome ou codigo foram fornecidos
         if nome is not None or codigo is not None:
             modelo.save()
 
-        # Atualizar relacionamento com produto se fornecido
         if produto_id is not None and modelo.id:
             if produto_id:
                 Modelo.associar_produto(modelo.id, produto_id)
             else:
-                # Remover associação se produto_id for None ou 0
                 Modelo.remover_associacao_produto(modelo.id)
 
-        # Atualizar peças se fornecidas
         if pecas is not None and modelo.id:
-            # Buscar peças existentes do modelo usando o service
             pecas_existentes = pecas_service.buscar_por_modelo_id(modelo.id)
             ids_pecas_existentes = {p.get('id') for p in pecas_existentes if p.get('id')}
             ids_pecas_enviadas = {peca_info.get('id') for peca_info in pecas if peca_info.get('id')}
             
-            # Deletar peças que foram removidas (existem no banco mas não foram enviadas)
             pecas_para_deletar = ids_pecas_existentes - ids_pecas_enviadas
             for peca_id in pecas_para_deletar:
                 pecas_service.deletar_peca(peca_id)
             
-            # Atualizar ou criar peças usando o service
             for peca_info in pecas:
                 peca_id = peca_info.get('id')
                 if peca_id and peca_id in ids_pecas_existentes:
-                    # Peça existente - atualizar usando o service
                     pecas_service.atualizar_peca(
                         peca_id=peca_id,
                         modelo_id=modelo.id,
@@ -153,14 +137,12 @@ def atualizar_modelo(modelo_id, codigo=None, nome=None, pecas=None, produto_id=N
                         nome=peca_info.get('nome', '')
                     )
                 else:
-                    # Nova peça - criar usando o service
                     pecas_service.criar_peca(
                         modelo_id=modelo.id,
                         codigo=peca_info.get('codigo', ''),
                         nome=peca_info.get('nome', '')
                     )
 
-        # Buscar modelo atualizado para retornar dados corretos
         modelo_atualizado = Modelo.buscar_por_id(modelo_id)
         produto_id = Modelo.buscar_produto_por_modelo_id(modelo_id) if modelo_atualizado else None
         

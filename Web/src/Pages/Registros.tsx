@@ -233,40 +233,38 @@ const Registros = () => {
 
         // Criar dados para Excel
         const headers = [
-            'Data Início', 
-            'Data Fim', 
             'Totem', 
             'Posto', 
+            'Operação', 
             'Operador', 
             'Matrícula', 
             'Turno', 
-            'Operação', 
             'Produto', 
             'Modelo', 
             'Peça', 
-            'Código Produção', 
+            'Código Peça', 
+            'Qtd', 
+            'Data', 
             'Hora Início', 
             'Hora Fim', 
-            'Quantidade', 
             'Comentários'
         ]
         
         const rows = registrosParaExportar.map(reg => [
-            reg.data_inicio ? new Date(reg.data_inicio).toLocaleDateString('pt-BR') : '',
-            reg.data_fim ? new Date(reg.data_fim).toLocaleDateString('pt-BR') : '',
             reg.totem || '',
             reg.posto || '',
+            reg.operacao || '',
             reg.operador || '',
             reg.matricula || '',
             String(reg.turno || ''),
-            reg.operacao || '',
             reg.produto || '',
             reg.modelo || '',
             reg.peca || '',
             reg.codigo_producao || '',
+            String(reg.quantidade || ''),
+            reg.data_inicio ? new Date(reg.data_inicio).toLocaleDateString('pt-BR') : '',
             reg.hora_inicio || reg.hora || '',
             reg.hora_fim || '',
-            String(reg.quantidade || ''),
             reg.comentarios || ''
         ])
 
@@ -275,23 +273,21 @@ const Registros = () => {
         const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
 
         // Definir larguras de colunas (em caracteres)
-        // Colunas de Data Início e Data Fim com largura maior (20 caracteres)
         ws['!cols'] = [
-            { wch: 20 }, // Data Início
-            { wch: 20 }, // Data Fim
             { wch: 12 }, // Totem
             { wch: 15 }, // Posto
+            { wch: 15 }, // Operação
             { wch: 20 }, // Operador
             { wch: 12 }, // Matrícula
             { wch: 10 }, // Turno
-            { wch: 15 }, // Operação
             { wch: 20 }, // Produto
             { wch: 20 }, // Modelo
             { wch: 15 }, // Peça
-            { wch: 18 }, // Código Produção
+            { wch: 18 }, // Código Peça
+            { wch: 8 },  // Qtd
+            { wch: 12 }, // Data
             { wch: 12 }, // Hora Início
             { wch: 12 }, // Hora Fim
-            { wch: 12 }, // Quantidade
             { wch: 30 }  // Comentários
         ]
 
@@ -505,16 +501,13 @@ const Registros = () => {
                                                         />
                                                     </th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Data Início
-                                                    </th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Data Fim
-                                                    </th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                         Totem
                                                     </th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                         Posto
+                                                    </th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Operação
                                                     </th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                         Operador
@@ -526,9 +519,6 @@ const Registros = () => {
                                                         Turno
                                                     </th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Operação
-                                                    </th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                         Produto
                                                     </th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -538,16 +528,19 @@ const Registros = () => {
                                                         Peça
                                                     </th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Código Produção
+                                                        Código Peça
+                                                    </th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Qtd
+                                                    </th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Data
                                                     </th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                         Hora Início
                                                     </th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                         Hora Fim
-                                                    </th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Quantidade
                                                     </th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                         Comentários
@@ -564,6 +557,39 @@ const Registros = () => {
                                                                 onChange={() => handleToggleSelecionarRegistro(registro.id)}
                                                                 className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                                                             />
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {registro.totem || '-'}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {registro.posto || '-'}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {registro.operacao || '-'}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {registro.operador || '-'}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {registro.matricula || '-'}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {registro.turno || '-'}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {registro.produto || '-'}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {registro.modelo || '-'}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {registro.peca || '-'}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {registro.codigo_producao || '-'}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {registro.quantidade || '-'}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                             {registro.data_inicio ? (() => {
@@ -583,60 +609,10 @@ const Registros = () => {
                                                             })() : '-'}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {registro.data_fim ? (() => {
-                                                                try {
-                                                                    // Converter YYYY-MM-DD para Date interpretando como horário local
-                                                                    const partes = registro.data_fim.split('-')
-                                                                    if (partes.length === 3) {
-                                                                        const date = new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2]))
-                                                                        return isNaN(date.getTime()) ? registro.data_fim : date.toLocaleDateString('pt-BR')
-                                                                    }
-                                                                    // Fallback para formato antigo (pode ser timestamp)
-                                                                    const date = new Date(registro.data_fim)
-                                                                    return isNaN(date.getTime()) ? registro.data_fim : date.toLocaleDateString('pt-BR')
-                                                                } catch {
-                                                                    return registro.data_fim
-                                                                }
-                                                            })() : '-'}
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {registro.totem || '-'}
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {registro.posto || '-'}
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {registro.operador || '-'}
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {registro.matricula || '-'}
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {registro.turno || '-'}
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {registro.operacao || '-'}
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {registro.produto || '-'}
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {registro.modelo || '-'}
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {registro.peca || '-'}
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {registro.codigo_producao || '-'}
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                             {registro.hora_inicio || registro.hora || '-'}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                             {registro.hora_fim || '-'}
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {registro.quantidade || '-'}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                             {registro.comentarios || '-'}

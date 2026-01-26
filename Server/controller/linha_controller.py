@@ -1,7 +1,5 @@
 from flask import Blueprint, request, jsonify
 from Server.services import linha_service
-from Server.services import audit_service
-from Server.utils.audit_helper import obter_usuario_id_da_requisicao
 
 linhas_bp = Blueprint('linhas', __name__, url_prefix='/api/linhas')
 
@@ -19,18 +17,6 @@ def criar_linha():
         resultado = linha_service.criar_linha(nome)
         if 'erro' in resultado:
             return jsonify(resultado), 400
-        
-        # Registrar log de auditoria
-        usuario_id_requisicao = obter_usuario_id_da_requisicao()
-        if usuario_id_requisicao:
-            audit_service.registrar_acao(
-                usuario_id=usuario_id_requisicao,
-                acao='criar',
-                entidade='linha',
-                entidade_id=resultado.get('id'),
-                dados_novos={'nome': nome},
-                detalhes=f"Linha '{nome}' criada"
-            )
         
         return jsonify(resultado)
     except Exception as e:
@@ -57,19 +43,6 @@ def atualizar_linha(linha_id):
         if 'erro' in resultado:
             return jsonify(resultado), 400
         
-        # Registrar log de auditoria
-        usuario_id_requisicao = obter_usuario_id_da_requisicao()
-        if usuario_id_requisicao:
-            audit_service.registrar_acao(
-                usuario_id=usuario_id_requisicao,
-                acao='atualizar',
-                entidade='linha',
-                entidade_id=linha_id,
-                dados_anteriores=linha_anterior,
-                dados_novos={'nome': nome} if nome else None,
-                detalhes=f"Linha ID {linha_id} atualizada"
-            )
-        
         return jsonify(resultado)
     except Exception as e:
         print(f'Erro ao atualizar linha: {e}')
@@ -80,7 +53,6 @@ def atualizar_linha(linha_id):
 @linhas_bp.route('/<int:linha_id>', methods=['DELETE'])
 def deletar_linha(linha_id):
     try:
-        # Buscar dados da linha antes de deletar
         linhas_anteriores = linha_service.listar_linhas()
         linha_anterior = next((l for l in linhas_anteriores if l.get('id') == linha_id), None)
 
@@ -88,18 +60,6 @@ def deletar_linha(linha_id):
 
         if 'erro' in resultado:
             return jsonify(resultado), 400
-        
-        # Registrar log de auditoria
-        usuario_id_requisicao = obter_usuario_id_da_requisicao()
-        if usuario_id_requisicao:
-            audit_service.registrar_acao(
-                usuario_id=usuario_id_requisicao,
-                acao='deletar',
-                entidade='linha',
-                entidade_id=linha_id,
-                dados_anteriores=linha_anterior,
-                detalhes=f"Linha ID {linha_id} deletada"
-            )
         
         return jsonify(resultado)
     except Exception as e:

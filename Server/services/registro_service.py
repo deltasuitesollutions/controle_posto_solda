@@ -1,6 +1,6 @@
 from typing import Dict, Any, Optional, List, Tuple
 from datetime import datetime
-from Server.models.registros import registros
+from Server.models.registros import RegistroProducao
 from Server.models import Funcionario, Modelo, Posto
 from Server.models.operacao import Operacao
 from Server.models.produto import Produto
@@ -276,7 +276,7 @@ def listar_registros(
 ) -> Dict[str, Any]:
     """Lista registros de produção usando o model"""
     
-    if not registros.verificar_tabela_existe():
+    if not RegistroProducao.verificar_tabela_existe():
         return {
             "registros": [],
             "total": 0,
@@ -286,7 +286,7 @@ def listar_registros(
     
     try:
         # Verificar se a coluna nome existe na tabela operacoes
-        tem_coluna_nome_operacao = registros.verificar_coluna_nome_operacao()
+        tem_coluna_nome_operacao = RegistroProducao.verificar_coluna_nome_operacao()
         
         # Construir filtros
         where_clause, params = _construir_filtros(
@@ -295,10 +295,10 @@ def listar_registros(
         
         # Contar registros
         filtro_turno = turno and len(turno) > 0
-        total = registros.contar_registros(where_clause, params, filtro_turno)
+        total = RegistroProducao.contar_registros(where_clause, params, filtro_turno)
         
         # Buscar registros com relacionamentos
-        rows = registros.buscar_registros_com_relacionamentos(
+        rows = RegistroProducao.buscar_registros_com_relacionamentos(
             where_clause, params, limit, offset, tem_coluna_nome_operacao
         )
         
@@ -350,7 +350,7 @@ def atualizar_comentario(registro_id: int, comentario: str) -> Dict[str, Any]:
     """Atualiza o comentário de um registro de produção usando o model"""
     
     try:
-        return registros.atualizar_comentario(registro_id, comentario)
+        return RegistroProducao.atualizar_comentario(registro_id, comentario)
         
     except ValueError as ve:
         raise Exception(str(ve))
@@ -364,7 +364,7 @@ def atualizar_comentario(registro_id: int, comentario: str) -> Dict[str, Any]:
 def buscar_registro_por_id(registro_id: int) -> Optional[Dict[str, Any]]:
     """Busca um registro específico pelo ID"""
     try:
-        return registros.buscar_registro_por_id(registro_id)
+        return RegistroProducao.buscar_registro_por_id(registro_id)
     except Exception as e:
         print(f"Erro ao buscar registro por ID: {e}")
         return None

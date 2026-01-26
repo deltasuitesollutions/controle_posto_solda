@@ -1,12 +1,8 @@
-"""
-Service para lógica de negócio de configuração de postos
-"""
 from typing import Dict, Any, Optional, List
 from Server.models import PostoConfiguracao
 
-
+# OBTER CONFIGURAÇÃO DO POSTO
 def obter_configuracao_posto(posto: str) -> Optional[Dict[str, Any]]:
-    """Obtém a configuração de um posto específico"""
     try:
         config = PostoConfiguracao.buscar_por_posto(posto)
         if not config:
@@ -15,23 +11,21 @@ def obter_configuracao_posto(posto: str) -> Optional[Dict[str, Any]]:
     except Exception as e:
         raise Exception(f"Erro ao obter configuração do posto: {str(e)}")
 
-
+# LISTAR
 def listar_configuracoes() -> List[Dict[str, Any]]:
-    """Lista todas as configurações de postos"""
     try:
         configuracoes = PostoConfiguracao.listar_todas()
         return [config.to_dict(include_relations=True) for config in configuracoes]
     except Exception as e:
         raise Exception(f"Erro ao listar configurações: {str(e)}")
 
-
+# CONFIGURAR POSTO
 def configurar_posto(
     posto: str, 
     funcionario_matricula: Optional[str] = None, 
     modelo_codigo: Optional[str] = None,
     turno: Optional[int] = None
 ) -> Dict[str, Any]:
-    """Configura ou atualiza a configuração de um posto"""
     try:
         if not posto:
             raise Exception("Código do posto é obrigatório")
@@ -54,9 +48,8 @@ def configurar_posto(
     except Exception as e:
         raise Exception(f"Erro ao configurar posto: {str(e)}")
 
-
+# REMOVER
 def remover_configuracao_posto(posto: str) -> Dict[str, Any]:
-    """Remove a configuração de um posto"""
     try:
         config = PostoConfiguracao.buscar_por_posto(posto)
         if not config:
