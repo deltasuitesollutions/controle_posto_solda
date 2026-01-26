@@ -19,16 +19,41 @@ def init_socketio(app: Flask) -> SocketIO:
     """Inicializa e retorna a instância do SocketIO"""
     global _socketio_instance
     
-    _socketio_instance = SocketIO(
-        app,
-        cors_allowed_origins=get_socketio_cors_origins(),
-        async_mode='threading',
-        logger=os.getenv('FLASK_ENV') != 'production',
-        engineio_logger=False
-    )
+    # Detectar o melhor modo async disponível
+    # 'auto' tenta eventlet, depois gevent, depois threading
+    # Em desenvolvimento com Werkzeug, 'threading' é mais estável
+    async_mode = os.getenv('SOCKETIO_ASYNC_MODE', 'threading')
     
-    logger.info("SocketIO inicializado")
-    return _socketio_instance
+    try:
+        _socketio_instance = SocketIO(
+            app,
+            cors_allowed_origins=get_socketio_cors_origins(),
+            async_mode=async_mode,
+            logger=os.getenv('FLASK_ENV') != 'production',
+            engineio_logger=False,
+            ping_timeout=60,
+            ping_interval=25,
+            max_http_buffer_size=1e6,
+            allow_upgrades=True,
+            transports=['websocket', 'polling']
+        )
+        
+        logger.info(f"SocketIO inicializado com async_mode={async_mode}")
+        return _socketio_instance
+    except Exception as e:
+        logger.error(f"Erro ao inicializar SocketIO: {e}")
+        # Fallback para modo threading se houver erro
+        if async_mode != 'threading':
+            logger.warning("Tentando inicializar com async_mode='threading' como fallback")
+            _socketio_instance = SocketIO(
+                app,
+                cors_allowed_origins=get_socketio_cors_origins(),
+                async_mode='threading',
+                logger=os.getenv('FLASK_ENV') != 'production',
+                engineio_logger=False
+            )
+            return _socketio_instance
+        raise
 
 
 def get_socketio() -> Optional[SocketIO]:

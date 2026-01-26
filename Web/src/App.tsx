@@ -15,13 +15,15 @@ import Usuarios from "./Pages/Usuarios";
 import OperacoesCanceladas from "./Pages/OperacoesCanceladas";
 import CadastroProdutoModelo from "./Pages/CadastroProdutoModelo";
 import ListagemPecas from "./Pages/ListagemPecas";
+import CadastroUsuario from "./Pages/CadastroUsuario";
 
 
 function App() {
   return (
     <Routes>
-      {/* Rota de login */}
+      {/* Rotas públicas */}
       <Route path="/login" element={<Login />} />
+      <Route path="/cadastro-usuario" element={<CadastroUsuario />} />
       
       {/* Rotas públicas/admin */}
       <Route 

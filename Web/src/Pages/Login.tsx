@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const Login = () => {
@@ -65,6 +65,7 @@ const Login = () => {
               onChange={(e) => setUsername(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Digite seu usuário"
+              autoComplete="username"
               required
               disabled={carregando}
             />
@@ -79,6 +80,7 @@ const Login = () => {
               onChange={(e) => setSenha(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Digite sua senha"
+              autoComplete="current-password"
               required
               disabled={carregando}
             />
@@ -92,6 +94,15 @@ const Login = () => {
             {carregando ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
+        <div className="mt-4 text-center">
+          <Link
+            to="/cadastro-usuario"
+            className="text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center justify-center gap-2"
+          >
+            <i className="bi bi-person-plus"></i>
+            <span>Cadastrar novo usuário</span>
+          </Link>
+        </div>
       </div>
     </div>
   );
