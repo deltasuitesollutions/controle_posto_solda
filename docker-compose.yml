@@ -43,12 +43,6 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       DB_PORT: ${DB_PORT:-5432}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health').read()"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
     networks:
       - app-network
 
@@ -64,11 +58,6 @@ services:
       - backend
     environment:
       VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
-      VITE_API_BACKEND_URL: ${VITE_API_BACKEND_URL:-http://backend:8000}
-      DOCKER_ENV: ${DOCKER_ENV:-true}
-    volumes:
-      - ./Web:/app
-      - /app/node_modules
     networks:
       - app-network
 
