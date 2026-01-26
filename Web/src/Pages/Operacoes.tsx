@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import TopBar from '../Components/topBar/TopBar'
 import MenuLateral from '../Components/MenuLateral/MenuLateral'
 import { Paginacao } from '../Components/Compartilhados/paginacao'
+import ModalSucesso from '../Components/Modais/ModalSucesso'
+import ModalErro from '../Components/Modais/ModalErro'
 import { operacoesAPI, produtosAPI, modelosAPI, linhasAPI, postosAPI, sublinhasAPI, pecasAPI } from '../api/api'
 
 interface Operacao {
@@ -69,6 +71,11 @@ const Operacoes = () => {
     const [itensPorPagina] = useState(10)
     const [carregando, setCarregando] = useState(false)
     const [erro, setErro] = useState<string | null>(null)
+    const [modalSucessoAberto, setModalSucessoAberto] = useState(false)
+    const [modalErroAberto, setModalErroAberto] = useState(false)
+    const [mensagemSucesso, setMensagemSucesso] = useState('')
+    const [mensagemErro, setMensagemErro] = useState('')
+    const [tituloErro, setTituloErro] = useState('Erro!')
 
     const [operacao, setOperacao] = useState('')
     const [produto, setProduto] = useState('')
@@ -288,7 +295,9 @@ const Operacoes = () => {
         e.preventDefault()
         
         if (!operacao.trim() || !produto || !modelo || !linha || !posto) {
-            alert('Preencha todos os campos obrigatórios')
+            setTituloErro('Erro!')
+            setMensagemErro('Preencha todos os campos obrigatórios')
+            setModalErroAberto(true)
             return
         }
 
@@ -312,11 +321,13 @@ const Operacoes = () => {
             if (operacaoEditandoId) {
                 // Atualizar operação existente
                 await operacoesAPI.atualizar(parseInt(operacaoEditandoId), dadosOperacao)
-                alert('Operação atualizada com sucesso!')
+                setMensagemSucesso('Operação atualizada com sucesso!')
+                setModalSucessoAberto(true)
             } else {
                 // Criar nova operação
                 await operacoesAPI.criar(dadosOperacao)
-                alert('Operação cadastrada com sucesso!')
+                setMensagemSucesso('Operação cadastrada com sucesso!')
+                setModalSucessoAberto(true)
             }
 
             limparFormulario()
@@ -324,8 +335,11 @@ const Operacoes = () => {
             await carregarOperacoes()
         } catch (error) {
             console.error('Erro ao salvar operação:', error)
-            setErro(error instanceof Error ? error.message : 'Erro ao salvar operação')
-            alert(`Erro: ${error instanceof Error ? error.message : 'Erro ao salvar operação'}`)
+            const errorMessage = error instanceof Error ? error.message : 'Erro ao salvar operação'
+            setErro(errorMessage)
+            setTituloErro('Erro!')
+            setMensagemErro(`Erro: ${errorMessage}`)
+            setModalErroAberto(true)
         } finally {
             setCarregando(false)
         }
@@ -734,6 +748,20 @@ const Operacoes = () => {
                     </div>
                 </div>
             </div>
+
+            <ModalSucesso
+                isOpen={modalSucessoAberto}
+                onClose={() => setModalSucessoAberto(false)}
+                mensagem={mensagemSucesso}
+                titulo="Sucesso!"
+            />
+
+            <ModalErro
+                isOpen={modalErroAberto}
+                onClose={() => setModalErroAberto(false)}
+                mensagem={mensagemErro}
+                titulo={tituloErro}
+            />
         </div>
     )
 }

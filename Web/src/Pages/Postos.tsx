@@ -3,6 +3,8 @@ import TopBar from '../Components/topBar/TopBar'
 import MenuLateral from '../Components/MenuLateral/MenuLateral'
 import CardPosto from '../Components/Postos/CardPosto'
 import ModalConfirmacao from '../Components/Compartilhados/ModalConfirmacao'
+import ModalSucesso from '../Components/Modais/ModalSucesso'
+import ModalErro from '../Components/Modais/ModalErro'
 import { Paginacao } from '../Components/Compartilhados/paginacao'
 import { postosAPI, sublinhasAPI } from '../api/api'
 
@@ -35,6 +37,11 @@ const Postos = () => {
     const [totens, setTotens] = useState<Toten[]>([])
     const [carregando, setCarregando] = useState(false)
     const [modalExcluirAberto, setModalExcluirAberto] = useState(false)
+    const [modalSucessoAberto, setModalSucessoAberto] = useState(false)
+    const [modalErroAberto, setModalErroAberto] = useState(false)
+    const [mensagemSucesso, setMensagemSucesso] = useState('')
+    const [mensagemErro, setMensagemErro] = useState('')
+    const [tituloErro, setTituloErro] = useState('Erro!')
     const [postoSelecionado, setPostoSelecionado] = useState<Posto | null>(null)
     const [postoEditando, setPostoEditando] = useState<Posto | null>(null)
     const [paginaAtual, setPaginaAtual] = useState(1)
@@ -106,17 +113,23 @@ const Postos = () => {
         e.preventDefault()
         
         if (!nome.trim()) {
-            alert('Informe o nome do posto')
+            setTituloErro('Erro!')
+            setMensagemErro('Informe o nome do posto')
+            setModalErroAberto(true)
             return
         }
 
         if (!sublinhaId) {
-            alert('Selecione uma sublinha')
+            setTituloErro('Erro!')
+            setMensagemErro('Selecione uma sublinha')
+            setModalErroAberto(true)
             return
         }
 
         if (!totenId) {
-            alert('Selecione um toten')
+            setTituloErro('Erro!')
+            setMensagemErro('Selecione um toten')
+            setModalErroAberto(true)
             return
         }
 
@@ -128,8 +141,9 @@ const Postos = () => {
                     sublinha_id: sublinhaId,
                     toten_id: totenId
                 })
-                alert('Posto atualizado com sucesso!')
                 setPostoEditando(null)
+                setMensagemSucesso('Posto atualizado com sucesso!')
+                setModalSucessoAberto(true)
             } else {
                 // Criar novo posto
                 await postosAPI.criar({
@@ -137,7 +151,8 @@ const Postos = () => {
                     sublinha_id: sublinhaId,
                     toten_id: totenId
                 })
-                alert('Posto cadastrado com sucesso!')
+                setMensagemSucesso('Posto cadastrado com sucesso!')
+                setModalSucessoAberto(true)
             }
             
             // Limpar formulário
@@ -154,7 +169,9 @@ const Postos = () => {
             }
         } catch (error: any) {
             const errorMessage = error?.message || 'Erro ao cadastrar posto. Tente novamente.'
-            alert(`Erro: ${errorMessage}`)
+            setTituloErro('Erro!')
+            setMensagemErro(`Erro: ${errorMessage}`)
+            setModalErroAberto(true)
         }
     }
 
@@ -389,6 +406,20 @@ const Postos = () => {
                 textoConfirmar="Excluir"
                 textoCancelar="Cancelar"
                 corHeader="laranja"
+            />
+
+            <ModalSucesso
+                isOpen={modalSucessoAberto}
+                onClose={() => setModalSucessoAberto(false)}
+                mensagem={mensagemSucesso}
+                titulo="Sucesso!"
+            />
+
+            <ModalErro
+                isOpen={modalErroAberto}
+                onClose={() => setModalErroAberto(false)}
+                mensagem={mensagemErro}
+                titulo={tituloErro}
             />
         </div>
     )

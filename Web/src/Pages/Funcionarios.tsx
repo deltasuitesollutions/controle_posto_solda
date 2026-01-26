@@ -3,6 +3,8 @@ import TopBar from '../Components/topBar/TopBar'
 import MenuLateral from '../Components/MenuLateral/MenuLateral'
 import ModalEditarFuncionario from '../Components/Funcionarios/ModalEditarFuncionario'
 import ModalConfirmacao from '../Components/Compartilhados/ModalConfirmacao'
+import ModalSucesso from '../Components/Modais/ModalSucesso'
+import ModalErro from '../Components/Modais/ModalErro'
 import { Paginacao } from '../Components/Compartilhados/paginacao'
 import { funcionariosAPI, operacoesAPI } from '../api/api'
 
@@ -38,6 +40,11 @@ const Funcionarios = () => {
     const [modalEditarAberto, setModalEditarAberto] = useState(false)
     const [modalExcluirAberto, setModalExcluirAberto] = useState(false)
     const [modalStatusAberto, setModalStatusAberto] = useState(false)
+    const [modalSucessoAberto, setModalSucessoAberto] = useState(false)
+    const [modalErroAberto, setModalErroAberto] = useState(false)
+    const [mensagemSucesso, setMensagemSucesso] = useState('')
+    const [mensagemErro, setMensagemErro] = useState('')
+    const [tituloErro, setTituloErro] = useState('Erro!')
     const [funcionarioSelecionado, setFuncionarioSelecionado] = useState<Funcionario | null>(null)
     const [paginaAtual, setPaginaAtual] = useState(1)
     const [itensPorPagina] = useState(10)
@@ -51,6 +58,8 @@ const Funcionarios = () => {
         setModalEditarAberto(false)
         setModalExcluirAberto(false)
         setModalStatusAberto(false)
+        setModalSucessoAberto(false)
+        setModalErroAberto(false)
         setFuncionarioSelecionado(null)
     }
 
@@ -170,17 +179,21 @@ const Funcionarios = () => {
                 rfidInputRef.current?.focus()
             }, 100)
             
-            alert('Funcionário cadastrado com sucesso!')
+            setMensagemSucesso('Funcionário cadastrado com sucesso!')
+            setModalSucessoAberto(true)
         } catch (error: any) {
             const errorMessage = error?.message || 'Erro ao cadastrar funcionário. Tente novamente.'
             
             if (errorMessage.toLowerCase().includes('tag rfid') && 
                 (errorMessage.toLowerCase().includes('já está cadastrada') || 
                  errorMessage.toLowerCase().includes('já está associada'))) {
-                alert(`ATENÇÃO: ${errorMessage}\n\nEssa tag RFID já está cadastrada no sistema.`)
+                setTituloErro('ATENÇÃO')
+                setMensagemErro(`${errorMessage}\n\nEssa tag RFID já está cadastrada no sistema.`)
             } else {
-                alert(`Erro ao cadastrar funcionário: ${errorMessage}`)
+                setTituloErro('Erro!')
+                setMensagemErro(`Erro ao cadastrar funcionário: ${errorMessage}`)
             }
+            setModalErroAberto(true)
         }
     }
 
@@ -199,7 +212,9 @@ const Funcionarios = () => {
         
         const funcionarioId = funcionarioSelecionado.id || (funcionarioSelecionado as any).funcionario_id
         if (!funcionarioId) {
-            alert('Erro: ID do funcionário não encontrado')
+            setTituloErro('Erro!')
+            setMensagemErro('Erro: ID do funcionário não encontrado')
+            setModalErroAberto(true)
             return
         }
         
@@ -220,17 +235,21 @@ const Funcionarios = () => {
             
             await carregarFuncionarios()
             fecharModal()
-            alert('Funcionário atualizado com sucesso!')
+            setMensagemSucesso('Funcionário atualizado com sucesso!')
+            setModalSucessoAberto(true)
         } catch (error: any) {
             const errorMessage = error?.message || 'Erro ao atualizar funcionário. Tente novamente.'
             
             if (errorMessage.toLowerCase().includes('tag rfid') && 
                 (errorMessage.toLowerCase().includes('já está cadastrada') || 
                  errorMessage.toLowerCase().includes('já está associada'))) {
-                alert(`ATENÇÃO: ${errorMessage}\n\nEssa tag RFID já está cadastrada no sistema.`)
+                setTituloErro('ATENÇÃO')
+                setMensagemErro(`${errorMessage}\n\nEssa tag RFID já está cadastrada no sistema.`)
             } else {
-                alert(`Erro ao atualizar funcionário: ${errorMessage}`)
+                setTituloErro('Erro!')
+                setMensagemErro(`Erro ao atualizar funcionário: ${errorMessage}`)
             }
+            setModalErroAberto(true)
         }
     }
 
@@ -673,6 +692,20 @@ const Funcionarios = () => {
                 } : undefined}
                 camposItem={['matricula', 'nome']}
                 mostrarDetalhes={true}
+            />
+
+            <ModalSucesso
+                isOpen={modalSucessoAberto}
+                onClose={fecharModal}
+                mensagem={mensagemSucesso}
+                titulo="Sucesso!"
+            />
+
+            <ModalErro
+                isOpen={modalErroAberto}
+                onClose={fecharModal}
+                mensagem={mensagemErro}
+                titulo={tituloErro}
             />
 
         </div>

@@ -5,6 +5,8 @@ import { Paginacao } from '../Components/Compartilhados/paginacao'
 import FormCadastrarLinha from '../Components/Linhas/FormCadastrarLinha'
 import FormCadastrarSublinha from '../Components/Linhas/FormCadastrarSublinha'
 import CardLinha from '../Components/Linhas/CardLinha'
+import ModalSucesso from '../Components/Modais/ModalSucesso'
+import ModalErro from '../Components/Modais/ModalErro'
 import { linhasAPI, sublinhasAPI } from '../api/api'
 
 interface Sublinha {
@@ -39,6 +41,11 @@ const Linhas = () => {
     const [nomeSublinhaEditando, setNomeSublinhaEditando] = useState('')
     const [paginaAtual, setPaginaAtual] = useState(1)
     const [itensPorPagina] = useState(10)
+    const [modalSucessoAberto, setModalSucessoAberto] = useState(false)
+    const [modalErroAberto, setModalErroAberto] = useState(false)
+    const [mensagemSucesso, setMensagemSucesso] = useState('')
+    const [mensagemErro, setMensagemErro] = useState('')
+    const [tituloErro, setTituloErro] = useState('Erro!')
 
     useEffect(() => {
         if (abaAtiva === 'listar') {
@@ -90,16 +97,21 @@ const Linhas = () => {
         e.preventDefault()
         
         if (!nomeLinha.trim()) {
-            alert('Informe o nome da linha')
+            setTituloErro('Erro!')
+            setMensagemErro('Informe o nome da linha')
+            setModalErroAberto(true)
             return
         }
 
         try {
             await linhasAPI.criar({ nome: nomeLinha.trim() })
             setNomeLinha('')
-            alert('Linha cadastrada com sucesso!')
+            setMensagemSucesso('Linha cadastrada com sucesso!')
+            setModalSucessoAberto(true)
         } catch (error: any) {
-            alert(`Erro ao cadastrar linha: ${error?.message || 'Tente novamente.'}`)
+            setTituloErro('Erro!')
+            setMensagemErro(`Erro ao cadastrar linha: ${error?.message || 'Tente novamente.'}`)
+            setModalErroAberto(true)
         }
     }
 
@@ -107,12 +119,16 @@ const Linhas = () => {
         e.preventDefault()
         
         if (!nomeSublinha.trim()) {
-            alert('Informe o nome da sublinha')
+            setTituloErro('Erro!')
+            setMensagemErro('Informe o nome da sublinha')
+            setModalErroAberto(true)
             return
         }
 
         if (!linhaSelecionada) {
-            alert('Selecione uma linha')
+            setTituloErro('Erro!')
+            setMensagemErro('Selecione uma linha')
+            setModalErroAberto(true)
             return
         }
 
@@ -122,9 +138,12 @@ const Linhas = () => {
                 linha_id: linhaSelecionada
             })
             setNomeSublinha('')
-            alert('Sublinha cadastrada com sucesso!')
+            setMensagemSucesso('Sublinha cadastrada com sucesso!')
+            setModalSucessoAberto(true)
         } catch (error: any) {
-            alert(`Erro ao cadastrar sublinha: ${error?.message || 'Tente novamente.'}`)
+            setTituloErro('Erro!')
+            setMensagemErro(`Erro ao cadastrar sublinha: ${error?.message || 'Tente novamente.'}`)
+            setModalErroAberto(true)
         }
     }
 
@@ -165,7 +184,9 @@ const Linhas = () => {
 
     const handleSalvarEdicaoLinha = async (linhaId: number) => {
         if (!nomeLinhaEditando.trim()) {
-            alert('Informe o nome da linha')
+            setTituloErro('Erro!')
+            setMensagemErro('Informe o nome da linha')
+            setModalErroAberto(true)
             return
         }
 
@@ -174,9 +195,12 @@ const Linhas = () => {
             await carregarLinhas()
             setLinhaEditando(null)
             setNomeLinhaEditando('')
-            alert('Linha atualizada com sucesso!')
+            setMensagemSucesso('Linha atualizada com sucesso!')
+            setModalSucessoAberto(true)
         } catch (error: any) {
-            alert(`Erro ao atualizar linha: ${error?.message || 'Tente novamente.'}`)
+            setTituloErro('Erro!')
+            setMensagemErro(`Erro ao atualizar linha: ${error?.message || 'Tente novamente.'}`)
+            setModalErroAberto(true)
         }
     }
 
@@ -349,6 +373,20 @@ const Linhas = () => {
                     </div>
                 </div>
             </div>
+
+            <ModalSucesso
+                isOpen={modalSucessoAberto}
+                onClose={() => setModalSucessoAberto(false)}
+                mensagem={mensagemSucesso}
+                titulo="Sucesso!"
+            />
+
+            <ModalErro
+                isOpen={modalErroAberto}
+                onClose={() => setModalErroAberto(false)}
+                mensagem={mensagemErro}
+                titulo={tituloErro}
+            />
         </div>
     )
 }

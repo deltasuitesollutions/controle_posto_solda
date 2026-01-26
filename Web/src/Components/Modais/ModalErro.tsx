@@ -24,7 +24,7 @@ const ModalErro = ({ isOpen, onClose, mensagem, titulo = 'Erro!' }: ModalErroPro
                     </div>
                     <h3 className="text-lg font-semibold text-gray-800">{titulo}</h3>
                 </div>
-                <p className="text-gray-600 mb-6">{mensagem}</p>
+                <p className="text-gray-600 mb-6 whitespace-pre-line">{mensagem}</p>
                 <div className="flex justify-end">
                     <button
                         onClick={onClose}

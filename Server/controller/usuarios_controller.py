@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
 from Server.services import usuarios_service
+from Server.services import device_info_service
 
 usuarios_bp = Blueprint('usuarios', __name__, url_prefix='/api/usuarios')
 
@@ -23,6 +24,17 @@ def login():
 
         if not usuario:
             return jsonify({"erro": "Usuário ou senha inválidos"}), 401
+
+        # Capturar informações do dispositivo (Raspberry Pi) no primeiro login
+        # Isso registra automaticamente o device_info no banco se ainda não existir
+        try:
+            device_info = device_info_service.registrar_device_info()
+            # Adicionar device_id ao retorno do login para referência futura
+            usuario['device_id'] = device_info.get('device_id')
+        except Exception as device_error:
+            # Não falhar o login se houver erro ao capturar device_info
+            # Apenas logar o erro para debug
+            print(f"Aviso: Erro ao capturar device_info no login: {device_error}")
 
         return jsonify(usuario), 200
 

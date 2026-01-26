@@ -1,9 +1,6 @@
 version: "3.9"
 
 services:
-  # ============================================
-  # POSTGRESQL DATABASE
-  # ============================================
   postgres:
     image: postgres:16-alpine
     container_name: postgres_db
@@ -24,9 +21,6 @@ services:
     networks:
       - app-network
 
-  # ============================================
-  # BACKEND API (FLASK)
-  # ============================================
   backend:
     build:
       context: .
@@ -43,13 +37,11 @@ services:
       FLASK_HOST: ${FLASK_HOST:-0.0.0.0}
       FLASK_PORT: ${FLASK_PORT:-8000}
       SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
-
       DB_HOST: ${DB_HOST:-postgres}
       DB_NAME: ${DB_NAME:-postos}
       DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       DB_PORT: ${DB_PORT:-5432}
-
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health').read()"]
@@ -60,9 +52,6 @@ services:
     networks:
       - app-network
 
-  # ============================================
-  # FRONTEND (VITE)
-  # ============================================
   frontend:
     build:
       context: .
