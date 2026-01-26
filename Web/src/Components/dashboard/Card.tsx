@@ -86,7 +86,7 @@ const Card = ({posto, mod, peca_nome, operador, habilitado, turno, comentario: c
 
         {comentario_aviso && (
           <div className='bg-red-50 border border-red-200 rounded p-2'>
-            <p className='text-xs font-semibold text-red-800 mb-1'>⚠️ Aviso</p>
+            <p className='text-xs font-semibold text-red-800 mb-1'>Aviso</p>
             <p className='text-xs text-red-700'>{comentario_aviso}</p>
           </div>
         )}

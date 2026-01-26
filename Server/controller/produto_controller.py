@@ -20,18 +20,6 @@ def criarProduto():
         if 'erro' in resultado:
             return jsonify(resultado), 400
         
-        # Registrar log de auditoria
-        usuario_id_requisicao = obter_usuario_id_da_requisicao()
-        if usuario_id_requisicao:
-            audit_service.registrar_acao(
-                usuario_id=usuario_id_requisicao,
-                acao='criar',
-                entidade='produto',
-                entidade_id=resultado.get('id'),
-                dados_novos={'nome': nome},
-                detalhes=f"Produto '{nome}' criado"
-            )
-        
         return jsonify(resultado)
     except Exception as e:
         print(f'Erro ao criar modelo: {e}')
@@ -56,19 +44,6 @@ def atualizarProduto(produto_id):
         if 'erro' in resultado:
             return jsonify(resultado), 201
         
-        # Registrar log de auditoria
-        usuario_id_requisicao = obter_usuario_id_da_requisicao()
-        if usuario_id_requisicao:
-            audit_service.registrar_acao(
-                usuario_id=usuario_id_requisicao,
-                acao='atualizar',
-                entidade='produto',
-                entidade_id=produto_id,
-                dados_anteriores=produto_anterior,
-                dados_novos={'nome': nome} if nome else None,
-                detalhes=f"Produto ID {produto_id} atualizado"
-            )
-        
         return jsonify(resultado)
     except Exception as e:
         print(f'Erro ao atualizar produto: {e}')
@@ -86,18 +61,6 @@ def deletarProduto(produto_id):
 
         if 'erro' in resultado:
             return jsonify(resultado), 201
-        
-        # Registrar log de auditoria
-        usuario_id_requisicao = obter_usuario_id_da_requisicao()
-        if usuario_id_requisicao:
-            audit_service.registrar_acao(
-                usuario_id=usuario_id_requisicao,
-                acao='deletar',
-                entidade='produto',
-                entidade_id=produto_id,
-                dados_anteriores=produto_anterior,
-                detalhes=f"Produto ID {produto_id} deletado"
-            )
         
         return jsonify(resultado)
     except Exception as e:

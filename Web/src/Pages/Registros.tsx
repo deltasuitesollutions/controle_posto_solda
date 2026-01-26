@@ -119,7 +119,6 @@ const Registros = () => {
 
             const resposta = await registrosAPI.listar(params)
             
-            // Mapear dados do backend para o formato esperado
             const registrosMapeados: Registro[] = resposta.registros.map((reg: any) => ({
                 id: reg.id,
                 data: reg.data_inicio || '',
