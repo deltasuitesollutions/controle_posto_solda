@@ -17,6 +17,8 @@ interface CardProps {
   comentario?: string;
   comentario_aviso?: string;
   registro_id?: number;
+  serial?: string;
+  hostname?: string;
 }
 
 interface Sublinha {
@@ -246,6 +248,8 @@ const Dashboard = () => {
                       comentario={item.comentario}
                       comentario_aviso={item.comentario_aviso}
                       registro_id={item.registro_id}
+                      serial={item.serial}
+                      hostname={item.hostname}
                     />
                   ))}
                 </div>

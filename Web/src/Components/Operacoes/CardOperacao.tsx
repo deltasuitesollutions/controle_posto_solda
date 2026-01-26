@@ -10,6 +10,8 @@ interface Operacao {
     totens: string[]
     pecas: string[]
     codigos: string[]
+    serial?: string
+    hostname?: string
 }
 
 interface CardOperacaoProps {
@@ -86,6 +88,23 @@ const CardOperacao: React.FC<CardOperacaoProps> = ({
                             <p className="font-medium text-gray-900">{operacao.posto}</p>
                         </div>
                     </div>
+
+                    {(operacao.serial || operacao.hostname) && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            {operacao.serial && (
+                                <div>
+                                    <span className="text-xs text-gray-500">Serial:</span>
+                                    <p className="font-medium text-gray-900">{operacao.serial}</p>
+                                </div>
+                            )}
+                            {operacao.hostname && (
+                                <div>
+                                    <span className="text-xs text-gray-500">Hostname:</span>
+                                    <p className="font-medium text-gray-900">{operacao.hostname}</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     {operacao.totens.length > 0 && (
                         <div className="mb-4">

@@ -12,10 +12,12 @@ interface CardProps {
     comentario?: string;
     comentario_aviso?: string;
     registro_id?: number;
+    serial?: string;
+    hostname?: string;
 }
 
 
-const Card = ({posto, mod, peca_nome, operador, habilitado, turno, comentario: comentarioInicial, comentario_aviso, registro_id}: CardProps) => {
+const Card = ({posto, mod, peca_nome, operador, habilitado, turno, comentario: comentarioInicial, comentario_aviso, registro_id, serial, hostname}: CardProps) => {
   const [comentario, setComentario] = useState(comentarioInicial || '');
   const [salvando, setSalvando] = useState(false);
   const [mensagemSucesso, setMensagemSucesso] = useState(false);
@@ -83,6 +85,26 @@ const Card = ({posto, mod, peca_nome, operador, habilitado, turno, comentario: c
             <p className='text-sm font-semibold text-gray-800'>{turno || 'Não definido'}</p>
           </div>
         </div>
+
+        {(serial || hostname) && (
+          <div className='grid grid-cols-1 gap-2'>
+            <div className='bg-gray-50 rounded p-2 border border-gray-200'>
+              <p className='text-xs text-gray-600 mb-1'>Dispositivo</p>
+              {serial && (
+                <p className='text-xs font-semibold text-gray-800 mb-1'>
+                  <i className='bi bi-hash mr-1'></i>
+                  Serial: {serial}
+                </p>
+              )}
+              {hostname && (
+                <p className='text-xs font-semibold text-gray-800'>
+                  <i className='bi bi-pc-display mr-1'></i>
+                  {hostname}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
         {comentario_aviso && (
           <div className='bg-red-50 border border-red-200 rounded p-2'>

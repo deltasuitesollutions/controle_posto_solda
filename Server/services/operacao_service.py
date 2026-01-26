@@ -7,6 +7,34 @@ from Server.models.linha import Linha
 from Server.models.posto import Posto
 from Server.models.peca import Peca
 from Server.models.database import DatabaseConnection
+from Server.services import dispositivo_raspberry_service
+
+
+def _buscar_info_dispositivo_por_toten(toten_id: int) -> Dict[str, Any]:
+    """
+    Busca informações do dispositivo Raspberry baseado no toten_id
+    Retorna dict com serial, hostname e dispositivo_id ou valores vazios
+    """
+    try:
+        dispositivos = dispositivo_raspberry_service.listar_dispositivos()
+        if dispositivos and len(dispositivos) > 0:
+            # Associar sequencialmente: dispositivo 0 -> toten 1, dispositivo 1 -> toten 2, etc.
+            toten_index = toten_id - 1 if toten_id > 0 else 0
+            if toten_index < len(dispositivos):
+                dispositivo = dispositivos[toten_index]
+                return {
+                    'serial': dispositivo.get('serial', ''),
+                    'hostname': dispositivo.get('hostname', ''),
+                    'dispositivo_id': dispositivo.get('id')
+                }
+    except Exception as e:
+        print(f'Erro ao buscar dispositivo por toten: {e}')
+    
+    return {
+        'serial': '',
+        'hostname': '',
+        'dispositivo_id': None
+    }
 
 # LISTAR
 def listar_operacoes() -> List[Dict[str, Any]]:
@@ -34,11 +62,7 @@ def listar_operacoes() -> List[Dict[str, Any]]:
                 totens_rows = DatabaseConnection.execute_query(query_totens, (operacao.operacao_id,), fetch_all=True)
                 totens = [row[0] for row in totens_rows] if totens_rows else []
                 if not totens and posto:
-                    from Server.enums.toten_enum import TotenID
-                    todos_totens = TotenID.listar_todos()
-                    toten_info = next((t for t in todos_totens if t['id'] == posto.toten_id), None)
-                    if toten_info:
-                        totens = [toten_info.get('nome', f'ID-{posto.toten_id}')]
+                    totens = [f'ID-{posto.toten_id}']
                 
                 query_pecas = """
                     SELECT p.peca_id, p.codigo, p.nome
@@ -67,6 +91,16 @@ def listar_operacoes() -> List[Dict[str, Any]]:
                 if not codigos_list and pecas_codigos:
                     codigos_list = [pecas_codigos[0]]
                 
+                # Buscar informações do dispositivo se houver posto
+                serial = ''
+                hostname = ''
+                dispositivo_id = None
+                if posto:
+                    info_dispositivo = _buscar_info_dispositivo_por_toten(posto.toten_id)
+                    serial = info_dispositivo['serial']
+                    hostname = info_dispositivo['hostname']
+                    dispositivo_id = info_dispositivo['dispositivo_id']
+                
                 operacoes_agrupadas[chave] = {
                     'id': str(operacao.operacao_id),  
                     'operacao': operacao.nome or operacao.codigo_operacao,  
@@ -77,7 +111,10 @@ def listar_operacoes() -> List[Dict[str, Any]]:
                     'totens': totens,
                     'pecas': pecas_codigos,
                     'pecas_nomes': pecas_nomes,  
-                    'codigos': codigos_list
+                    'codigos': codigos_list,
+                    'serial': serial,
+                    'hostname': hostname,
+                    'dispositivo_id': dispositivo_id
                 }
         
         resultado = list(operacoes_agrupadas.values())
@@ -116,11 +153,7 @@ def buscar_operacao_por_id(operacao_id: int) -> Dict[str, Any]:
         totens = [row[0] for row in totens_rows] if totens_rows else []
         
         if not totens and posto:
-            from Server.enums.toten_enum import TotenID
-            todos_totens = TotenID.listar_todos()
-            toten_info = next((t for t in todos_totens if t['id'] == posto.toten_id), None)
-            if toten_info:
-                totens = [toten_info.get('nome', f'ID-{posto.toten_id}')]
+            totens = [f'ID-{posto.toten_id}']
         
         query_pecas = """
             SELECT p.peca_id, p.codigo, p.nome
@@ -147,6 +180,16 @@ def buscar_operacao_por_id(operacao_id: int) -> Dict[str, Any]:
         if not codigos and pecas_codigos:
             codigos = [pecas_codigos[0]]
         
+        # Buscar informações do dispositivo se houver posto
+        serial = ''
+        hostname = ''
+        dispositivo_id = None
+        if posto:
+            info_dispositivo = _buscar_info_dispositivo_por_toten(posto.toten_id)
+            serial = info_dispositivo['serial']
+            hostname = info_dispositivo['hostname']
+            dispositivo_id = info_dispositivo['dispositivo_id']
+        
         return {
             'id': str(operacao.operacao_id),
             'operacao': operacao.nome or operacao.codigo_operacao, 
@@ -157,7 +200,10 @@ def buscar_operacao_por_id(operacao_id: int) -> Dict[str, Any]:
             'totens': totens,
             'pecas': pecas_codigos,
             'pecas_nomes': pecas_nomes,  # Nomes das peças
-            'codigos': codigos
+            'codigos': codigos,
+            'serial': serial,
+            'hostname': hostname,
+            'dispositivo_id': dispositivo_id
         }
     except Exception as erro:
         print(f'Erro ao buscar operação: {erro}')

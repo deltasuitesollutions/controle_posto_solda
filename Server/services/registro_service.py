@@ -5,7 +5,34 @@ from Server.models import Funcionario, Modelo, Posto
 from Server.models.operacao import Operacao
 from Server.models.produto import Produto
 from Server.models.peca import Peca
-from Server.enums.toten_enum import TotenID
+from Server.services import dispositivo_raspberry_service
+
+
+def _buscar_info_dispositivo_por_toten(toten_id: int) -> Dict[str, Any]:
+    """
+    Busca informações do dispositivo Raspberry baseado no toten_id
+    Retorna dict com serial, hostname e dispositivo_id ou valores vazios
+    """
+    try:
+        dispositivos = dispositivo_raspberry_service.listar_dispositivos()
+        if dispositivos and len(dispositivos) > 0:
+            # Associar sequencialmente: dispositivo 0 -> toten 1, dispositivo 1 -> toten 2, etc.
+            toten_index = toten_id - 1 if toten_id > 0 else 0
+            if toten_index < len(dispositivos):
+                dispositivo = dispositivos[toten_index]
+                return {
+                    'serial': dispositivo.get('serial', ''),
+                    'hostname': dispositivo.get('hostname', ''),
+                    'dispositivo_id': dispositivo.get('id')
+                }
+    except Exception as e:
+        print(f'Erro ao buscar dispositivo por toten: {e}')
+    
+    return {
+        'serial': '',
+        'hostname': '',
+        'dispositivo_id': None
+    }
 
 
 def _formatar_hora(hora: Optional[str]) -> Optional[str]:
@@ -186,6 +213,9 @@ def _formatar_registro(row: Tuple, pecas_cache: Dict[int, List[Dict]], totens_di
     
     # Buscar totem do posto
     totem_info = None
+    serial = ''
+    hostname = ''
+    dispositivo_id = None
     if p_toten_id is not None and p_toten_id != 0:
         try:
             toten_id_int = int(p_toten_id)
@@ -200,6 +230,12 @@ def _formatar_registro(row: Tuple, pecas_cache: Dict[int, List[Dict]], totens_di
                     "id": toten_id_int,
                     "nome": f"Totem {toten_id_int}"
                 }
+            
+            # Buscar informações do dispositivo
+            info_dispositivo = _buscar_info_dispositivo_por_toten(toten_id_int)
+            serial = info_dispositivo['serial']
+            hostname = info_dispositivo['hostname']
+            dispositivo_id = info_dispositivo['dispositivo_id']
         except (ValueError, TypeError):
             totem_info = None
     
@@ -221,6 +257,9 @@ def _formatar_registro(row: Tuple, pecas_cache: Dict[int, List[Dict]], totens_di
             "nome": p_nome or 'N/A'
         },
         "totem": totem_info,
+        "serial": serial,
+        "hostname": hostname,
+        "dispositivo_id": dispositivo_id,
         "modelo": {
             "id": m_id,
             "codigo": m_nome or 'N/A',
@@ -302,9 +341,9 @@ def listar_registros(
             where_clause, params, limit, offset, tem_coluna_nome_operacao
         )
         
-        # Otimização: buscar totens uma única vez
-        totens = TotenID.listar_todos()
-        totens_dict = {int(t['id']): t for t in totens}
+        # Otimização: buscar totens uma única vez (não usado mais, mas mantido para compatibilidade)
+        totens = []
+        totens_dict = {}
         
         # Otimização: buscar peças de modelos únicos de uma vez
         modelos_ids_unicos = set()

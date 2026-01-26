@@ -228,7 +228,9 @@ const Operacoes = () => {
                 linha: op.linha,
                 posto: op.posto,
                 totens: op.totens || [],
-                pecas: op.pecas || []
+                pecas: op.pecas || [],
+                serial: op.serial || '',
+                hostname: op.hostname || ''
             })))
         } catch (error) {
             console.error('Erro ao carregar operações:', error)

@@ -30,6 +30,8 @@ interface Registro {
     peca?: string
     pecas?: Array<{ id: number; codigo: string; nome: string }>
     codigo_producao?: string
+    serial?: string
+    hostname?: string
 }
 
 const Registros = () => {
@@ -140,7 +142,9 @@ const Registros = () => {
                 comentarios: reg.comentarios || '-',
                 peca: reg.peca?.nome || reg.peca?.codigo || '',
                 pecas: reg.pecas || [],
-                codigo_producao: reg.codigo_producao || ''
+                codigo_producao: reg.codigo_producao || '',
+                serial: reg.serial || '',
+                hostname: reg.hostname || ''
             }))
 
             setRegistros(registrosMapeados)
@@ -504,6 +508,12 @@ const Registros = () => {
                                                         Totem
                                                     </th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Serial
+                                                    </th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Hostname
+                                                    </th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                         Posto
                                                     </th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -560,6 +570,12 @@ const Registros = () => {
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                             {registro.totem || '-'}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {registro.serial || '-'}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {registro.hostname || '-'}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                             {registro.posto || '-'}

@@ -8,6 +8,34 @@ from Server.models.funcionario import Funcionario
 from Server.models.modelo import Modelo
 from Server.models.operacao import Operacao
 from Server.models.sublinha import Sublinha
+from Server.services import dispositivo_raspberry_service
+
+
+def _buscar_info_dispositivo_por_toten(toten_id: int) -> Dict[str, Any]:
+    """
+    Busca informações do dispositivo Raspberry baseado no toten_id
+    Retorna dict com serial, hostname e dispositivo_id ou valores vazios
+    """
+    try:
+        dispositivos = dispositivo_raspberry_service.listar_dispositivos()
+        if dispositivos and len(dispositivos) > 0:
+            # Associar sequencialmente: dispositivo 0 -> toten 1, dispositivo 1 -> toten 2, etc.
+            toten_index = toten_id - 1 if toten_id > 0 else 0
+            if toten_index < len(dispositivos):
+                dispositivo = dispositivos[toten_index]
+                return {
+                    'serial': dispositivo.get('serial', ''),
+                    'hostname': dispositivo.get('hostname', ''),
+                    'dispositivo_id': dispositivo.get('id')
+                }
+    except Exception as e:
+        print(f'Erro ao buscar dispositivo por toten: {e}')
+    
+    return {
+        'serial': '',
+        'hostname': '',
+        'dispositivo_id': None
+    }
 
 
 def buscar_postos_em_uso() -> Dict[str, Any]:
@@ -68,6 +96,9 @@ def buscar_postos_em_uso() -> Dict[str, Any]:
             if posto.sublinha_id not in postos_por_sublinha:
                 postos_por_sublinha[posto.sublinha_id] = []
             
+            # Buscar informações do dispositivo
+            info_dispositivo = _buscar_info_dispositivo_por_toten(posto.toten_id)
+            
             # Criar estrutura básica do posto (zerada)
             posto_info = {
                 'posto_id': posto.posto_id,
@@ -85,7 +116,10 @@ def buscar_postos_em_uso() -> Dict[str, Any]:
                 'funcionario_id': None,
                 'registro_id': None,
                 'comentario': None,
-                'comentario_aviso': None
+                'comentario_aviso': None,
+                'serial': info_dispositivo['serial'],
+                'hostname': info_dispositivo['hostname'],
+                'dispositivo_id': info_dispositivo['dispositivo_id']
             }
             postos_por_sublinha[posto.sublinha_id].append(posto_info)
         
@@ -236,7 +270,10 @@ def buscar_postos_em_uso() -> Dict[str, Any]:
                     'funcionario_id': None,
                     'registro_id': None,
                     'comentario': None,
-                    'comentario_aviso': None
+                    'comentario_aviso': None,
+                    'serial': '',
+                    'hostname': '',
+                    'dispositivo_id': None
                 }
                 postos_da_sublinha.append(posto_vazio)
                 numero_posto_global += 1
