@@ -6,45 +6,68 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+def generate_network_origins(
+    base_ip: str,
+    start: int,
+    count: int,
+    ports: list[int]
+) -> list[str]:
+    origins = []
+
+    for i in range(start, start + count):
+        for port in ports:
+            origins.append(f"{base_ip}{i}:{port}")
+
+    return origins
+
+
 def get_cors_origins() -> Union[str, List[str]]:
     is_prod = os.getenv('FLASK_ENV') == 'production'
-    
-    cors_origins_env = os.getenv('CORS_ORIGINS', '')
+
+    # Se vier explícito no env, sempre prioriza
+    cors_origins_env = os.getenv('CORS_ORIGINS')
     if cors_origins_env:
-        origins = [origin.strip() for origin in cors_origins_env.split(',')]
-        return origins
-    
-    if is_prod:
-        return ['http://localhost:5173', 'http://127.0.0.1:5173']
-    else:
-        default_origins = [
+        return [origin.strip() for origin in cors_origins_env.split(',')]
+
+    if not is_prod:
+        return [
             'http://localhost:5173',
-            'http://127.0.0.1:5173',
-            'http://192.168.0.184:5173',
-            'http://192.168.0.185:5173',
-            'http://192.168.0.184:5173',
-            'http://192.168.0.184:8000'
+            'http://127.0.0.1:5173'
         ]
-        return default_origins
+
+    # ===== PRODUÇÃO =====
+    base_ip = os.getenv('NETWORK_BASE', 'http://192.168.0.')
+    units = int(os.getenv('UNITS_COUNT', 12))
+    ports = [int(p) for p in os.getenv('ALLOWED_PORTS', '5173').split(',')]
+
+    network_origins = generate_network_origins(
+        base_ip=base_ip,
+        start=180,  # ex: começa no 192.168.0.180
+        count=units,
+        ports=ports
+    )
+
+    return network_origins
 
 def get_socketio_cors_origins() -> Union[str, List[str]]:
     is_prod = os.getenv('FLASK_ENV') == 'production'
-    cors_origins_env = os.getenv('CORS_ORIGINS', '')
-    
-    if is_prod:
-        if cors_origins_env:
-            return [origin.strip() for origin in cors_origins_env.split(',')]
-        else:
-            return ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://192.168.0.184:5173']
-    else:
+
+    if not is_prod:
         return '*'
 
-def get_flask_config() -> dict:
-    return {
-        'SECRET_KEY': os.getenv('SECRET_KEY', secrets.token_hex(32)),
-        'PERMANENT_SESSION_LIFETIME': timedelta(days=30),
-        'SESSION_COOKIE_HTTPONLY': True,
-        'SESSION_COOKIE_SECURE': os.getenv('FLASK_ENV') == 'production',
-        'SESSION_COOKIE_SAMESITE': 'Lax'
-    }
+    cors_origins_env = os.getenv('CORS_ORIGINS')
+    if cors_origins_env:
+        return [origin.strip() for origin in cors_origins_env.split(',')]
+
+    base_ip = os.getenv('NETWORK_BASE', 'http://192.168.0.')
+    units = int(os.getenv('UNITS_COUNT', 12))
+    ports = [int(p) for p in os.getenv('ALLOWED_PORTS', '5173').split(',')]
+
+    return generate_network_origins(
+        base_ip=base_ip,
+        start=180,
+        count=units,
+        ports=ports
+    )
+
 

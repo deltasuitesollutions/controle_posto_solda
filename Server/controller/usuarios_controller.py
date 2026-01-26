@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from Server.services import usuarios_service
-from Server.services import device_info_service
+from Server.services import dispositivo_raspberry_service
 
 usuarios_bp = Blueprint('usuarios', __name__, url_prefix='/api/usuarios')
 
@@ -25,16 +25,19 @@ def login():
         if not usuario:
             return jsonify({"erro": "Usuário ou senha inválidos"}), 401
 
-        # Capturar informações do dispositivo (Raspberry Pi) no primeiro login
-        # Isso registra automaticamente o device_info no banco se ainda não existir
+        # Registrar dispositivo Raspberry (serial e hostname) APENAS UMA VEZ
+        # A função registrar_dispositivo_raspberry() já verifica se existe antes de criar
+        # Se já existir, retorna o existente. Se não existir, cria pela primeira vez.
         try:
-            device_info = device_info_service.registrar_device_info()
-            # Adicionar device_id ao retorno do login para referência futura
-            usuario['device_id'] = device_info.get('device_id')
-        except Exception as device_error:
-            # Não falhar o login se houver erro ao capturar device_info
+            dispositivo = dispositivo_raspberry_service.registrar_dispositivo_raspberry()
+            # Adicionar informações do dispositivo ao retorno do login
+            usuario['dispositivo_serial'] = dispositivo.get('serial')
+            usuario['dispositivo_hostname'] = dispositivo.get('hostname')
+            usuario['dispositivo_id'] = dispositivo.get('id')
+        except Exception as dispositivo_error:
+            # Não falhar o login se houver erro ao capturar informações do dispositivo
             # Apenas logar o erro para debug
-            print(f"Aviso: Erro ao capturar device_info no login: {device_error}")
+            print(f"Aviso: Erro ao capturar informações do dispositivo Raspberry no login: {dispositivo_error}")
 
         return jsonify(usuario), 200
 

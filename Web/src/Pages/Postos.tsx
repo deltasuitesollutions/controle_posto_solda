@@ -13,6 +13,8 @@ interface Posto {
     nome: string
     sublinha_id: number
     toten_id: number
+    serial?: string
+    hostname?: string
 }
 
 interface Sublinha {
@@ -25,6 +27,9 @@ interface Sublinha {
 interface Toten {
     id: number
     nome: string
+    serial?: string
+    hostname?: string
+    dispositivo_id?: number
 }
 
 const Postos = () => {
@@ -98,7 +103,9 @@ const Postos = () => {
                 posto_id: p.posto_id,
                 nome: p.nome,
                 sublinha_id: p.sublinha_id,
-                toten_id: p.toten_id
+                toten_id: p.toten_id,
+                serial: p.serial || '',
+                hostname: p.hostname || ''
             }))
             setPostos(dadosNormalizados)
         } catch (error: any) {

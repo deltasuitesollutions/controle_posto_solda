@@ -22,7 +22,8 @@ def register_blueprints(app: Flask):
         dashboard_controller,
         usuarios_controller,
         cancelamento_controller,
-        tags_temporarias_controller
+        tags_temporarias_controller,
+        dispositivo_raspberry_controller
     )
     
     app.register_blueprint(producao_controller.producao_bp)
@@ -42,6 +43,7 @@ def register_blueprints(app: Flask):
     app.register_blueprint(usuarios_controller.usuarios_bp)
     app.register_blueprint(cancelamento_controller.cancelamento_bp)
     app.register_blueprint(tags_temporarias_controller.tags_temporarias_bp)
+    app.register_blueprint(dispositivo_raspberry_controller.dispositivo_raspberry_bp)
     
     logger.info(f"Registrados {len(app.blueprints)} blueprints")
 

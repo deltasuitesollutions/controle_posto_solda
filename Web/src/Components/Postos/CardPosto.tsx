@@ -5,6 +5,8 @@ interface Posto {
     nome: string
     sublinha_id: number
     toten_id: number
+    serial?: string
+    hostname?: string
 }
 
 interface CardPostoProps {
@@ -37,6 +39,18 @@ const CardPosto: React.FC<CardPostoProps> = ({
                                         <i className="bi bi-cpu mr-1"></i>
                                         Totem {posto.toten_id}
                                     </span>
+                                    {posto.serial && (
+                                        <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">
+                                            <i className="bi bi-hash mr-1"></i>
+                                            Serial: {posto.serial}
+                                        </span>
+                                    )}
+                                    {posto.hostname && (
+                                        <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-indigo-100 text-indigo-800">
+                                            <i className="bi bi-pc-display mr-1"></i>
+                                            {posto.hostname}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         </div>

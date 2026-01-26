@@ -10,9 +10,21 @@ parent_dir = os.path.dirname(current_dir)
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
-from Server.config import get_flask_config, get_cors_origins
+from Server.config import get_cors_origins
 from Server.blueprints import register_blueprints
 from Server.websocket_manager import init_socketio
+
+# Importar modelos para garantir que sejam carregados
+try:
+    from Server.models import DispositivoRaspberry
+except ImportError:
+    pass
+
+# Importar services para garantir que sejam carregados
+try:
+    from Server.services import dispositivo_raspberry_service
+except ImportError:
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -39,8 +51,8 @@ def configure_cors(app: Flask):
 def create_app(config: Optional[dict] = None):
     app = Flask(__name__)
     
-    flask_config = get_flask_config()
-    app.config.update(flask_config)
+    # flask_config = get_flask_config()
+    # app.config.update(flask_config)
     
     if config:
         app.config.update(config)
