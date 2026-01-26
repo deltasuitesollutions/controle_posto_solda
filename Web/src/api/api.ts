@@ -1,39 +1,37 @@
-/**
- * ARQUITETURA API-FIRST
- * 
- * IMPORTANTE: Este é o ÚNICO ponto de comunicação entre o frontend e o backend.
- * 
- * REGRAS:
- * - O frontend NUNCA deve acessar o banco de dados diretamente
- * - Todas as operações devem passar por esta API
- * - Não importar models, services ou database do backend
- * - Usar apenas funções HTTP (GET, POST, PUT, DELETE)
- * 
- * Se você precisar acessar dados:
- * 1. Adicione uma função aqui (ex: modelosAPI.criar)
- * 2. Certifique-se de que o endpoint existe no backend (Server/controller/)
- * 3. Use a função no componente React
+/** 
+function getApiBaseUrl(): string {
+  if (import.meta.env.VITE_API_URL) {
+    return `${import.meta.env.VITE_API_URL}/api`
+  }
+ 
+  if (import.meta.env.DEV) {
+    const hostname = window.location.hostname
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+      return `http://${hostname}:8000/api`
+    }
+  }
+  
+  return 'http://localhost:8000/api'
+ }
+
  */
 
-// URL base da API - configurável via variável de ambiente
-// Em desenvolvimento, usa localhost:8000 por padrão
-// Em produção, configure VITE_API_URL no arquivo .env
 const API_BASE_URL = import.meta.env.VITE_API_URL 
   ? `${import.meta.env.VITE_API_URL}/api`
-  : 'http://localhost:8000/api'
-
+  : `http://${window.location.hostname}:8000/api`
+ 
 /**
  * Função auxiliar para fazer requisições HTTP à API
  * 
  * Esta é a única forma permitida de comunicação com o backend.
  * NUNCA importe ou use DatabaseConnection, models ou services diretamente.
  * 
- * @param endpoint - Endpoint da API (ex: '/modelos', '/funcionarios')
- * @param options - Opções do fetch (method, body, headers, etc.)
- * @returns Promise com os dados retornados pela API
+ * @param endpoint 
+ * @param options 
+ * @returns 
  */
+
 async function fetchAPI(endpoint: string, options: RequestInit = {}) {
-  // Obter usuario_id do localStorage se disponível
   let usuarioId: string | null = null
   try {
     const userStr = localStorage.getItem('user')
@@ -50,7 +48,6 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
     ...(options.headers as Record<string, string> || {}),
   }
 
-  // Adicionar usuario_id no header se disponível
   if (usuarioId) {
     headers['X-User-Id'] = usuarioId
   }
@@ -64,12 +61,10 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
   const data = await response.json().catch(() => ({ erro: 'Erro ao processar resposta' }))
   
   if (!response.ok) {
-    // O backend retorna 'erro' (português) quando há erro
     const errorMessage = data.erro || data.error || data.message || `Erro ${response.status}`
     throw new Error(errorMessage)
   }
   
-  // Verificar se a resposta contém um erro mesmo com status 200
   if (data.erro) {
     throw new Error(data.erro)
   }

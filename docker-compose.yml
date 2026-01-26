@@ -2,12 +2,12 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: postgres_db
-    restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-postos}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-deltaSollutions}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -36,12 +36,11 @@ services:
       FLASK_HOST: ${FLASK_HOST:-0.0.0.0}
       FLASK_PORT: ${FLASK_PORT:-8000}
       SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
-      DB_HOST: ${DB_HOST:-postgres}
-      DB_NAME: ${DB_NAME:-postos}
-      DB_USER: ${DB_USER:-postgres}
-      DB_PASSWORD: ${DB_PASSWORD:-postgres}
-      DB_PORT: ${DB_PORT:-5432}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+      DB_HOST: ${POSTGRES_HOST}
+      DB_PORT: ${POSTGRES_PORT}
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
     networks:
       - app-network
 
@@ -55,8 +54,6 @@ services:
       - "${FRONTEND_PORT:-5173}:5173"
     depends_on:
       - backend
-    environment:
-      VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
     networks:
       - app-network
 

@@ -2,26 +2,31 @@ import os
 import secrets
 from datetime import timedelta
 from typing import List, Union
+from dotenv import load_dotenv
 
-# LISTAR
-def get_cors_origins() -> List[str]:
+load_dotenv()
+
+def get_cors_origins() -> Union[str, List[str]]:
     is_prod = os.getenv('FLASK_ENV') == 'production'
     
+    cors_origins_env = os.getenv('CORS_ORIGINS', '')
+    if cors_origins_env:
+        origins = [origin.strip() for origin in cors_origins_env.split(',')]
+        return origins
+    
     if is_prod:
-        cors_origins_env = os.getenv('CORS_ORIGINS', '')
-        if cors_origins_env:
-            return [origin.strip() for origin in cors_origins_env.split(',')]
-        else:
-            return ['http://localhost:5173', 'http://127.0.0.1:5173']
+        return ['http://localhost:5173', 'http://127.0.0.1:5173']
     else:
-        return [
+        default_origins = [
             'http://localhost:5173',
             'http://127.0.0.1:5173',
-            'http://localhost:3000',
-            'http://127.0.0.1:3000'
+            'http://192.168.0.184:5173',
+            'http://192.168.0.185:5173',
+            'http://192.168.0.184:5173',
+            'http://192.168.0.184:8000'
         ]
+        return default_origins
 
-# ORIGIM CORS SOCKETIO
 def get_socketio_cors_origins() -> Union[str, List[str]]:
     is_prod = os.getenv('FLASK_ENV') == 'production'
     cors_origins_env = os.getenv('CORS_ORIGINS', '')
@@ -30,12 +35,10 @@ def get_socketio_cors_origins() -> Union[str, List[str]]:
         if cors_origins_env:
             return [origin.strip() for origin in cors_origins_env.split(',')]
         else:
-            return ['http://localhost:5173', 'http://127.0.0.1:5173']
+            return ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://192.168.0.184:5173']
     else:
         return '*'
 
-
-# CONFIGURAÇÃO FLASK
 def get_flask_config() -> dict:
     return {
         'SECRET_KEY': os.getenv('SECRET_KEY', secrets.token_hex(32)),
