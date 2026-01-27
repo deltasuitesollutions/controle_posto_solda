@@ -274,7 +274,21 @@ def _formatar_registro(row: Tuple, pecas_cache: Dict[int, List[Dict]], totens_di
     if p_toten_id is not None and p_toten_id != 0:
         try:
             toten_id_int = int(p_toten_id)
-            if toten_id_int in totens_dict:
+            
+            # Buscar informações do dispositivo primeiro
+            info_dispositivo = _buscar_info_dispositivo_por_toten(toten_id_int)
+            serial = info_dispositivo['serial']
+            hostname = info_dispositivo['hostname']  # hostname agora contém o usuário do Raspberry
+            dispositivo_id = info_dispositivo['dispositivo_id']
+            
+            # Se encontrou dispositivo com usuário, usar o usuário como nome do totem
+            if hostname:
+                totem_info = {
+                    "id": toten_id_int,
+                    "nome": hostname,  # Usar o usuário do Raspberry como nome
+                    "dispositivo_id": dispositivo_id
+                }
+            elif toten_id_int in totens_dict:
                 toten_info = totens_dict[toten_id_int]
                 totem_info = {
                     "id": toten_info['id'],
@@ -285,12 +299,6 @@ def _formatar_registro(row: Tuple, pecas_cache: Dict[int, List[Dict]], totens_di
                     "id": toten_id_int,
                     "nome": f"Totem {toten_id_int}"
                 }
-            
-            # Buscar informações do dispositivo
-            info_dispositivo = _buscar_info_dispositivo_por_toten(toten_id_int)
-            serial = info_dispositivo['serial']
-            hostname = info_dispositivo['hostname']
-            dispositivo_id = info_dispositivo['dispositivo_id']
         except (ValueError, TypeError):
             totem_info = None
     

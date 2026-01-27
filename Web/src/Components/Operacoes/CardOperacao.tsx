@@ -89,20 +89,12 @@ const CardOperacao: React.FC<CardOperacaoProps> = ({
                         </div>
                     </div>
 
-                    {(operacao.serial || operacao.hostname) && (
+                    {operacao.serial && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                            {operacao.serial && (
-                                <div>
-                                    <span className="text-xs text-gray-500">Serial:</span>
-                                    <p className="font-medium text-gray-900">{operacao.serial}</p>
-                                </div>
-                            )}
-                            {operacao.hostname && (
-                                <div>
-                                    <span className="text-xs text-gray-500">Hostname:</span>
-                                    <p className="font-medium text-gray-900">{operacao.hostname}</p>
-                                </div>
-                            )}
+                            <div>
+                                <span className="text-xs text-gray-500">Serial:</span>
+                                <p className="font-medium text-gray-900">{operacao.serial}</p>
+                            </div>
                         </div>
                     )}
 

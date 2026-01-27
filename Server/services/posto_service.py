@@ -222,3 +222,32 @@ def listar_totens_disponiveis() -> List[Dict[str, Any]]:
     
     return totens_com_info
 
+
+def listar_usuarios_raspberry() -> List[Dict[str, Any]]:
+    """
+    Lista todos os usuários dos dispositivos Raspberry conectados
+    Retorna lista com id (dispositivo_id), nome (user), serial e hostname (user)
+    """
+    try:
+        dispositivos = dispositivo_raspberry_service.listar_dispositivos()
+        
+        usuarios_raspberry = []
+        for dispositivo in dispositivos:
+            usuario = dispositivo.get('hostname', '')  # hostname agora contém o user
+            serial = dispositivo.get('serial', '')
+            dispositivo_id = dispositivo.get('id')
+            
+            if usuario:  # Só adicionar se tiver usuário
+                usuarios_raspberry.append({
+                    'id': dispositivo_id,
+                    'nome': usuario,  # Nome será o user do Raspberry
+                    'serial': serial,
+                    'hostname': usuario,  # Mantido para compatibilidade
+                    'dispositivo_id': dispositivo_id
+                })
+        
+        return usuarios_raspberry
+    except Exception as e:
+        print(f'Erro ao listar usuários Raspberry: {e}')
+        return []
+

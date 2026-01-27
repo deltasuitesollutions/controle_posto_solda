@@ -45,12 +45,6 @@ const CardPosto: React.FC<CardPostoProps> = ({
                                             Serial: {posto.serial}
                                         </span>
                                     )}
-                                    {posto.hostname && (
-                                        <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-indigo-100 text-indigo-800">
-                                            <i className="bi bi-pc-display mr-1"></i>
-                                            {posto.hostname}
-                                        </span>
-                                    )}
                                 </div>
                             </div>
                         </div>

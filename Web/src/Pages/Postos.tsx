@@ -79,13 +79,14 @@ const Postos = () => {
 
     const carregarTotens = async () => {
         try {
-            const dados = await postosAPI.listarTotensDisponiveis()
+            // Buscar usuários dos dispositivos Raspberry ao invés de totens
+            const dados = await postosAPI.listarUsuariosRaspberry()
             setTotens(dados)
             if (dados.length > 0 && totenId === 0) {
                 setTotenId(dados[0].id)
             }
         } catch (error) {
-            console.error('Erro ao carregar totens:', error)
+            console.error('Erro ao carregar usuários Raspberry:', error)
         }
     }
 
@@ -320,7 +321,7 @@ const Postos = () => {
 
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                    Totem/Raspberry
+                                                    Usuário Raspberry
                                                 </label>
                                                 <select
                                                     id="posto-toten"
@@ -329,10 +330,10 @@ const Postos = () => {
                                                     value={totenId}
                                                     onChange={(e) => setTotenId(Number(e.target.value))}
                                                 >
-                                                    <option value={0}>Selecione um toten</option>
+                                                    <option value={0}>Selecione um usuário Raspberry</option>
                                                     {totens.map((toten) => (
                                                         <option key={toten.id} value={toten.id}>
-                                                            {toten.nome}
+                                                            {toten.nome} {toten.serial ? `(Serial: ${toten.serial})` : ''}
                                                         </option>
                                                     ))}
                                                 </select>

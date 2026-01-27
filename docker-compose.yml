@@ -12,6 +12,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./postgres/pg_hba.conf:/var/lib/postgresql/data/pg_hba.conf
       - ./postgres/postgresql.conf:/var/lib/postgresql/data/postgresql.conf
+      - ./database/init_database.sql:/docker-entrypoint-initdb.d/01-init_database.sql
     command: postgres -c config_file=/var/lib/postgresql/data/postgresql.conf
     ports:
       - "${POSTGRES_PORT:-5432}:5432"

@@ -68,7 +68,7 @@ class DispositivoRaspberry:
             # Atualizar
             query = """
                 UPDATE dispositivos_raspberry 
-                SET serial = %s, hostname = %s 
+                SET serial = %s, "user" = %s 
                 WHERE id = %s
             """
             params: Tuple[Any, ...] = (self.serial, self.hostname, self.dispositivo_id)
@@ -76,7 +76,7 @@ class DispositivoRaspberry:
         else:
             # Inserir com RETURNING id para PostgreSQL
             query = """
-                INSERT INTO dispositivos_raspberry (serial, hostname, data_registro) 
+                INSERT INTO dispositivos_raspberry (serial, "user", data_registro) 
                 VALUES (%s, %s, CURRENT_TIMESTAMP) 
                 RETURNING id
             """
@@ -90,7 +90,7 @@ class DispositivoRaspberry:
     def buscar_por_id(dispositivo_id: int) -> Optional['DispositivoRaspberry']:
         """Busca um dispositivo pelo ID"""
         query = """
-            SELECT id, serial, hostname, data_registro 
+            SELECT id, serial, "user", data_registro 
             FROM dispositivos_raspberry 
             WHERE id = %s
         """
@@ -103,7 +103,7 @@ class DispositivoRaspberry:
     def buscar_por_serial(serial: str) -> Optional['DispositivoRaspberry']:
         """Busca um dispositivo pelo serial"""
         query = """
-            SELECT id, serial, hostname, data_registro 
+            SELECT id, serial, "user", data_registro 
             FROM dispositivos_raspberry 
             WHERE serial = %s
         """
@@ -116,7 +116,7 @@ class DispositivoRaspberry:
     def listar_todos() -> List['DispositivoRaspberry']:
         """Lista todos os dispositivos"""
         query = """
-            SELECT id, serial, hostname, data_registro 
+            SELECT id, serial, "user", data_registro 
             FROM dispositivos_raspberry 
             ORDER BY data_registro DESC
         """

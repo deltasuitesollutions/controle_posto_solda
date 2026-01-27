@@ -134,3 +134,14 @@ def listar_totens_disponiveis():
         print(f'Erro ao listar totens disponíveis: {e}')
         return jsonify({'erro': 'Erro ao listar totens disponíveis'}), 500
 
+
+# LISTAR USUÁRIOS DOS DISPOSITIVOS RASPBERRY
+@postos_bp.route('/usuarios-raspberry', methods=['GET'])
+def listar_usuarios_raspberry():
+    try:
+        resultado = posto_service.listar_usuarios_raspberry()
+        return jsonify(resultado), 200
+    except Exception as e:
+        print(f'Erro ao listar usuários Raspberry: {e}')
+        return jsonify({'erro': 'Erro ao listar usuários Raspberry'}), 500
+

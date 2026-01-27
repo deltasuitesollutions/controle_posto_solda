@@ -86,22 +86,14 @@ const Card = ({posto, mod, peca_nome, operador, habilitado, turno, comentario: c
           </div>
         </div>
 
-        {(serial || hostname) && (
+        {serial && (
           <div className='grid grid-cols-1 gap-2'>
             <div className='bg-gray-50 rounded p-2 border border-gray-200'>
               <p className='text-xs text-gray-600 mb-1'>Dispositivo</p>
-              {serial && (
-                <p className='text-xs font-semibold text-gray-800 mb-1'>
-                  <i className='bi bi-hash mr-1'></i>
-                  Serial: {serial}
-                </p>
-              )}
-              {hostname && (
-                <p className='text-xs font-semibold text-gray-800'>
-                  <i className='bi bi-pc-display mr-1'></i>
-                  {hostname}
-                </p>
-              )}
+              <p className='text-xs font-semibold text-gray-800'>
+                <i className='bi bi-hash mr-1'></i>
+                Serial: {serial}
+              </p>
             </div>
           </div>
         )}

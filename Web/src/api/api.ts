@@ -223,6 +223,7 @@ export const postosAPI = {
   buscarPorSublinha: (sublinhaId: number) => fetchAPI(`/postos/por-sublinha/${sublinhaId}`),
   buscarPorToten: (totenId: number) => fetchAPI(`/postos/por-toten/${totenId}`),
   listarTotensDisponiveis: () => fetchAPI('/postos/totens-disponiveis'),
+  listarUsuariosRaspberry: () => fetchAPI('/postos/usuarios-raspberry'),
   criar: (data: { nome: string; sublinha_id: number; toten_id: number }) => 
     fetchAPI('/postos', {
       method: 'POST',
