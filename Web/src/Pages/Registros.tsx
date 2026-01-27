@@ -39,7 +39,7 @@ const Registros = () => {
     const [itensPorPagina, setItensPorPagina] = useState(10)
     const [modalAberto, setModalAberto] = useState<string | null>(null)
     const [filtros, setFiltros] = useState({
-        processo: ['subsolda1'] as string[],
+        processo: [] as string[],
         horarioInicio: '',
         horarioFim: '',
         turno: [] as string[],
