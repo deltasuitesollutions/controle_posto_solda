@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 # Instância global do SocketIO
 _socketio_instance: Optional[SocketIO] = None
 _last_update_time = 0
-_throttle_interval = 3
+_throttle_interval = 0.5  # Reduzido de 3s para 0.5s para atualizações mais rápidas
 
 
 def init_socketio(app: Flask) -> SocketIO:
@@ -61,13 +61,12 @@ def get_socketio() -> Optional[SocketIO]:
     return _socketio_instance
 
 
-def register_socketio_events(socketio_instance: SocketIO):
-    """Mantido para compatibilidade"""
-    logger.info("Eventos do WebSocket registrados")
-
-
-def enviar_atualizacao_dashboard():
-    """Envia atualização do dashboard via WebSocket"""
+def enviar_atualizacao_dashboard(forcar: bool = False):
+    """Envia atualização do dashboard via WebSocket
+    
+    Args:
+        forcar: Se True, ignora o throttle e envia imediatamente
+    """
     global _last_update_time
 
     socketio_instance = get_socketio()
@@ -75,13 +74,22 @@ def enviar_atualizacao_dashboard():
         return
 
     current_time = time.time()
-    if current_time - _last_update_time < _throttle_interval:
+    if not forcar and current_time - _last_update_time < _throttle_interval:
         return
 
     _last_update_time = current_time
 
     try:
         dados = dashboard_service.buscar_postos_em_uso()
-        socketio_instance.emit('dashboard_update', dados)
+        socketio_instance.emit('dashboard_update', dados, broadcast=True)
     except Exception as e:
         logger.error(f"Erro ao enviar atualização do dashboard: {e}")
+
+
+def register_socketio_events(socketio_instance: SocketIO):
+    """Registra eventos do SocketIO"""
+    
+    @socketio_instance.on('connect')
+    def handle_connect():
+        """Envia atualização imediata quando cliente se conecta"""
+        enviar_atualizacao_dashboard(forcar=True)

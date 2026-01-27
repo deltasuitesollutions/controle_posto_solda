@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { ihmAPI } from "../../api/api"
 import { useAuth } from "../../contexts/AuthContext"
@@ -11,6 +11,7 @@ const LeitorRfid = () => {
     const [colaborador, setColaborador] = useState<string | null>(null)
     const navigate = useNavigate()
     const { logout } = useAuth()
+    const inputRef = useRef<HTMLInputElement>(null)
 
     const handleLogout = () => {
         logout()
@@ -21,7 +22,20 @@ const LeitorRfid = () => {
         setStatus('idle')
         setColaborador(null)
         setRfidInput('')
+        // Focar no campo após resetar
+        setTimeout(() => {
+            inputRef.current?.focus()
+        }, 100)
     }
+
+    // Garantir que o campo sempre esteja focado quando a página carregar ou quando o status voltar para idle
+    useEffect(() => {
+        if (status === 'idle') {
+            setTimeout(() => {
+                inputRef.current?.focus()
+            }, 100)
+        }
+    }, [status])
 
     const processarRfid = async (codigo: string) => {
         const codigoLimpo = codigo.trim()
@@ -96,6 +110,7 @@ const LeitorRfid = () => {
                             }}
                         >
                             <input
+                                ref={inputRef}
                                 type="text"
                                 className="flex-1 text-lg outline-none bg-transparent placeholder-gray-400"
                                 placeholder="Passe o crachá RFID abaixo"

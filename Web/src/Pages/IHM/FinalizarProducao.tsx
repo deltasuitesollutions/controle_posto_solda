@@ -184,7 +184,7 @@ const FinalizarProducao = () => {
               setErro(null);
             }}
             onKeyDown={handleKeyDown}
-            className="px-6 py-5 text-3xl border-4 border-gray-400 rounded-lg focus:outline-none focus:border-blue-500 text-center"
+            className="px-6 py-5 text-3xl border-4 border-gray-400 rounded-lg focus:outline-none focus:border-blue-500 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             style={{ minHeight: '80px', minWidth: '200px' }}
             autoFocus
             disabled={carregando}

@@ -58,49 +58,38 @@ const Dashboard = () => {
   const [carregando, setCarregando] = useState(true);
   const socketRef = useRef<Socket | null>(null);
 
-  // Carregar dados iniciais do dashboard
+  // Carregar dados iniciais e configurar WebSocket
   useEffect(() => {
+    // Carregar dados iniciais
     carregarDadosDashboard();
-  }, []);
 
-  // Configurar WebSocket
-  useEffect(() => {
-    // URL do servidor WebSocket - usa mesma URL da API
-    // Configurável via variável de ambiente VITE_API_URL
-    const socketUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    // Configurar WebSocket
+    let socketUrl = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:8000`;
+    if (socketUrl.endsWith('/api')) {
+      socketUrl = socketUrl.replace('/api', '');
+    }
     
-    // Criar conexão WebSocket
     const socket = io(socketUrl, {
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionDelay: 1000,
-      reconnectionAttempts: 5,
     });
 
     socketRef.current = socket;
 
     // Receber atualizações do dashboard
     socket.on('dashboard_update', (dados: any) => {
-      console.log('📊 Atualização recebida via WebSocket:', dados);
-      
-      if (dados.metricas) {
-        console.log('📈 Atualizando métricas:', dados.metricas);
+      if (dados?.metricas) {
         setMetricas(dados.metricas);
       }
-      
-      if (dados.sublinhas) {
-        console.log('📋 Atualizando sublinhas:', dados.sublinhas.length, 'sublinhas');
+      if (dados?.sublinhas) {
         setSublinhas(dados.sublinhas);
       }
-      
       setCarregando(false);
     });
 
-    // Cleanup ao desmontar o componente
     return () => {
-      if (socket) {
-        socket.disconnect();
-      }
+      socket.disconnect();
     };
   }, []);
 

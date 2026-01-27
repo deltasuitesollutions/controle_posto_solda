@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 from pathlib import Path
@@ -10,10 +11,21 @@ if str(parent_dir) not in sys.path:
 from flask import Flask
 from flask_cors import CORS
 from blueprints import register_blueprints
-from websocket_manager import init_socketio
+from websocket_manager import init_socketio, register_socketio_events
+
+
+class NoOptionsLogFilter(logging.Filter):
+    """Evita que requisições OPTIONS (preflight CORS) apareçam no log."""
+    def filter(self, record):
+        return "OPTIONS" not in record.getMessage()
+
 
 def create_app():
     app = Flask(__name__)
+
+    # Não logar requisições OPTIONS (preflight CORS)
+    werkzeug_log = logging.getLogger("werkzeug")
+    werkzeug_log.addFilter(NoOptionsLogFilter())
 
     # CORS liberado para tudo
     CORS(
@@ -23,6 +35,9 @@ def create_app():
     )
 
     socketio = init_socketio(app)
+    
+    # Registrar eventos do WebSocket
+    register_socketio_events(socketio)
 
     register_blueprints(app)
 
