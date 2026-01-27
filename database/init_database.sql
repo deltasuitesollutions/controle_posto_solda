@@ -177,9 +177,9 @@ CREATE TABLE IF NOT EXISTS registros_producao (
     comentarios TEXT,
     criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    data_inicio DATE GENERATED ALWAYS AS (DATE(inicio)) STORED,
-    hora_inicio TIME GENERATED ALWAYS AS (inicio::TIME) STORED,
-    mes_ano TEXT GENERATED ALWAYS AS (TO_CHAR(inicio, 'YYYY-MM')) STORED,
+    data_inicio DATE,
+    hora_inicio TIME,
+    mes_ano TEXT,
     FOREIGN KEY (sublinha_id) REFERENCES sublinhas(sublinha_id) ON DELETE SET NULL,
     FOREIGN KEY (posto_id) REFERENCES postos(posto_id) ON DELETE CASCADE,
     FOREIGN KEY (funcionario_id) REFERENCES funcionarios(funcionario_id) ON DELETE CASCADE,
@@ -187,6 +187,27 @@ CREATE TABLE IF NOT EXISTS registros_producao (
     FOREIGN KEY (modelo_id) REFERENCES modelos(modelo_id) ON DELETE CASCADE,
     FOREIGN KEY (peca_id) REFERENCES pecas(peca_id) ON DELETE SET NULL
 );
+
+CREATE OR REPLACE FUNCTION set_registros_producao_datas()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.inicio IS NOT NULL THEN
+        NEW.data_inicio := NEW.inicio::DATE;
+        NEW.hora_inicio := NEW.inicio::TIME;
+        NEW.mes_ano := TO_CHAR(NEW.inicio, 'YYYY-MM');
+    END IF;
+
+    NEW.atualizado_em := CURRENT_TIMESTAMP;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_registros_producao_datas
+BEFORE INSERT OR UPDATE ON registros_producao
+FOR EACH ROW
+EXECUTE FUNCTION set_registros_producao_datas();
+
 
 CREATE INDEX IF NOT EXISTS idx_registros_posto_id ON registros_producao(posto_id);
 CREATE INDEX IF NOT EXISTS idx_registros_funcionario_id ON registros_producao(funcionario_id);
@@ -235,7 +256,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_log_data_hora ON audit_log(data_hora);
 CREATE TABLE IF NOT EXISTS dispositivos_raspberry (
     id SERIAL PRIMARY KEY,
     serial TEXT NOT NULL UNIQUE,
-    user TEXT NOT NULL,
+    "user" TEXT NOT NULL,
     data_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

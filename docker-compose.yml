@@ -1,23 +1,24 @@
-
 services:
   postgres:
     image: postgres:16-alpine
+    container_name: postgres_db
     environment:
-      POSTGRES_HOST: ${POSTGRES_HOST}
-      POSTGRES_PORT: ${POSTGRES_PORT}
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./postgres/pg_hba.conf:/var/lib/postgresql/data/pg_hba.conf
-      - ./postgres/postgresql.conf:/var/lib/postgresql/data/postgresql.conf
-      - ./database/init_database.sql:/docker-entrypoint-initdb.d/01-init_database.sql
-    command: postgres -c config_file=/var/lib/postgresql/data/postgresql.conf
+      - ./postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      - ./database/init_database.sql:/docker-entrypoint-initdb.d/01-init_database.sql:ro
+    command: >
+      postgres
+      -c config_file=/etc/postgresql/postgresql.conf
+      -c hba_file=/etc/postgresql/pg_hba.conf
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -36,12 +37,8 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      FLASK_ENV: ${FLASK_ENV:-development}
-      FLASK_HOST: ${FLASK_HOST:-0.0.0.0}
-      FLASK_PORT: ${FLASK_PORT:-8000}
-      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
-      DB_HOST: ${POSTGRES_HOST}
-      DB_PORT: ${POSTGRES_PORT}
+      DB_HOST: postgres
+      DB_PORT: 5432
       DB_NAME: ${POSTGRES_DB}
       DB_USER: ${POSTGRES_USER}
       DB_PASSWORD: ${POSTGRES_PASSWORD}
@@ -67,4 +64,3 @@ networks:
 
 volumes:
   postgres_data:
-    driver: local
