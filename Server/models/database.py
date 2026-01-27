@@ -53,9 +53,26 @@ class DatabaseConnection:
             # Primeiro, tentar ler das variáveis de ambiente
             host = safe_getenv('DB_HOST')
             port = safe_getenv('DB_PORT')
-            database = safe_getenv('DB_NAME')
-            user = safe_getenv('DB_USER')
-            password = safe_getenv('DB_PASSWORD')
+            # Tentar DB_NAME primeiro, depois POSTGRES_DB como fallback
+            database = safe_getenv('DB_NAME') or safe_getenv('POSTGRES_DB')
+            user = safe_getenv('DB_USER') or safe_getenv('POSTGRES_USER')
+            password = safe_getenv('DB_PASSWORD') or safe_getenv('POSTGRES_PASSWORD')
+            # Se port não estiver definido, tentar POSTGRES_PORT
+            if not port:
+                port = safe_getenv('POSTGRES_PORT')
+            
+            # Se o host for "postgres" (nome do serviço Docker), verificar se está rodando no Docker
+            # Se não estiver no Docker, usar localhost como fallback
+            if host == 'postgres':
+                import socket
+                try:
+                    # Tentar resolver o hostname "postgres"
+                    socket.gethostbyname('postgres')
+                    # Se conseguir resolver, está no Docker, manter "postgres"
+                except (socket.gaierror, OSError):
+                    # Se não conseguir resolver, não está no Docker, usar localhost
+                    print("[AVISO] Hostname 'postgres' não resolvido. Assumindo execução fora do Docker. Usando 'localhost'.")
+                    host = 'localhost'
             
             # Se alguma variável não estiver definida, tentar ler do arquivo JSON
             if not host or not database or not user:
@@ -199,6 +216,27 @@ class DatabaseConnection:
                     pass  # Se falhar, continuar mesmo assim
                 return conn
             except psycopg2.OperationalError as e:
+                # Se falhar e o host não for localhost, tentar com localhost como fallback
+                if host != 'localhost' and host != '127.0.0.1':
+                    try:
+                        print(f"[AVISO] Falha ao conectar em '{host}'. Tentando com 'localhost'...")
+                        conn = psycopg2.connect(
+                            host='localhost',
+                            port=int(port),
+                            database=str(database),
+                            user=str(user),
+                            password=str(password),
+                            connect_timeout=10
+                        )
+                        try:
+                            conn.set_client_encoding('UTF8')
+                        except:
+                            pass
+                        return conn
+                    except psycopg2.OperationalError:
+                        # Se também falhar com localhost, continuar com o erro original
+                        pass
+                
                 # Erro operacional (servidor não está rodando, credenciais incorretas, etc.)
                 try:
                     error_msg = str(e)

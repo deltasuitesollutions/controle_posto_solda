@@ -35,23 +35,74 @@ def _buscar_info_dispositivo_por_toten(toten_id: int) -> Dict[str, Any]:
     }
 
 
-def _formatar_hora(hora: Optional[str]) -> Optional[str]:
+def _formatar_hora(hora: Optional[Any]) -> Optional[str]:
+    """
+    Formata hora de diferentes formatos para HH:MM
+    Aceita: datetime objects, timestamps (string), time strings
+    """
     if not hora:
         return None
-    hora_str = str(hora)
     
+    # Se for um objeto datetime ou time do PostgreSQL
+    if isinstance(hora, datetime):
+        return hora.strftime('%H:%M')
     
+    # Se for um objeto time
+    try:
+        from datetime import time as dt_time
+        if isinstance(hora, dt_time):
+            return hora.strftime('%H:%M')
+    except:
+        pass
+    
+    hora_str = str(hora).strip()
+    
+    # Se contém espaço (timestamp completo: "YYYY-MM-DD HH:MM:SS" ou "YYYY-MM-DD HH:MM:SS.microseconds")
     if ' ' in hora_str:
         partes = hora_str.split(' ')
         if len(partes) >= 2:
-            hora_part = partes[1]  
+            hora_part = partes[1].strip()
+            # Remover microsegundos se existirem
+            if '.' in hora_part:
+                hora_part = hora_part.split('.')[0]
+            # Se tem segundos (HH:MM:SS), pegar apenas HH:MM
             if hora_part.count(':') >= 2:
-                return hora_part[:5] 
+                return hora_part[:5]
+            # Se já está em HH:MM
+            elif hora_part.count(':') == 1:
+                return hora_part
             return hora_part
     
-    
+    # Se já está em formato HH:MM:SS (sem data)
     if len(hora_str) >= 8 and hora_str.count(':') >= 2:
+        # Remover microsegundos se existirem
+        if '.' in hora_str:
+            hora_str = hora_str.split('.')[0]
         return hora_str[:5]
+    
+    # Se já está em formato HH:MM
+    if len(hora_str) == 5 and hora_str.count(':') == 1:
+        return hora_str
+    
+    # Tentar parsear como datetime
+    try:
+        # Tentar diferentes formatos comuns
+        formatos = [
+            '%Y-%m-%d %H:%M:%S.%f',
+            '%Y-%m-%d %H:%M:%S',
+            '%Y-%m-%d %H:%M',
+            '%H:%M:%S.%f',
+            '%H:%M:%S',
+            '%H:%M'
+        ]
+        for fmt in formatos:
+            try:
+                dt = datetime.strptime(hora_str, fmt)
+                return dt.strftime('%H:%M')
+            except ValueError:
+                continue
+    except:
+        pass
     
     return hora_str
 
@@ -204,7 +255,11 @@ def _formatar_registro(row: Tuple, pecas_cache: Dict[int, List[Dict]], totens_di
     pecas_modelo = pecas_cache.get(modelo_id, []) if modelo_id else []
     
     # Formatar horários
-    hora_inicio_formatada = _formatar_hora(str(hora_inicio) if hora_inicio else None)
+    # Se hora_inicio não existe, usar o campo inicio (timestamp)
+    hora_para_formatar = hora_inicio if hora_inicio else (str(inicio) if inicio else None)
+    hora_inicio_formatada = _formatar_hora(hora_para_formatar)
+    
+    # Para hora_fim, usar o campo fim (timestamp)
     hora_fim_formatada = _formatar_hora(str(fim) if fim else None)
     
     # Extrair datas
