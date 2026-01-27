@@ -10,6 +10,9 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./postgres/pg_hba.conf:/var/lib/postgresql/data/pg_hba.conf
+      - ./postgres/postgresql.conf:/var/lib/postgresql/data/postgresql.conf
+    command: postgres -c config_file=/var/lib/postgresql/data/postgresql.conf
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     healthcheck:
