@@ -377,6 +377,15 @@ export const registrosAPI = {
       method: 'PUT',
       body: JSON.stringify({ comentario }),
     }),
+  deletar: (registroId: number) =>
+    fetchAPI(`/registros/${registroId}`, {
+      method: 'DELETE',
+    }),
+  deletarMultiplos: (registroIds: number[]) =>
+    fetchAPI('/registros/deletar-multiplos', {
+      method: 'DELETE',
+      body: JSON.stringify({ registro_ids: registroIds }),
+    }),
 }
 
 // CHAMADA PARA DASHBOARD_CONTROLLER.PY

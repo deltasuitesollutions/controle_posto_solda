@@ -73,7 +73,7 @@ const ModalEditarUsuario: React.FC<ModalEditarUsuarioProps> = ({
         }
 
         onSave(dados)
-        onClose()
+        // Não fechar automaticamente - deixar o componente pai controlar
     }
 
     const isValid = username.trim() !== '' && nome.trim() !== ''

@@ -3,6 +3,7 @@ import TopBar from '../Components/topBar/TopBar'
 import MenuLateral from '../Components/MenuLateral/MenuLateral'
 import ModalConfirmacao from '../Components/Compartilhados/ModalConfirmacao'
 import ModalEditarUsuario from '../Components/Usuarios/ModalEditarUsuario'
+import ModalSucesso from '../Components/Modais/ModalSucesso'
 import { Paginacao } from '../Components/Compartilhados/paginacao'
 import { usuariosAPI } from '../api/api'
 
@@ -26,6 +27,11 @@ const Usuarios = () => {
     const [modalEditarAberto, setModalEditarAberto] = useState(false)
     const [modalExcluirAberto, setModalExcluirAberto] = useState(false)
     const [modalStatusAberto, setModalStatusAberto] = useState(false)
+    const [modalCadastrarAberto, setModalCadastrarAberto] = useState(false)
+    const [modalConfirmarEdicaoAberto, setModalConfirmarEdicaoAberto] = useState(false)
+    const [modalSucessoAberto, setModalSucessoAberto] = useState(false)
+    const [mensagemSucesso, setMensagemSucesso] = useState('')
+    const [dadosParaSalvar, setDadosParaSalvar] = useState<any>(null)
     const [usuarioSelecionado, setUsuarioSelecionado] = useState<Usuario | null>(null)
     const [paginaAtual, setPaginaAtual] = useState(1)
     const [itensPorPagina] = useState(10)
@@ -34,7 +40,10 @@ const Usuarios = () => {
         setModalEditarAberto(false)
         setModalExcluirAberto(false)
         setModalStatusAberto(false)
+        setModalCadastrarAberto(false)
+        setModalConfirmarEdicaoAberto(false)
         setUsuarioSelecionado(null)
+        setDadosParaSalvar(null)
     }
 
     useEffect(() => {
@@ -69,7 +78,10 @@ const Usuarios = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        
+        setModalCadastrarAberto(true)
+    }
+
+    const handleConfirmarCadastro = async () => {
         try {
             await usuariosAPI.criar({
                 username,
@@ -89,10 +101,13 @@ const Usuarios = () => {
                 await carregarUsuarios()
             }
             
-            alert('Usuário cadastrado com sucesso!')
+            fecharModal()
+            setMensagemSucesso('Usuário cadastrado com sucesso!')
+            setModalSucessoAberto(true)
         } catch (error: any) {
             const errorMessage = error?.message || 'Erro ao cadastrar usuário. Tente novamente.'
             alert(`Erro ao cadastrar usuário: ${errorMessage}`)
+            fecharModal()
         }
     }
 
@@ -101,23 +116,32 @@ const Usuarios = () => {
         setModalEditarAberto(true)
     }
 
-    const handleSalvarEdicao = async (dados: any) => {
-        if (!usuarioSelecionado) return
+    const handleSalvarEdicao = (dados: any) => {
+        setDadosParaSalvar(dados)
+        setModalConfirmarEdicaoAberto(true)
+    }
+
+    const handleConfirmarEdicao = async () => {
+        if (!usuarioSelecionado || !dadosParaSalvar) return
         
         const usuarioId = usuarioSelecionado.id
         if (!usuarioId) {
             alert('Erro: ID do usuário não encontrado')
+            setModalConfirmarEdicaoAberto(false)
             return
         }
         
         try {
-            await usuariosAPI.atualizar(usuarioId, dados)
+            await usuariosAPI.atualizar(usuarioId, dadosParaSalvar)
             await carregarUsuarios()
-            fecharModal()
-            alert('Usuário atualizado com sucesso!')
+            setModalConfirmarEdicaoAberto(false)
+            setModalEditarAberto(false)
+            setMensagemSucesso('Usuário atualizado com sucesso!')
+            setModalSucessoAberto(true)
         } catch (error: any) {
             const errorMessage = error?.message || 'Erro ao atualizar usuário. Tente novamente.'
             alert(`Erro ao atualizar usuário: ${errorMessage}`)
+            setModalConfirmarEdicaoAberto(false)
         }
     }
 
@@ -137,6 +161,7 @@ const Usuarios = () => {
         const usuarioId = usuarioSelecionado.id
         if (!usuarioId) {
             alert('Erro: ID do usuário não encontrado')
+            fecharModal()
             return
         }
         
@@ -144,10 +169,12 @@ const Usuarios = () => {
             await usuariosAPI.deletar(usuarioId)
             await carregarUsuarios()
             fecharModal()
-            alert('Usuário excluído com sucesso!')
+            setMensagemSucesso('Usuário excluído com sucesso!')
+            setModalSucessoAberto(true)
         } catch (error: any) {
             const errorMessage = error?.message || 'Erro ao excluir usuário. Tente novamente.'
             alert(`Erro ao excluir usuário: ${errorMessage}`)
+            fecharModal()
         }
     }
 
@@ -157,6 +184,7 @@ const Usuarios = () => {
         const usuarioId = usuarioSelecionado.id
         if (!usuarioId) {
             alert('Erro: ID do usuário não encontrado')
+            fecharModal()
             return
         }
         
@@ -170,10 +198,12 @@ const Usuarios = () => {
             })
             await carregarUsuarios()
             fecharModal()
-            alert(`Usuário ${novoStatus ? 'ativado' : 'desativado'} com sucesso!`)
+            setMensagemSucesso(`Usuário ${novoStatus ? 'ativado' : 'desativado'} com sucesso!`)
+            setModalSucessoAberto(true)
         } catch (error: any) {
             const errorMessage = error?.message || 'Erro ao alterar status do usuário. Tente novamente.'
             alert(`Erro ao alterar status: ${errorMessage}`)
+            fecharModal()
         }
     }
 
@@ -475,6 +505,51 @@ const Usuarios = () => {
                 } : undefined}
                 camposItem={['username', 'nome']}
                 mostrarDetalhes={true}
+            />
+
+            <ModalConfirmacao
+                isOpen={modalCadastrarAberto}
+                onClose={fecharModal}
+                onConfirm={handleConfirmarCadastro}
+                titulo="Cadastrar Usuário"
+                mensagem="Tem certeza que deseja cadastrar este usuário?"
+                textoConfirmar="Cadastrar"
+                textoCancelar="Cancelar"
+                corHeader="azul"
+                item={{
+                    username,
+                    nome,
+                    role: getRoleLabel(role),
+                    ativo: ativo ? 'Sim' : 'Não'
+                }}
+                camposItem={['username', 'nome', 'role', 'ativo']}
+                mostrarDetalhes={true}
+            />
+
+            <ModalConfirmacao
+                isOpen={modalConfirmarEdicaoAberto}
+                onClose={fecharModal}
+                onConfirm={handleConfirmarEdicao}
+                titulo="Editar Usuário"
+                mensagem="Tem certeza que deseja salvar as alterações neste usuário?"
+                textoConfirmar="Salvar"
+                textoCancelar="Cancelar"
+                corHeader="azul"
+                item={usuarioSelecionado && dadosParaSalvar ? {
+                    username: dadosParaSalvar.username || usuarioSelecionado.username,
+                    nome: dadosParaSalvar.nome || usuarioSelecionado.nome,
+                    role: getRoleLabel(dadosParaSalvar.role || usuarioSelecionado.role),
+                    ativo: dadosParaSalvar.ativo !== undefined ? (dadosParaSalvar.ativo ? 'Sim' : 'Não') : (usuarioSelecionado.ativo ? 'Sim' : 'Não')
+                } : undefined}
+                camposItem={['username', 'nome', 'role', 'ativo']}
+                mostrarDetalhes={true}
+            />
+
+            <ModalSucesso
+                isOpen={modalSucessoAberto}
+                onClose={() => setModalSucessoAberto(false)}
+                mensagem={mensagemSucesso}
+                titulo="Sucesso!"
             />
         </div>
     )

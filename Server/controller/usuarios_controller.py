@@ -65,6 +65,20 @@ def listar_todos_usuarios():
         return jsonify({"erro": str(e)}), 500
 
 
+# Busca um usuário por ID
+@usuarios_bp.route('/<int:usuario_id>', methods=['GET'])
+def buscar_usuario(usuario_id):
+    try:
+        usuario = usuarios_service.buscar_usuario_por_id(usuario_id)
+        if not usuario:
+            return jsonify({"erro": f"Usuário com ID {usuario_id} não encontrado"}), 404
+        return jsonify(usuario), 200
+    except ValueError as e:
+        return jsonify({"erro": "ID de usuário inválido"}), 400
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
+
+
 # Cria usuário
 @usuarios_bp.route('', methods=['POST'])
 def criar_usuario():
@@ -125,6 +139,8 @@ def atualizar_usuario(usuario_id):
         )
 
         return jsonify(usuario), 200
+    except ValueError as e:
+        return jsonify({"erro": "ID de usuário inválido"}), 400
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
 
@@ -140,6 +156,8 @@ def deletar_usuario(usuario_id):
         usuarios_service.deletar_usuario(usuario_id)
         return jsonify({"mensagem": "Usuário deletado com sucesso"}), 200
 
+    except ValueError as e:
+        return jsonify({"erro": "ID de usuário inválido"}), 400
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
 

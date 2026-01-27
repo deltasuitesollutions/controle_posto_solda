@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import TopBar from '../Components/topBar/TopBar'
 import MenuLateral from '../Components/MenuLateral/MenuLateral'
 import ModalFiltro from '../Components/Compartilhados/ModalFiltro'
+import ModalConfirmacao from '../Components/Compartilhados/ModalConfirmacao'
 import { registrosAPI } from '../api/api'
 import { postosAPI } from '../api/api'
 import { funcionariosAPI } from '../api/api'
@@ -40,8 +41,7 @@ const Registros = () => {
     const [modalAberto, setModalAberto] = useState<string | null>(null)
     const [filtros, setFiltros] = useState({
         processo: [] as string[],
-        horarioInicio: '',
-        horarioFim: '',
+        horario: '',
         turno: [] as string[],
         data: '',
         produto: [] as string[],
@@ -53,6 +53,10 @@ const Registros = () => {
     const [registrosSelecionados, setRegistrosSelecionados] = useState<Set<number>>(new Set())
     const [carregando, setCarregando] = useState(false)
     const [totalRegistros, setTotalRegistros] = useState(0)
+    const [modalExcluirAberto, setModalExcluirAberto] = useState(false)
+    const [excluindo, setExcluindo] = useState(false)
+    const [modalSucessoAberto, setModalSucessoAberto] = useState(false)
+    const [mensagemSucesso, setMensagemSucesso] = useState('')
 
     // Opções de filtros dinâmicas
     const [opcoesProcesso, setOpcoesProcesso] = useState<{ id: string; label: string }[]>([])
@@ -111,12 +115,8 @@ const Registros = () => {
                 params.turno = filtros.turno
             }
 
-            if (filtros.horarioInicio) {
-                params.hora_inicio = filtros.horarioInicio
-            }
-
-            if (filtros.horarioFim) {
-                params.hora_fim = filtros.horarioFim
+            if (filtros.horario) {
+                params.hora_inicio = filtros.horario
             }
 
             const resposta = await registrosAPI.listar(params)
@@ -156,7 +156,7 @@ const Registros = () => {
         } finally {
             setCarregando(false)
         }
-    }, [paginaAtual, itensPorPagina, filtros.data, filtros.processo, filtros.turno, filtros.horarioInicio, filtros.horarioFim])
+    }, [paginaAtual, itensPorPagina, filtros.data, filtros.processo, filtros.turno, filtros.horario])
 
     // Buscar registros quando filtros ou paginação mudarem
     useEffect(() => {
@@ -303,6 +303,59 @@ const Registros = () => {
         XLSX.writeFile(wb, `registros_${timestamp}.xlsx`)
     }
 
+    // Função para excluir registros selecionados
+    const handleExcluirRegistros = () => {
+        if (registrosSelecionados.size === 0) {
+            alert('Selecione pelo menos um registro para excluir')
+            return
+        }
+        setModalExcluirAberto(true)
+    }
+
+    const handleConfirmarExclusao = async () => {
+        if (registrosSelecionados.size === 0) return
+
+        setExcluindo(true)
+        try {
+            const idsParaExcluir = Array.from(registrosSelecionados)
+            console.log('IDs para excluir:', idsParaExcluir)
+            
+            let resultado
+            if (idsParaExcluir.length === 1) {
+                // Excluir um único registro
+                resultado = await registrosAPI.deletar(idsParaExcluir[0])
+            } else {
+                // Excluir múltiplos registros
+                resultado = await registrosAPI.deletarMultiplos(idsParaExcluir)
+            }
+            
+            console.log('Resultado da exclusão:', resultado)
+
+            // Verificar se houve erro na resposta
+            if (resultado && resultado.erro) {
+                throw new Error(resultado.erro)
+            }
+
+            // Limpar seleção
+            setRegistrosSelecionados(new Set())
+            
+            // Recarregar registros
+            await buscarRegistros()
+            
+            // Exibir modal de sucesso
+            const mensagem = resultado?.mensagem || `${idsParaExcluir.length} registro(s) excluído(s) com sucesso`
+            setMensagemSucesso(mensagem)
+            setModalSucessoAberto(true)
+        } catch (error: any) {
+            console.error('Erro ao excluir registros:', error)
+            const mensagemErro = error?.message || error?.erro || 'Erro desconhecido ao excluir registros'
+            alert(`Erro ao excluir registros: ${mensagemErro}`)
+        } finally {
+            setExcluindo(false)
+            setModalExcluirAberto(false)
+        }
+    }
+
     return (
         <div className="flex min-h-screen bg-gray-50">
             <MenuLateral />
@@ -330,22 +383,22 @@ const Registros = () => {
                                         </button>
                                     </div>
 
-                                    {/* Horário Início */}
+                                    {/* Horário */}
                                     <div>
                                         <label className="block text-xs font-medium text-gray-700 mb-1">
-                                            Horário Início
+                                            Horário
                                         </label>
                                         <input
                                             type="text"
                                             placeholder="HH:MM"
-                                            value={filtros.horarioInicio}
+                                            value={filtros.horario}
                                             onChange={(e) => {
-                                                const valorAnterior = filtros.horarioInicio
+                                                const valorAnterior = filtros.horario
                                                 let valor = e.target.value.replace(/[^0-9:]/g, '')
                                                 
                                                 // Se o usuário está apagando (valor novo é menor), permite apagar tudo
                                                 if (valor.length < valorAnterior.length) {
-                                                    setFiltros({ ...filtros, horarioInicio: valor })
+                                                    setFiltros({ ...filtros, horario: valor })
                                                     return
                                                 }
                                                 
@@ -357,41 +410,7 @@ const Registros = () => {
                                                     valor = valor + ':'
                                                 }
                                                 
-                                                setFiltros({ ...filtros, horarioInicio: valor })
-                                            }}
-                                            maxLength={5}
-                                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        />
-                                    </div>
-
-                                    {/* Horário Fim */}
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-700 mb-1">
-                                            Horário Fim
-                                        </label>
-                                        <input
-                                            type="text"
-                                            placeholder="HH:MM"
-                                            value={filtros.horarioFim}
-                                            onChange={(e) => {
-                                                const valorAnterior = filtros.horarioFim
-                                                let valor = e.target.value.replace(/[^0-9:]/g, '')
-                                                
-                                                // Se o usuário está apagando (valor novo é menor), permite apagar tudo
-                                                if (valor.length < valorAnterior.length) {
-                                                    setFiltros({ ...filtros, horarioFim: valor })
-                                                    return
-                                                }
-                                                
-                                                // Limita a 5 caracteres (HH:MM)
-                                                if (valor.length > 5) valor = valor.slice(0, 5)
-                                                
-                                                // Adiciona : automaticamente após 2 dígitos apenas se estiver digitando
-                                                if (valor.length === 2 && !valor.includes(':')) {
-                                                    valor = valor + ':'
-                                                }
-                                                
-                                                setFiltros({ ...filtros, horarioFim: valor })
+                                                setFiltros({ ...filtros, horario: valor })
                                             }}
                                             maxLength={5}
                                             className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -508,12 +527,6 @@ const Registros = () => {
                                                         Totem
                                                     </th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Serial
-                                                    </th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Hostname
-                                                    </th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                         Posto
                                                     </th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -570,12 +583,6 @@ const Registros = () => {
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                             {registro.totem || '-'}
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {registro.serial || '-'}
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {registro.hostname || '-'}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                             {registro.posto || '-'}
@@ -684,13 +691,22 @@ const Registros = () => {
                                         </div>
                                     </div>
 
-                                    {/* Botão Exportar e Contador */}
+                                    {/* Botão Exportar, Excluir e Contador */}
                                     <div className="flex items-center gap-6">
                                         {registrosSelecionados.size > 0 && (
                                             <span className="text-sm text-gray-700 font-medium">
                                                 {registrosSelecionados.size} registro(s) selecionado(s)
                                             </span>
                                         )}
+                                        <button
+                                            onClick={handleExcluirRegistros}
+                                            disabled={excluindo || registrosSelecionados.size === 0}
+                                            className="flex items-center gap-2 px-4 py-2 text-white rounded-md hover:opacity-90 transition-opacity text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                            style={{ backgroundColor: '#dc2626' }}
+                                        >
+                                            <i className="bi bi-trash"></i>
+                                            Excluir selecionados
+                                        </button>
                                         <button
                                             onClick={handleExportar}
                                             className="flex items-center gap-2 px-4 py-2 text-white rounded-md hover:opacity-90 transition-opacity text-sm font-medium"
@@ -768,6 +784,30 @@ const Registros = () => {
                     onFechar={() => setModalAberto(null)}
                 />
             )}
+
+            {/* Modal de Confirmação de Exclusão */}
+            <ModalConfirmacao
+                isOpen={modalExcluirAberto}
+                onClose={() => setModalExcluirAberto(false)}
+                onConfirm={handleConfirmarExclusao}
+                titulo="Confirmar Exclusão"
+                mensagem={`Tem certeza que deseja excluir ${registrosSelecionados.size} registro(s) selecionado(s)?\n\n⚠️ ATENÇÃO: Esta ação irá excluir permanentemente os registros do banco de dados principal. Esta operação não pode ser desfeita.`}
+                textoConfirmar="Sim, Excluir"
+                textoCancelar="Cancelar"
+                corHeader="vermelho"
+            />
+
+            {/* Modal de Sucesso */}
+            <ModalConfirmacao
+                isOpen={modalSucessoAberto}
+                onClose={() => setModalSucessoAberto(false)}
+                onConfirm={() => setModalSucessoAberto(false)}
+                titulo="Sucesso"
+                mensagem={mensagemSucesso}
+                textoConfirmar="OK"
+                textoCancelar={undefined}
+                corHeader="verde"
+            />
         </div>
     )
 }

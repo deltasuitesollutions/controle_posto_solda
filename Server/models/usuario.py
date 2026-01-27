@@ -167,6 +167,35 @@ class Usuario:
         if not self.usuario_id:
             return False
         
+        # Primeiro, atualizar referências na tabela operacoes_canceladas para NULL
+        # Isso evita violação de chave estrangeira
+        try:
+            update_query = """
+                UPDATE operacoes_canceladas 
+                SET cancelado_por_usuario_id = NULL 
+                WHERE cancelado_por_usuario_id = ?
+            """
+            DatabaseConnection.execute_query(update_query, (self.usuario_id,))
+        except Exception as e:
+            # Se a tabela não existir ou houver outro erro, apenas logar e continuar
+            print(f"Aviso: Erro ao atualizar referências em operacoes_canceladas: {e}")
+        
+        # Verificar e lidar com audit_log
+        # Como usuario_id é NOT NULL em audit_log, precisamos deletar os registros
+        # ou verificar se a constraint permite NULL (depende da migração)
+        try:
+            # Tentar deletar registros de audit_log relacionados ao usuário
+            # Isso mantém a integridade do banco, mas remove o histórico de auditoria
+            delete_audit_query = """
+                DELETE FROM audit_log 
+                WHERE usuario_id = ?
+            """
+            DatabaseConnection.execute_query(delete_audit_query, (self.usuario_id,))
+        except Exception as e:
+            # Se a tabela não existir ou houver outro erro, apenas logar e continuar
+            print(f"Aviso: Erro ao deletar registros de audit_log: {e}")
+        
+        # Agora pode deletar o usuário com segurança
         query = "DELETE FROM usuarios WHERE id = ?"
         DatabaseConnection.execute_query(query, (self.usuario_id,))
         return True

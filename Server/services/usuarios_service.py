@@ -23,6 +23,14 @@ def listar_todos_usuarios() -> List[Dict[str, Any]]:
     return resultado
 
 
+# Busca um usuário por ID
+def buscar_usuario_por_id(usuario_id: int) -> Optional[Dict[str, Any]]:
+    usuario = Usuario.buscar_por_id(usuario_id)
+    if not usuario:
+        return None
+    return usuario.to_dict()
+
+
 # Cria um novo usuário
 def criar_usuario(
     username: str, 

@@ -236,3 +236,110 @@ class RegistroProducao:
                 cursor.close()
             if conn:
                 conn.close()
+    
+    @staticmethod
+    def deletar_registro(registro_id: int) -> Dict[str, Any]:
+        """Deleta um registro de produção"""
+        conn = None
+        cursor = None
+        try:
+            conn = DatabaseConnection.get_connection()
+            cursor = conn.cursor()
+            
+            # Verificar se o registro existe
+            cursor.execute(
+                "SELECT registro_id FROM registros_producao WHERE registro_id = %s", 
+                (registro_id,)
+            )
+            registro = cursor.fetchone()
+            
+            if not registro:
+                return {
+                    "erro": f"Registro com ID {registro_id} não encontrado"
+                }
+            
+            # Deletar o registro
+            cursor.execute(
+                "DELETE FROM registros_producao WHERE registro_id = %s",
+                (registro_id,)
+            )
+            conn.commit()
+            
+            return {
+                "sucesso": True,
+                "mensagem": "Registro deletado com sucesso",
+                "registro_id": registro_id
+            }
+        except Exception as e:
+            if conn:
+                conn.rollback()
+            raise e
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
+    
+    @staticmethod
+    def deletar_registros_multiplos(registro_ids: List[int]) -> Dict[str, Any]:
+        """Deleta múltiplos registros de produção"""
+        conn = None
+        cursor = None
+        try:
+            conn = DatabaseConnection.get_connection()
+            cursor = conn.cursor()
+            
+            if not registro_ids:
+                return {
+                    "erro": "Nenhum ID de registro fornecido"
+                }
+            
+            # Verificar quantos registros existem e quais IDs foram encontrados
+            placeholders = ','.join(['%s'] * len(registro_ids))
+            cursor.execute(
+                f"SELECT registro_id FROM registros_producao WHERE registro_id IN ({placeholders})",
+                tuple(registro_ids)
+            )
+            registros_existentes = cursor.fetchall()
+            ids_existentes = [row[0] for row in registros_existentes]
+            total_existentes = len(ids_existentes)
+            
+            if total_existentes == 0:
+                return {
+                    "erro": "Nenhum dos registros fornecidos foi encontrado",
+                    "ids_solicitados": registro_ids
+                }
+            
+            # Se nem todos os IDs foram encontrados, informar quais foram encontrados
+            ids_nao_encontrados = [id for id in registro_ids if id not in ids_existentes]
+            
+            # Deletar apenas os registros que existem
+            if ids_existentes:
+                placeholders_existentes = ','.join(['%s'] * len(ids_existentes))
+                cursor.execute(
+                    f"DELETE FROM registros_producao WHERE registro_id IN ({placeholders_existentes})",
+                    tuple(ids_existentes)
+                )
+                conn.commit()
+            
+            resultado = {
+                "sucesso": True,
+                "mensagem": f"{total_existentes} registro(s) deletado(s) com sucesso",
+                "registros_deletados": total_existentes,
+                "ids_deletados": ids_existentes
+            }
+            
+            if ids_nao_encontrados:
+                resultado["aviso"] = f"{len(ids_nao_encontrados)} registro(s) não foram encontrados",
+                resultado["ids_nao_encontrados"] = ids_nao_encontrados
+            
+            return resultado
+        except Exception as e:
+            if conn:
+                conn.rollback()
+            raise e
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()

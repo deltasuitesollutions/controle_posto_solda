@@ -67,3 +67,57 @@ def atualizar_comentario_registro(registro_id: int) -> Union[Response, Tuple[Res
         print(f"Erro ao atualizar comentário: {error_details}")
         return jsonify({"error": str(e), "details": error_details}), 500
 
+# DELETAR MÚLTIPLOS REGISTROS (deve vir ANTES da rota dinâmica)
+@registros_bp.route('/deletar-multiplos', methods=['DELETE'])
+def deletar_registros_multiplos() -> Union[Response, Tuple[Response, int]]:
+    try:
+        data = request.get_json()
+        registro_ids = data.get('registro_ids', []) if data else []
+        
+        if not registro_ids:
+            return jsonify({"erro": "Nenhum ID de registro fornecido"}), 400
+        
+        resultado = registro_service.deletar_registros_multiplos(registro_ids)
+        
+        if 'erro' in resultado:
+            return jsonify(resultado), 404
+        
+        # Notificar mudança via WebSocket
+        try:
+            from Server.websocket_manager import enviar_atualizacao_dashboard
+            enviar_atualizacao_dashboard()
+        except Exception as ws_error:
+            print(f"Erro ao notificar via WebSocket: {ws_error}")
+        
+        return jsonify(resultado), 200
+        
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Erro ao deletar registros: {error_details}")
+        return jsonify({"error": str(e), "details": error_details}), 500
+
+# DELETAR REGISTRO (deve vir DEPOIS das rotas específicas)
+@registros_bp.route('/<int:registro_id>', methods=['DELETE'])
+def deletar_registro(registro_id: int) -> Union[Response, Tuple[Response, int]]:
+    try:
+        resultado = registro_service.deletar_registro(registro_id)
+        
+        if 'erro' in resultado:
+            return jsonify(resultado), 404
+        
+        # Notificar mudança via WebSocket
+        try:
+            from Server.websocket_manager import enviar_atualizacao_dashboard
+            enviar_atualizacao_dashboard()
+        except Exception as ws_error:
+            print(f"Erro ao notificar via WebSocket: {ws_error}")
+        
+        return jsonify(resultado), 200
+        
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Erro ao deletar registro: {error_details}")
+        return jsonify({"error": str(e), "details": error_details}), 500
+

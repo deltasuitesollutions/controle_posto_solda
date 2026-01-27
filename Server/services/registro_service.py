@@ -462,3 +462,33 @@ def buscar_registro_por_id(registro_id: int) -> Optional[Dict[str, Any]]:
     except Exception as e:
         print(f"Erro ao buscar registro por ID: {e}")
         return None
+
+
+def deletar_registro(registro_id: int) -> Dict[str, Any]:
+    """Deleta um registro de produção usando o model"""
+    
+    try:
+        return RegistroProducao.deletar_registro(registro_id)
+        
+    except ValueError as ve:
+        raise Exception(str(ve))
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Erro ao deletar registro: {error_details}")
+        raise Exception(f"Erro ao deletar registro: {str(e)}")
+
+
+def deletar_registros_multiplos(registro_ids: List[int]) -> Dict[str, Any]:
+    """Deleta múltiplos registros de produção usando o model"""
+    
+    try:
+        return RegistroProducao.deletar_registros_multiplos(registro_ids)
+        
+    except ValueError as ve:
+        raise Exception(str(ve))
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Erro ao deletar registros: {error_details}")
+        raise Exception(f"Erro ao deletar registros: {str(e)}")
