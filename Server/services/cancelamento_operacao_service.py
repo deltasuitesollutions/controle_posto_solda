@@ -3,9 +3,39 @@ Service para gerenciar cancelamentos de operações
 Contém a lógica de negócio para listar cancelamentos
 """
 from typing import Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, time
 from Server.models.cancelamento_operacao_model import CancelamentoOperacao
 from Server.models.cancelamento import CancelamentoOperacao as CancelamentoModel
+
+
+def _formatar_hora(value: Any) -> Optional[str]:
+    """
+    Converte time object ou string para formato HH:MM
+    
+    Args:
+        value: Valor que pode ser time object, string ou None
+    
+    Returns:
+        String no formato HH:MM ou None
+    """
+    if value is None:
+        return None
+    if isinstance(value, time):
+        return value.strftime('%H:%M')
+    if isinstance(value, str):
+        if ':' in value:
+            if len(value) >= 8 and value.count(':') >= 2:
+                return value[:5]
+            if len(value) == 5 and value.count(':') == 1:
+                return value
+            # Tentar extrair HH:MM de strings mais longas
+            try:
+                # Se for formato HH:MM:SS, pegar apenas HH:MM
+                if len(value) >= 5:
+                    return value[:5]
+            except:
+                pass
+    return str(value) if value else None
 
 
 def _formatar_data_brasileira(data_str: str) -> str:
@@ -70,9 +100,11 @@ def listar_cancelamentos(
             data_cancelamento = _formatar_data_brasileira(str(row[3]) if row[3] else '')
             
             # Extrair funcionario_nome e operacao_nome
-            # row[4] = funcionario_nome, row[5] = operacao_nome
+            # row[4] = funcionario_nome, row[5] = operacao_nome, row[6] = hora_inicio
             funcionario_nome = row[4] if len(row) > 4 and row[4] else 'N/A'
             operacao_nome = row[5] if len(row) > 5 and row[5] else 'N/A'
+            # hora_inicio já vem como string da query (TO_CHAR), mas vamos garantir formatação
+            hora_inicio = row[6] if len(row) > 6 and row[6] else None
             
             # Se ainda for N/A, pode ser que as colunas não existam ou estejam NULL
             # Tentar usar os dados salvos diretamente se disponíveis
@@ -88,6 +120,7 @@ def listar_cancelamentos(
                 "data_cancelamento": data_cancelamento,
                 "funcionario_nome": funcionario_nome,
                 "operacao_nome": operacao_nome,
+                "hora_inicio": hora_inicio,
                 "status": "Cancelado"
             }
             cancelamentos_formatados.append(cancelamento_formatado)

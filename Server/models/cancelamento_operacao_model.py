@@ -61,7 +61,7 @@ class CancelamentoOperacao:
     ) -> List[Tuple[Any, ...]]:
         """
         Lista cancelamentos com dados relacionados (funcionário e operação)
-        Retorna tuplas com: (id, registro_id, motivo, data_cancelamento, funcionario_nome, operacao_nome)
+        Retorna tuplas com: (id, registro_id, motivo, data_cancelamento, funcionario_nome, operacao_nome, hora_inicio)
         
         Args:
             limit: Limite de registros
@@ -82,6 +82,7 @@ class CancelamentoOperacao:
             
             # Query usando dados salvos diretamente na tabela operacoes_canceladas
             # Não precisa mais fazer JOIN com registros_producao pois os dados já estão salvos
+            # Converter hora_inicio para string usando TO_CHAR para evitar problemas de serialização JSON
             query = f"""
                 SELECT 
                     c.id,
@@ -89,7 +90,11 @@ class CancelamentoOperacao:
                     c.motivo,
                     c.data_cancelamento,
                     COALESCE(c.funcionario_nome, 'N/A') as funcionario_nome,
-                    COALESCE(c.operacao_nome, c.operacao_codigo, 'N/A') as operacao_nome
+                    COALESCE(c.operacao_nome, c.operacao_codigo, 'N/A') as operacao_nome,
+                    CASE 
+                        WHEN c.hora_inicio IS NOT NULL THEN TO_CHAR(c.hora_inicio, 'HH24:MI')
+                        ELSE NULL
+                    END as hora_inicio
                 FROM operacoes_canceladas c
                 {where_clause}
                 ORDER BY c.data_cancelamento DESC

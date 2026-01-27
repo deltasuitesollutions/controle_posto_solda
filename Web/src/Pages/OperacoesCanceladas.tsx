@@ -268,6 +268,9 @@ const OperacoesCanceladas = () => {
                                                     Data Cancelamento
                                                 </th>
                                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Hora da Operação
+                                                </th>
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                     Status
                                                 </th>
                                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -286,6 +289,9 @@ const OperacoesCanceladas = () => {
                                                     </td>
                                                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                                                         {cancelamento.data_cancelamento || '-'}
+                                                    </td>
+                                                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                                                        {cancelamento.hora_inicio || '-'}
                                                     </td>
                                                     <td className="px-4 py-3 whitespace-nowrap">
                                                         <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">

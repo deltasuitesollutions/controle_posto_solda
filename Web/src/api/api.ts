@@ -53,10 +53,10 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
   }
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-    credentials: 'include',
-  })
+  ...options,
+  headers,
+})
+
   
   const data = await response.json().catch(() => ({ erro: 'Erro ao processar resposta' }))
   
