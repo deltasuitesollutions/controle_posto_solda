@@ -1,0 +1,98 @@
+@import "tailwindcss";
+@import "bootstrap-icons/font/bootstrap-icons.css";
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg-azul: #4C79AF;
+  --bg-laranja: #D66B1A;
+}
+
+/* Ajusta z-index do TopBar quando menu está aberto */
+body.menu-open .menu-topbar {
+  z-index: 40;
+}
+
+/* Ajusta padding do conteúdo quando menu está aberto (para páginas IHM se necessário) */
+body.menu-open .menu-content {
+  /* Se precisar de padding diferente quando menu aberto, adicione aqui */
+}
+
+@media (min-width: 768px) {
+  /* Ajusta padding do TopBar quando menu desktop está fechado */
+  body:not(.menu-desktop-open) .menu-topbar {
+    padding-left: 4rem; /* 16 * 4 = 64px (w-16) */
+  }
+
+  /* Ajusta padding do TopBar quando menu desktop está aberto */
+  body.menu-desktop-open .menu-topbar {
+    padding-left: 16rem; /* 64 * 4 = 256px (w-64) */
+  }
+
+  /* Ajusta margin-left quando menu desktop está fechado */
+  body:not(.menu-desktop-open) main[class*="ml-20"],
+  body:not(.menu-desktop-open) [class*="ml-20"] {
+    margin-left: 4rem !important; /* 16 * 4 = 64px (w-16) */
+  }
+
+  /* Ajusta margin-left quando menu desktop está aberto */
+  body.menu-desktop-open main[class*="ml-20"],
+  body.menu-desktop-open [class*="ml-20"] {
+    margin-left: 16rem !important; /* 64 * 4 = 256px (w-64) */
+  }
+
+  /* Ajusta padding left quando menu desktop está fechado */
+  body:not(.menu-desktop-open) [class*="md:pl-20"] {
+    padding-left: 5rem !important; /* Espaço para menu fechado (64px + padding) */
+  }
+
+  /* Ajusta padding left quando menu desktop está aberto */
+  body.menu-desktop-open [class*="md:pl-20"] {
+    padding-left: 17rem !important; /* Espaço para menu aberto (256px + padding) */
+  }
+}
+
+/* Animação fade-in para mensagens de acesso */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+/* Scrollbar customizada */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e0 #f7fafc;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f7fafc;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #a0aec0;
+}
