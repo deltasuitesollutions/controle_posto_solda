@@ -78,3 +78,16 @@ def atualizar_motivo(cancelamento_id: int):
         return jsonify(resultado), 200
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
+
+
+# DELETAR
+@cancelamento_bp.route('/<int:cancelamento_id>', methods=['DELETE'])
+def excluir_cancelamento(cancelamento_id: int):
+    try:
+        resultado = cancelamento_operacao_service.excluir_cancelamento(
+            cancelamento_id=cancelamento_id
+        )
+        
+        return jsonify(resultado), 200
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500

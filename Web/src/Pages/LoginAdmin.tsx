@@ -1,12 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { InputWithKeyboard } from '../Components/VirtualKeyboard';
 
-// Desabilitar link de cadastro na tela de login (mantém rota e página; só oculta o link)
-const SHOW_CADASTRO_LINK = false;
-
-const Login = () => {
+const LoginAdmin = () => {
   const [username, setUsername] = useState('');
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
@@ -18,7 +14,8 @@ const Login = () => {
   useEffect(() => {
     if (user) {
       if (isOperador) {
-        navigate('/ihm/leitor', { replace: true });
+        // Operador não pode acessar área admin, redireciona para login operador
+        setErro('Acesso restrito a administradores. Use a tela de operador.');
       } else if (isAdmin || isMaster) {
         navigate('/', { replace: true });
       }
@@ -37,7 +34,14 @@ const Login = () => {
         return;
       }
 
-      await login(username.trim(), senha);
+      const userData = await login(username.trim(), senha);
+      
+      // Verificar se é admin ou master
+      if (userData.tipo === 'operador') {
+        setErro('Acesso restrito a administradores. Use a tela de operador.');
+        setCarregando(false);
+        return;
+      }
       
       // O redirecionamento será feito pelo useEffect quando o user for atualizado
     } catch (error: any) {
@@ -50,9 +54,12 @@ const Login = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-6 text-center" style={{ color: '#4C79AF' }}>
-          Login
+        <h2 className="text-2xl font-bold mb-2 text-center" style={{ color: '#4C79AF' }}>
+          Painel Administrativo
         </h2>
+        <p className="text-sm text-gray-500 text-center mb-6">
+          Acesso restrito a administradores
+        </p>
         <form onSubmit={handleLogin}>
           {erro && (
             <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md text-sm">
@@ -63,10 +70,10 @@ const Login = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Usuário
             </label>
-            <InputWithKeyboard
+            <input
               type="text"
               value={username}
-              onChange={setUsername}
+              onChange={(e) => setUsername(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Digite seu usuário"
               autoComplete="username"
@@ -78,10 +85,10 @@ const Login = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Senha
             </label>
-            <InputWithKeyboard
+            <input
               type="password"
               value={senha}
-              onChange={setSenha}
+              onChange={(e) => setSenha(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Digite sua senha"
               autoComplete="current-password"
@@ -98,21 +105,10 @@ const Login = () => {
             {carregando ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
-        {SHOW_CADASTRO_LINK && (
-          <div className="mt-4 text-center">
-            <Link
-              to="/cadastro-usuario"
-              className="text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center justify-center gap-2"
-            >
-              <i className="bi bi-person-plus"></i>
-              <span>Cadastrar novo usuário</span>
-            </Link>
-          </div>
-        )}
       </div>
     </div>
   );
 };
 
-export default Login;
+export default LoginAdmin;
 

@@ -17,13 +17,18 @@ import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import { BrowserRouter } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
+import { VirtualKeyboardProvider } from './contexts/VirtualKeyboardContext'
+import { VirtualKeyboard } from './Components/VirtualKeyboard'
 import './index.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <App />
+        <VirtualKeyboardProvider>
+          <App />
+          <VirtualKeyboard />
+        </VirtualKeyboardProvider>
       </AuthProvider>
     </BrowserRouter>
   </StrictMode>,

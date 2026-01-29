@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { ihmAPI, producaoAPI } from "../../api/api"
+import { InputWithKeyboard } from "../../Components/VirtualKeyboard"
 
 type StatusAcesso = 'idle' | 'success' | 'error'
 
@@ -194,13 +195,13 @@ const LeitorFinalizar = () => {
                                     boxShadow: '0 0 0 3px rgba(76, 121, 175, 0.1)'
                                 }}
                             >
-                                <input
+                                <InputWithKeyboard
                                     type="text"
                                     className="flex-1 text-lg outline-none bg-transparent placeholder-gray-400"
                                     placeholder="Passe o crachá RFID para finalizar"
                                     autoComplete="off"
                                     value={rfidInput}
-                                    onChange={(e) => setRfidInput(e.target.value)}
+                                    onChange={setRfidInput}
                                     onKeyDown={handleKeyDown}
                                     autoFocus
                                     disabled={status !== 'idle'}

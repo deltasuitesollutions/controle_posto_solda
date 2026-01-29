@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import TopBar from '../Components/topBar/TopBar'
 import MenuLateral from '../Components/MenuLateral/MenuLateral'
 import { Paginacao } from '../Components/Compartilhados/paginacao'
@@ -93,6 +93,9 @@ const Operacoes = () => {
     const [totenTemp, setTotenTemp] = useState('')
     const [pecaTemp, setPecaTemp] = useState('')
     const [operacaoEditandoId, setOperacaoEditandoId] = useState<string | null>(null)
+    
+    // Ref para controlar se estamos carregando dados de edição (evita limpar peças no useEffect)
+    const isLoadingEditData = useRef(false)
 
     // Dados para os dropdowns
     const [produtos, setProdutos] = useState<Produto[]>([])
@@ -114,13 +117,17 @@ const Operacoes = () => {
     useEffect(() => {
         if (modelo) {
             carregarPecasPorModelo()
-            // Limpar peças selecionadas quando modelo mudar
-            setPecas([])
-            setPecaTemp('')
+            // Limpar peças selecionadas quando modelo mudar, mas não se estiver carregando dados de edição
+            if (!isLoadingEditData.current) {
+                setPecas([])
+                setPecaTemp('')
+            }
         } else {
             setPecasDisponiveis([])
-            setPecas([])
-            setPecaTemp('')
+            if (!isLoadingEditData.current) {
+                setPecas([])
+                setPecaTemp('')
+            }
         }
     }, [modelo])
 
@@ -284,6 +291,7 @@ const Operacoes = () => {
     }
 
     const limparFormulario = () => {
+        isLoadingEditData.current = false
         setOperacao('')
         setProduto('')
         setModelo('')
@@ -387,6 +395,9 @@ const Operacoes = () => {
     }
 
     const handleEditarOperacao = async (op: Operacao) => {
+        // Marcar que estamos carregando dados de edição (evita limpar peças no useEffect)
+        isLoadingEditData.current = true
+        
         // Garantir que as linhas com sublinhas estejam carregadas
         if (linhasComSublinhas.length === 0) {
             await carregarLinhasComSublinhas()
@@ -425,6 +436,11 @@ const Operacoes = () => {
                 await carregarPecasPorModelo()
             }
         }
+        
+        // Resetar a flag após um breve delay para garantir que os useEffects já executaram
+        setTimeout(() => {
+            isLoadingEditData.current = false
+        }, 100)
     }
 
     const indiceInicio = (paginaAtual - 1) * itensPorPagina

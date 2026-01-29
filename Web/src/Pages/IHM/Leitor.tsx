@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { ihmAPI } from "../../api/api"
 import { useAuth } from "../../contexts/AuthContext"
+import { InputWithKeyboard } from "../../Components/VirtualKeyboard"
 
 type StatusAcesso = 'idle' | 'success' | 'error'
 
@@ -11,7 +12,6 @@ const LeitorRfid = () => {
     const [colaborador, setColaborador] = useState<string | null>(null)
     const navigate = useNavigate()
     const { logout } = useAuth()
-    const inputRef = useRef<HTMLInputElement>(null)
 
     const handleLogout = () => {
         logout()
@@ -22,20 +22,7 @@ const LeitorRfid = () => {
         setStatus('idle')
         setColaborador(null)
         setRfidInput('')
-        // Focar no campo após resetar
-        setTimeout(() => {
-            inputRef.current?.focus()
-        }, 100)
     }
-
-    // Garantir que o campo sempre esteja focado quando a página carregar ou quando o status voltar para idle
-    useEffect(() => {
-        if (status === 'idle') {
-            setTimeout(() => {
-                inputRef.current?.focus()
-            }, 100)
-        }
-    }, [status])
 
     const processarRfid = async (codigo: string) => {
         const codigoLimpo = codigo.trim()
@@ -109,18 +96,27 @@ const LeitorRfid = () => {
                                 boxShadow: '0 0 0 3px rgba(76, 121, 175, 0.1)'
                             }}
                         >
-                            <input
-                                ref={inputRef}
+                            <InputWithKeyboard
                                 type="text"
                                 className="flex-1 text-lg outline-none bg-transparent placeholder-gray-400"
                                 placeholder="Passe o crachá RFID abaixo"
                                 autoComplete="off"
                                 value={rfidInput}
-                                onChange={(e) => setRfidInput(e.target.value)}
+                                onChange={setRfidInput}
                                 onKeyDown={handleKeyDown}
                                 autoFocus
                                 disabled={status !== 'idle'}
                             />
+                            <button
+                                type="button"
+                                onClick={() => rfidInput.trim() && processarRfid(rfidInput)}
+                                disabled={status !== 'idle' || !rfidInput.trim()}
+                                className="ml-3 w-12 h-12 flex items-center justify-center rounded-lg text-white text-2xl font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90"
+                                style={{ backgroundColor: '#4C79AF' }}
+                                title="Confirmar"
+                            >
+                                ✓
+                            </button>
                         </div>
                     </div>
                 </div>

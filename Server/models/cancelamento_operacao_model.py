@@ -169,6 +169,32 @@ class CancelamentoOperacao:
             cursor.close()
             conn.close()
     
+    @staticmethod
+    def excluir(cancelamento_id: int) -> bool:
+        """
+        Exclui um cancelamento pelo ID
+        
+        Args:
+            cancelamento_id: ID do cancelamento a ser excluído
+        
+        Returns:
+            True se excluído com sucesso, False caso contrário
+        """
+        conn = DatabaseConnection.get_connection()
+        cursor = conn.cursor()
+        
+        try:
+            query = "DELETE FROM operacoes_canceladas WHERE id = %s"
+            cursor.execute(query, (cancelamento_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+        except Exception as e:
+            conn.rollback()
+            raise Exception(f"Erro ao excluir cancelamento: {str(e)}")
+        finally:
+            cursor.close()
+            conn.close()
+    
     def to_dict(self) -> dict:
         """Converte o objeto para dicionário"""
         return {

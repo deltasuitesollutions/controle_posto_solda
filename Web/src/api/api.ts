@@ -517,4 +517,8 @@ export const cancelamentoAPI = {
       method: 'PUT',
       body: JSON.stringify({ motivo }),
     }),
+  deletar: (cancelamentoId: number) =>
+    fetchAPI(`/cancelamentos/${cancelamentoId}`, {
+      method: 'DELETE',
+    }),
 }

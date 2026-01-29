@@ -257,6 +257,12 @@ def _formatar_registro(row: Tuple, pecas_cache: Dict[int, List[Dict]], totens_di
     # Nome do dispositivo salvo diretamente no registro (PRIORIDADE MÁXIMA)
     r_dispositivo_nome = row[33] if len(row) > 33 else None
     
+    # Todas as peças da operação (JSON array)
+    operacao_pecas_json = row[34] if len(row) > 34 else []
+    
+    # Todos os totens da operação (JSON array)
+    operacao_totens_json = row[35] if len(row) > 35 else []
+    
     # Buscar peças do modelo (usar cache pré-carregado)
     pecas_modelo = pecas_cache.get(modelo_id, []) if modelo_id else []
     
@@ -385,6 +391,34 @@ def _formatar_registro(row: Tuple, pecas_cache: Dict[int, List[Dict]], totens_di
     # Adicionar código de produção se existir
     if codigo_producao:
         registro_formatado["codigo_producao"] = codigo_producao
+    
+    # Adicionar todas as peças da operação
+    if operacao_pecas_json:
+        if isinstance(operacao_pecas_json, list):
+            registro_formatado["operacao_pecas"] = operacao_pecas_json
+        else:
+            # Se veio como string JSON, converter
+            import json
+            try:
+                registro_formatado["operacao_pecas"] = json.loads(operacao_pecas_json) if isinstance(operacao_pecas_json, str) else operacao_pecas_json
+            except:
+                registro_formatado["operacao_pecas"] = []
+    else:
+        registro_formatado["operacao_pecas"] = []
+    
+    # Adicionar todos os totens da operação
+    if operacao_totens_json:
+        if isinstance(operacao_totens_json, list):
+            registro_formatado["operacao_totens"] = operacao_totens_json
+        else:
+            # Se veio como string JSON, converter
+            import json
+            try:
+                registro_formatado["operacao_totens"] = json.loads(operacao_totens_json) if isinstance(operacao_totens_json, str) else operacao_totens_json
+            except:
+                registro_formatado["operacao_totens"] = []
+    else:
+        registro_formatado["operacao_totens"] = []
     
     return registro_formatado
 

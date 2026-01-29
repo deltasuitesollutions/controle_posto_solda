@@ -121,7 +121,7 @@ class RegistroProducao:
                     -- Produto
                     pr.produto_id as pr_id,
                     pr.nome as pr_nome,
-                    -- Peça
+                    -- Peça do registro
                     pc.peca_id as pc_id,
                     pc.codigo as pc_codigo,
                     pc.nome as pc_nome,
@@ -130,7 +130,22 @@ class RegistroProducao:
                      FROM operacao_totens ot 
                      WHERE ot.operacao_id = r.operacao_id) as o_toten_nome,
                     -- Nome do dispositivo salvo diretamente no registro
-                    r.dispositivo_nome as r_dispositivo_nome
+                    r.dispositivo_nome as r_dispositivo_nome,
+                    -- Todas as peças da operação (JSON array)
+                    (SELECT COALESCE(JSON_AGG(JSON_BUILD_OBJECT(
+                        'id', pec.peca_id,
+                        'codigo', pec.codigo,
+                        'nome', pec.nome
+                    )), '[]'::json)
+                     FROM operacao_pecas op_pec
+                     INNER JOIN pecas pec ON op_pec.peca_id = pec.peca_id
+                     WHERE op_pec.operacao_id = r.operacao_id) as operacao_pecas_json,
+                    -- Todos os totens da operação (JSON array)
+                    (SELECT COALESCE(JSON_AGG(JSON_BUILD_OBJECT(
+                        'nome', ot2.toten_nome
+                    )), '[]'::json)
+                     FROM operacao_totens ot2
+                     WHERE ot2.operacao_id = r.operacao_id) as operacao_totens_json
                 FROM registros_producao r
                 LEFT JOIN funcionarios f ON r.funcionario_id = f.funcionario_id
                 LEFT JOIN postos p ON r.posto_id = p.posto_id

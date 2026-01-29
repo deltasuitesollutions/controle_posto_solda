@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { producaoAPI, cancelamentoAPI } from '../../api/api';
+import { InputWithKeyboard } from '../../Components/VirtualKeyboard';
 
 const FinalizarProducao = () => {
   const location = useLocation();
@@ -176,11 +177,11 @@ const FinalizarProducao = () => {
         </div>
 
         <div className="flex items-center justify-center gap-6">
-          <input
+          <InputWithKeyboard
             type="number"
             value={quantidade}
-            onChange={(e) => {
-              setQuantidade(e.target.value);
+            onChange={(value) => {
+              setQuantidade(value);
               setErro(null);
             }}
             onKeyDown={handleKeyDown}
@@ -189,6 +190,7 @@ const FinalizarProducao = () => {
             autoFocus
             disabled={carregando}
             min="0"
+            keyboardLayout="numeric"
           />
 
           <button

@@ -20,17 +20,20 @@ def exportar_registros_csv(
     output = io.StringIO()
     writer = csv.writer(output, delimiter=';', quoting=csv.QUOTE_MINIMAL, lineterminator='\r\n')
     
-    writer.writerow(['Posto', 'Inicio', 'Fim', 'Data', 'Produto', 'Matrícula', 'Operador'])
+    writer.writerow(['Posto', 'Operação', 'Inicio', 'Fim', 'Data', 'Produto', 'Peça', 'Código', 'Matrícula', 'Operador'])
     
     for row in rows:
         try:
             dados = processar_linha(row)
             writer.writerow([
                 dados['posto'],
+                dados['operacao_nome'],
                 dados['hora_inicio'],
                 dados['hora_fim'],
                 dados['data_str'],
                 dados['modelo_desc'],
+                dados['peca_nome'],
+                dados['codigo_producao'],
                 dados['matricula'],
                 dados['nome']
             ])

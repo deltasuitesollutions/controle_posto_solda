@@ -33,6 +33,9 @@ const Operacao = () => {
   const [registroAberto, setRegistroAberto] = useState<any>(null);
   const [funcionarioMatricula, setFuncionarioMatricula] = useState<string>('');
   const [postoAtual, setPostoAtual] = useState<string>('');
+  // Estados para múltiplas peças e códigos da operação
+  const [pecasDisponiveis, setPecasDisponiveis] = useState<Array<{nome: string; codigo: string}>>([]);
+  const [codigosDisponiveis, setCodigosDisponiveis] = useState<string[]>([]);
   const [erros, setErros] = useState({
     operacao: false,
     produto: false,
@@ -149,6 +152,8 @@ const Operacao = () => {
       setPeca('');
       setCodigo('');
       setPostoAtual('');
+      setPecasDisponiveis([]);
+      setCodigosDisponiveis([]);
       return;
     }
     
@@ -187,22 +192,39 @@ const Operacao = () => {
         setModeloDescricao(descricaoModelo);
       }
       
+      // Montar lista de peças disponíveis (nome + código)
+      const pecasNomes = operacaoEncontrada.pecas_nomes || [];
+      const pecasCodigos = operacaoEncontrada.pecas || [];
+      const listaPecas: Array<{nome: string; codigo: string}> = [];
+      
+      for (let i = 0; i < Math.max(pecasNomes.length, pecasCodigos.length); i++) {
+        listaPecas.push({
+          nome: pecasNomes[i] || '',
+          codigo: pecasCodigos[i] || ''
+        });
+      }
+      setPecasDisponiveis(listaPecas);
+      
+      // Montar lista de códigos disponíveis
+      const codigosOperacao = operacaoEncontrada.codigos || [];
+      const nomeOp = operacaoEncontrada.operacao || '';
+      // Filtrar códigos que não sejam iguais ao nome da operação
+      const codigosFiltrados = codigosOperacao.filter((c: string) => c && c !== nomeOp);
+      // Adicionar códigos das peças se não estiverem na lista
+      pecasCodigos.forEach((cod: string) => {
+        if (cod && !codigosFiltrados.includes(cod)) {
+          codigosFiltrados.push(cod);
+        }
+      });
+      setCodigosDisponiveis(codigosFiltrados);
+      
       // Preencher peça com o nome da peça (primeira peça se houver)
-      const nomePeca = operacaoEncontrada.pecas_nomes?.[0] || '';
-      const codigoPeca = operacaoEncontrada.pecas?.[0] || '';
+      const nomePeca = pecasNomes[0] || '';
+      const codigoPeca = pecasCodigos[0] || '';
       setPeca(nomePeca);  // Campo PEÇA mostra o nome da peça
       
-      // Preencher código: usar o primeiro código da lista de códigos, ou o código da peça como fallback
-      // NUNCA usar o nome da operação (operacaoEncontrada.operacao)
-      // Verificar se o código não é o nome da operação (caso tenha sido salvo incorretamente)
-      const nomeOperacao = operacaoEncontrada.operacao || '';
-      const primeiroCodigo = operacaoEncontrada.codigos?.[0] || '';
-      
-      // Se o código da lista for igual ao nome da operação, usar o código da peça ao invés
-      const codigoParaUsar = (primeiroCodigo && primeiroCodigo !== nomeOperacao) 
-        ? primeiroCodigo 
-        : (codigoPeca || '');
-      
+      // Preencher código: usar o primeiro código válido
+      const codigoParaUsar = codigosFiltrados[0] || codigoPeca || '';
       setCodigo(codigoParaUsar);
       
       // Definir posto
@@ -215,6 +237,8 @@ const Operacao = () => {
       setModeloDescricao('');
       setPeca('');
       setCodigo('');
+      setPecasDisponiveis([]);
+      setCodigosDisponiveis([]);
     }
   };
 
@@ -441,13 +465,43 @@ const Operacao = () => {
           <label className="text-gray-700 text-xl font-bold mb-3 block">
             PEÇA
           </label>
-          <input
-            type="text"
-            value={peca}
-            readOnly
-            className={`w-full px-4 py-3 text-base border-2 rounded-lg focus:outline-none bg-gray-100 cursor-not-allowed ${erros.peca ? 'border-red-500' : 'border-gray-400'}`}
-            style={{ minHeight: '55px' }}
-          />
+          {pecasDisponiveis.length > 1 ? (
+            <select
+              value={peca}
+              onChange={(e) => {
+                const novaPeca = e.target.value;
+                setPeca(novaPeca);
+                if (erros.peca) setErros({ ...erros, peca: false });
+                // Atualizar código correspondente à peça selecionada
+                const pecaSelecionada = pecasDisponiveis.find(p => p.nome === novaPeca);
+                if (pecaSelecionada) {
+                  const novoCodigo = pecaSelecionada.codigo || '';
+                  setCodigo(novoCodigo);
+                  if (novoCodigo && erros.codigo) setErros({ ...erros, codigo: false });
+                }
+              }}
+              className={`w-full px-4 py-3 text-base border-2 rounded-lg focus:outline-none bg-white appearance-none cursor-pointer ${erros.peca ? 'border-red-500' : 'border-gray-400 focus:border-blue-500'}`}
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 1rem center',
+                paddingRight: '2.5rem',
+                minHeight: '55px',
+              }}
+            >
+              {pecasDisponiveis.map((p, idx) => (
+                <option key={idx} value={p.nome}>{p.nome}</option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type="text"
+              value={peca}
+              readOnly
+              className={`w-full px-4 py-3 text-base border-2 rounded-lg focus:outline-none bg-gray-100 cursor-not-allowed ${erros.peca ? 'border-red-500' : 'border-gray-400'}`}
+              style={{ minHeight: '55px' }}
+            />
+          )}
         </div>
 
         <div>

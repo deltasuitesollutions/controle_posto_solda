@@ -337,3 +337,32 @@ def atualizar_motivo(cancelamento_id: int, motivo: str) -> Dict[str, Any]:
         }
     except Exception as e:
         raise Exception(f"Erro ao atualizar motivo: {str(e)}")
+
+
+def excluir_cancelamento(cancelamento_id: int) -> Dict[str, Any]:
+    """
+    Exclui um cancelamento pelo ID
+    
+    Args:
+        cancelamento_id: ID do cancelamento a ser excluído
+    
+    Returns:
+        Dicionário com resultado da operação
+    """
+    try:
+        # Validação de negócio
+        if not cancelamento_id:
+            raise Exception("ID do cancelamento é obrigatório")
+        
+        # Excluir no model
+        sucesso = CancelamentoOperacao.excluir(cancelamento_id)
+        
+        if not sucesso:
+            raise Exception("Cancelamento não encontrado")
+        
+        return {
+            "sucesso": True,
+            "mensagem": "Cancelamento excluído com sucesso"
+        }
+    except Exception as e:
+        raise Exception(f"Erro ao excluir cancelamento: {str(e)}")

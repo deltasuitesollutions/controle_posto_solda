@@ -3,6 +3,7 @@ import Funcionarios from "./Pages/Funcionarios";
 import Registros from "./Pages/Registros";
 import Dashboard from "./Pages/Dashboard";
 import Login from "./Pages/Login";
+import LoginAdmin from "./Pages/LoginAdmin";
 import LeitorIHM from "./Pages/IHM/Leitor";
 import OperacaoIHM from "./Pages/IHM/Operacao";
 import LeitorFinalizar from "./Pages/IHM/LeitorFinalizar";
@@ -24,6 +25,7 @@ function App() {
     <Routes>
       {/* Rotas públicas */}
       <Route path="/login" element={<Login />} />
+      <Route path="/admin" element={<LoginAdmin />} />
       <Route path="/cadastro-usuario" element={<CadastroUsuario />} />
       
       {/* Rotas públicas/admin */}

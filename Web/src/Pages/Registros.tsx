@@ -35,6 +35,9 @@ interface Registro {
     codigo_producao?: string
     serial?: string
     nome?: string
+    // Novas propriedades para múltiplas peças e totens da operação
+    operacao_pecas?: Array<{ id: number; codigo: string; nome: string }>
+    operacao_totens?: Array<{ nome: string }>
 }
 
 const Registros = () => {
@@ -222,7 +225,9 @@ const Registros = () => {
                 pecas: reg.pecas || [],
                 codigo_producao: reg.codigo_producao || '',
                 serial: reg.serial || '',
-                nome: reg.nome || ''
+                nome: reg.nome || '',
+                operacao_pecas: reg.operacao_pecas || [],
+                operacao_totens: reg.operacao_totens || []
             }))
 
             setRegistros(registrosMapeados)
@@ -671,7 +676,19 @@ const Registros = () => {
                                                             />
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {registro.totem || '-'}
+                                                            {registro.operacao_totens && registro.operacao_totens.length > 1 ? (
+                                                                <select 
+                                                                    className="px-2 py-1 text-sm border border-gray-300 rounded bg-white min-w-[120px]"
+                                                                    defaultValue={registro.totem || ''}
+                                                                    disabled
+                                                                >
+                                                                    {registro.operacao_totens.map((t, idx) => (
+                                                                        <option key={idx} value={t.nome}>{t.nome}</option>
+                                                                    ))}
+                                                                </select>
+                                                            ) : (
+                                                                registro.totem || '-'
+                                                            )}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                             {registro.posto || '-'}
@@ -695,10 +712,34 @@ const Registros = () => {
                                                             {registro.modelo || '-'}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {registro.peca || '-'}
+                                                            {registro.operacao_pecas && registro.operacao_pecas.length > 1 ? (
+                                                                <select 
+                                                                    className="px-2 py-1 text-sm border border-gray-300 rounded bg-white min-w-[120px]"
+                                                                    defaultValue={registro.peca || ''}
+                                                                    disabled
+                                                                >
+                                                                    {registro.operacao_pecas.map((p) => (
+                                                                        <option key={p.id} value={p.nome}>{p.nome}</option>
+                                                                    ))}
+                                                                </select>
+                                                            ) : (
+                                                                registro.peca || '-'
+                                                            )}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {registro.codigo_producao || '-'}
+                                                            {registro.operacao_pecas && registro.operacao_pecas.length > 1 ? (
+                                                                <select 
+                                                                    className="px-2 py-1 text-sm border border-gray-300 rounded bg-white min-w-[120px]"
+                                                                    defaultValue={registro.codigo_producao || ''}
+                                                                    disabled
+                                                                >
+                                                                    {registro.operacao_pecas.map((p) => (
+                                                                        <option key={p.id} value={p.codigo}>{p.codigo}</option>
+                                                                    ))}
+                                                                </select>
+                                                            ) : (
+                                                                registro.codigo_producao || '-'
+                                                            )}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                             {registro.quantidade || '-'}

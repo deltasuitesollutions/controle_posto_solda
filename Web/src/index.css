@@ -96,3 +96,147 @@ body.menu-open .menu-content {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #a0aec0;
 }
+
+/* ===== Virtual Keyboard Styles ===== */
+.virtual-keyboard-container {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+
+.virtual-keyboard-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  pointer-events: auto;
+}
+
+.virtual-keyboard-wrapper {
+  position: relative;
+  background: #f5f5f5;
+  border-top: 2px solid #4C79AF;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+  pointer-events: auto;
+  padding: 4px 8px;
+  padding-bottom: max(4px, env(safe-area-inset-bottom));
+}
+
+.virtual-keyboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 8px 4px 8px;
+}
+
+.virtual-keyboard-close {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e0e0e0;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.virtual-keyboard-close:hover {
+  background: #d0d0d0;
+}
+
+/* Custom theme for react-simple-keyboard */
+.virtual-keyboard-theme {
+  background: transparent !important;
+  border-radius: 0 !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+.virtual-keyboard-theme .hg-row {
+  margin-bottom: 3px;
+}
+
+.virtual-keyboard-theme .hg-row:last-child {
+  margin-bottom: 0;
+}
+
+.virtual-keyboard-theme .hg-button {
+  height: 36px;
+  min-width: 32px;
+  font-size: 15px;
+  font-weight: 500;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  color: #374151;
+  transition: all 0.1s ease;
+}
+
+.virtual-keyboard-theme .hg-button:active,
+.virtual-keyboard-theme .hg-button:hover {
+  background: #4C79AF;
+  color: white;
+  border-color: #4C79AF;
+}
+
+.virtual-keyboard-theme .hg-button[data-skbtn="{space}"] {
+  min-width: 150px;
+  flex-grow: 2;
+}
+
+.virtual-keyboard-theme .hg-button[data-skbtn="{enter}"] {
+  background: #4C79AF;
+  color: white;
+  border-color: #4C79AF;
+  min-width: 60px;
+}
+
+.virtual-keyboard-theme .hg-button[data-skbtn="{enter}"]:hover {
+  background: #3d6a9f;
+}
+
+.virtual-keyboard-theme .hg-button[data-skbtn="{bksp}"] {
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #fecaca;
+  min-width: 50px;
+}
+
+.virtual-keyboard-theme .hg-button[data-skbtn="{bksp}"]:hover {
+  background: #dc2626;
+  color: white;
+  border-color: #dc2626;
+}
+
+.virtual-keyboard-theme .hg-button[data-skbtn="{shift}"] {
+  background: #e0e7ff;
+  color: #4338ca;
+  border-color: #c7d2fe;
+  min-width: 55px;
+}
+
+.virtual-keyboard-theme .hg-button[data-skbtn="{shift}"]:hover,
+.virtual-keyboard-theme .hg-button[data-skbtn="{shift}"].hg-activeButton {
+  background: #4338ca;
+  color: white;
+  border-color: #4338ca;
+}
+
+/* Responsivo para telas menores */
+@media (max-width: 600px) {
+  .virtual-keyboard-theme .hg-button {
+    height: 32px;
+    min-width: 26px;
+    font-size: 14px;
+  }
+  
+  .virtual-keyboard-theme .hg-button[data-skbtn="{space}"] {
+    min-width: 120px;
+  }
+}

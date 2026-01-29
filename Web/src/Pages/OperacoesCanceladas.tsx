@@ -4,6 +4,7 @@ import MenuLateral from '../Components/MenuLateral/MenuLateral'
 import { Paginacao } from '../Components/Compartilhados/paginacao'
 import { cancelamentoAPI } from '../api/api'
 import ModalBase from '../Components/Compartilhados/ModalBase'
+import ModalConfirmacao from '../Components/Compartilhados/ModalConfirmacao'
 
 const OperacoesCanceladas = () => {
     const [paginaAtual, setPaginaAtual] = useState(1)
@@ -24,6 +25,10 @@ const OperacoesCanceladas = () => {
         mensagem: '',
         tipo: 'sucesso' as 'sucesso' | 'erro' | 'aviso'
     })
+    
+    // Estados para exclusão
+    const [excluindo, setExcluindo] = useState(false)
+    const [cancelamentoParaExcluir, setCancelamentoParaExcluir] = useState<any | null>(null)
 
     // Função para aplicar filtros rápidos
     const aplicarFiltroRapido = (tipo: string) => {
@@ -140,6 +145,37 @@ const OperacoesCanceladas = () => {
             mensagem: '',
             tipo: 'sucesso'
         })
+    }
+
+    // Função para abrir modal de exclusão
+    const abrirModalExclusao = (cancelamento: any) => {
+        setCancelamentoParaExcluir(cancelamento)
+    }
+
+    // Função para excluir cancelamento
+    const excluirCancelamento = async () => {
+        if (!cancelamentoParaExcluir) return
+
+        setExcluindo(true)
+        try {
+            await cancelamentoAPI.deletar(cancelamentoParaExcluir.id)
+            await buscarCancelamentos()
+            setModalMensagem({
+                isOpen: true,
+                mensagem: 'Registro excluído com sucesso!',
+                tipo: 'sucesso'
+            })
+        } catch (error: any) {
+            console.error('Erro ao excluir cancelamento:', error)
+            setModalMensagem({
+                isOpen: true,
+                mensagem: error.message || 'Erro ao excluir registro',
+                tipo: 'erro'
+            })
+        } finally {
+            setExcluindo(false)
+            setCancelamentoParaExcluir(null)
+        }
     }
 
     return (
@@ -276,6 +312,9 @@ const OperacoesCanceladas = () => {
                                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                     Motivo
                                                 </th>
+                                                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Ações
+                                                </th>
                                             </tr>
                                         </thead>
                                         <tbody className="bg-white divide-y divide-gray-200">
@@ -348,6 +387,15 @@ const OperacoesCanceladas = () => {
                                                             </div>
                                                         )}
                                                     </td>
+                                                    <td className="px-4 py-3 text-center">
+                                                        <button
+                                                            onClick={() => abrirModalExclusao(cancelamento)}
+                                                            className="px-2 py-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+                                                            title="Excluir registro"
+                                                        >
+                                                            <i className="bi bi-trash"></i>
+                                                        </button>
+                                                    </td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -393,6 +441,24 @@ const OperacoesCanceladas = () => {
             >
                 <p className="text-gray-700">{modalMensagem.mensagem}</p>
             </ModalBase>
+
+            {/* Modal de Confirmação de Exclusão */}
+            <ModalConfirmacao
+                isOpen={cancelamentoParaExcluir !== null}
+                onClose={() => setCancelamentoParaExcluir(null)}
+                onConfirm={excluirCancelamento}
+                titulo="Excluir Registro"
+                mensagem="Tem certeza que deseja excluir este registro de cancelamento? Esta ação não pode ser desfeita."
+                textoConfirmar={excluindo ? 'Excluindo...' : 'Excluir'}
+                textoCancelar="Cancelar"
+                corHeader="vermelho"
+                item={cancelamentoParaExcluir ? {
+                    Funcionário: cancelamentoParaExcluir.funcionario_nome,
+                    Operação: cancelamentoParaExcluir.operacao_nome,
+                    Data: cancelamentoParaExcluir.data_cancelamento,
+                    Motivo: cancelamentoParaExcluir.motivo || 'Não informado'
+                } : undefined}
+            />
         </div>
     )
 }
