@@ -10,7 +10,8 @@ const VirtualKeyboard = () => {
     hideKeyboard,
     setInputValue,
     onChangeCallback,
-    keyboardLayout
+    keyboardLayout,
+    keyboardSize
   } = useVirtualKeyboard()
 
   const keyboardRef = useRef<any>(null)
@@ -83,7 +84,7 @@ const VirtualKeyboard = () => {
       />
       
       {/* Container do teclado */}
-      <div className="virtual-keyboard-wrapper">
+      <div className={`virtual-keyboard-wrapper ${keyboardSize === 'large' ? 'virtual-keyboard-large' : ''}`}>
         <div className="virtual-keyboard-header">
           <span className="text-sm text-gray-600">Teclado Virtual</span>
           <button

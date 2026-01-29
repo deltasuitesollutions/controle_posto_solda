@@ -240,3 +240,45 @@ body.menu-open .menu-content {
     min-width: 120px;
   }
 }
+
+/* ===== Teclado Grande (para IHM) ===== */
+.virtual-keyboard-large .virtual-keyboard-theme .hg-row {
+  margin-bottom: 6px;
+}
+
+.virtual-keyboard-large .virtual-keyboard-theme .hg-button {
+  height: 56px;
+  min-width: 48px;
+  font-size: 22px;
+  font-weight: 600;
+  border-radius: 8px;
+}
+
+.virtual-keyboard-large .virtual-keyboard-theme .hg-button[data-skbtn="{space}"] {
+  min-width: 200px;
+}
+
+.virtual-keyboard-large .virtual-keyboard-theme .hg-button[data-skbtn="{enter}"] {
+  min-width: 80px;
+}
+
+.virtual-keyboard-large .virtual-keyboard-theme .hg-button[data-skbtn="{bksp}"] {
+  min-width: 70px;
+}
+
+.virtual-keyboard-large .virtual-keyboard-theme .hg-button[data-skbtn="{shift}"] {
+  min-width: 75px;
+}
+
+.virtual-keyboard-large .virtual-keyboard-header {
+  padding: 6px 12px 8px 12px;
+}
+
+.virtual-keyboard-large .virtual-keyboard-header span {
+  font-size: 16px;
+}
+
+.virtual-keyboard-large .virtual-keyboard-close {
+  width: 40px;
+  height: 40px;
+}

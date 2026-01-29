@@ -73,8 +73,8 @@ const LeitorRfid = () => {
                 </div>
             )}
 
-            <div className="pt-4 px-6 pb-2 flex flex-row items-center relative">
-                <span className="text-gray-700 font-sans text-4xl font-bold tracking-wide flex-1 text-center">
+            <div className="pt-12 px-6 pb-4 flex flex-row items-center relative">
+                <span className="text-gray-700 font-sans text-5xl font-bold tracking-wide flex-1 text-center">
                     Seja Bem Vindo!
                 </span>
                 <button
@@ -86,11 +86,11 @@ const LeitorRfid = () => {
                 </button>
             </div>
 
-            <div className="pt-4 px-6 pb-20 flex items-center justify-center">
-                <div className="w-full max-w-2xl">
-                    <div className="bg-white rounded-lg shadow-lg p-8">
+            <div className="pt-10 px-6 pb-20 flex items-center justify-center">
+                <div className="w-full max-w-3xl">
+                    <div className="bg-white rounded-lg shadow-lg p-10">
                         <div
-                            className="flex items-center border-2 rounded-lg px-4 py-4"
+                            className="flex items-center border-2 rounded-lg px-6 py-5"
                             style={{
                                 borderColor: '#4C79AF',
                                 boxShadow: '0 0 0 3px rgba(76, 121, 175, 0.1)'
@@ -98,7 +98,7 @@ const LeitorRfid = () => {
                         >
                             <InputWithKeyboard
                                 type="text"
-                                className="flex-1 text-lg outline-none bg-transparent placeholder-gray-400"
+                                className="flex-1 text-2xl outline-none bg-transparent placeholder-gray-400"
                                 placeholder="Passe o crachá RFID abaixo"
                                 autoComplete="off"
                                 value={rfidInput}
@@ -106,6 +106,7 @@ const LeitorRfid = () => {
                                 onKeyDown={handleKeyDown}
                                 autoFocus
                                 disabled={status !== 'idle'}
+                                keyboardSize="large"
                             />
                             <button
                                 type="button"

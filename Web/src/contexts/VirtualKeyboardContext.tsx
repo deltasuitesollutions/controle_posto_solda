@@ -10,6 +10,8 @@ interface VirtualKeyboardContextType {
   onChangeCallback: ((value: string) => void) | null
   keyboardLayout: 'default' | 'numeric'
   setKeyboardLayout: (layout: 'default' | 'numeric') => void
+  keyboardSize: 'normal' | 'large'
+  setKeyboardSize: (size: 'normal' | 'large') => void
 }
 
 const VirtualKeyboardContext = createContext<VirtualKeyboardContextType | undefined>(undefined)
@@ -19,6 +21,7 @@ export const VirtualKeyboardProvider: React.FC<{ children: React.ReactNode }> = 
   const [inputValue, setInputValue] = useState('')
   const [inputRef, setInputRef] = useState<React.RefObject<HTMLInputElement | HTMLTextAreaElement | null> | null>(null)
   const [keyboardLayout, setKeyboardLayout] = useState<'default' | 'numeric'>('default')
+  const [keyboardSize, setKeyboardSize] = useState<'normal' | 'large'>('normal')
   const onChangeCallbackRef = useRef<((value: string) => void) | null>(null)
 
   const showKeyboard = useCallback((
@@ -49,7 +52,9 @@ export const VirtualKeyboardProvider: React.FC<{ children: React.ReactNode }> = 
         setInputValue,
         onChangeCallback: onChangeCallbackRef.current,
         keyboardLayout,
-        setKeyboardLayout
+        setKeyboardLayout,
+        keyboardSize,
+        setKeyboardSize
       }}
     >
       {children}

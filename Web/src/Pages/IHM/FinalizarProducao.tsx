@@ -159,24 +159,24 @@ const FinalizarProducao = () => {
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen flex flex-col items-center justify-start pt-6 p-6">
+    <div className="bg-gray-50 min-h-screen flex flex-col items-center justify-start pt-16 p-6">
       {erro && (
-        <div className="mb-6 px-6 py-4 bg-red-100 border border-red-400 text-red-700 rounded-lg text-xl">
+        <div className="mb-8 px-8 py-5 bg-red-100 border border-red-400 text-red-700 rounded-lg text-2xl">
           {erro}
         </div>
       )}
 
-      <div className="w-full max-w-4xl flex flex-col items-center justify-center gap-6">
+      <div className="w-full max-w-4xl flex flex-col items-center justify-center gap-8">
         <div className="flex flex-col items-center justify-center">
-          <label className="block text-gray-700 text-xl font-bold text-center">
+          <label className="block text-gray-700 text-3xl font-bold text-center">
             QTD DE PEÇAS PRODUZIDAS
           </label>
-          <p className="text-base text-gray-600 text-center mt-1">
+          <p className="text-xl text-gray-600 text-center mt-3">
             (Digite 0 para cancelar a operação)
           </p>
         </div>
 
-        <div className="flex items-center justify-center gap-6">
+        <div className="flex items-center justify-center gap-8">
           <InputWithKeyboard
             type="number"
             value={quantidade}
@@ -185,21 +185,22 @@ const FinalizarProducao = () => {
               setErro(null);
             }}
             onKeyDown={handleKeyDown}
-            className="px-6 py-5 text-3xl border-4 border-gray-400 rounded-lg focus:outline-none focus:border-blue-500 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-            style={{ minHeight: '80px', minWidth: '200px' }}
+            className="px-8 py-6 text-4xl border-4 border-gray-400 rounded-lg focus:outline-none focus:border-blue-500 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            style={{ minHeight: '100px', minWidth: '240px' }}
             autoFocus
             disabled={carregando}
             min="0"
             keyboardLayout="numeric"
+            keyboardSize="large"
           />
 
           <button
             onClick={handleConcluir}
             disabled={carregando || !quantidade.trim()}
-            className="px-12 py-6 text-white text-3xl font-bold rounded-lg shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-green-600 hover:bg-green-700"
+            className="px-14 py-7 text-white text-4xl font-bold rounded-lg shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-green-600 hover:bg-green-700"
             style={{ 
-              minHeight: '80px',
-              minWidth: '250px'
+              minHeight: '100px',
+              minWidth: '280px'
             }}
           >
             {carregando ? 'Concluindo...' : 'Concluir'}
