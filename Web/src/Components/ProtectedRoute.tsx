@@ -17,8 +17,13 @@ const ProtectedRoute = ({
   const { user, isOperador, isAdmin, isMaster } = useAuth();
   const location = useLocation();
 
-  // Se não há usuário logado, redireciona para login admin (sem teclado virtual)
+  // Se não há usuário logado, redireciona para o login apropriado
   if (!user) {
+    // Se estava em uma rota IHM (operador), redireciona para login do operador
+    if (location.pathname.startsWith('/ihm')) {
+      return <Navigate to="/login" replace />;
+    }
+    // Caso contrário, redireciona para login admin
     return <Navigate to="/admin" replace state={{ from: location }} />;
   }
 
