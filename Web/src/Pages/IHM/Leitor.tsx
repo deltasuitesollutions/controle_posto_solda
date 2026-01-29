@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { ihmAPI } from "../../api/api"
 import { useAuth } from "../../contexts/AuthContext"
@@ -73,8 +73,8 @@ const LeitorRfid = () => {
                 </div>
             )}
 
-            <div className="pt-12 px-6 pb-4 flex flex-row items-center relative">
-                <span className="text-gray-700 font-sans text-5xl font-bold tracking-wide flex-1 text-center">
+            <div className="pt-4 px-6 pb-2 flex flex-row items-center relative">
+                <span className="text-gray-700 font-sans text-4xl font-bold tracking-wide flex-1 text-center">
                     Seja Bem Vindo!
                 </span>
                 <button
@@ -86,8 +86,8 @@ const LeitorRfid = () => {
                 </button>
             </div>
 
-            <div className="pt-10 px-6 pb-20 flex items-center justify-center">
-                <div className="w-full max-w-3xl">
+            <div className="px-6 pb-8 flex items-center justify-center">
+                <div className="w-full max-w-4xl">
                     <div className="bg-white rounded-lg shadow-lg p-10">
                         <div
                             className="flex items-center border-2 rounded-lg px-6 py-5"
@@ -108,16 +108,6 @@ const LeitorRfid = () => {
                                 disabled={status !== 'idle'}
                                 keyboardSize="large"
                             />
-                            <button
-                                type="button"
-                                onClick={() => rfidInput.trim() && processarRfid(rfidInput)}
-                                disabled={status !== 'idle' || !rfidInput.trim()}
-                                className="ml-3 w-12 h-12 flex items-center justify-center rounded-lg text-white text-2xl font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90"
-                                style={{ backgroundColor: '#4C79AF' }}
-                                title="Confirmar"
-                            >
-                                ✓
-                            </button>
                         </div>
                     </div>
                 </div>

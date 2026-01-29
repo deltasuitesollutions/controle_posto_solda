@@ -243,13 +243,13 @@ body.menu-open .menu-content {
 
 /* ===== Teclado Grande (para IHM) ===== */
 .virtual-keyboard-large .virtual-keyboard-theme .hg-row {
-  margin-bottom: 6px;
+  margin-bottom: 10px;
 }
 
 .virtual-keyboard-large .virtual-keyboard-theme .hg-button {
-  height: 56px;
-  min-width: 48px;
-  font-size: 22px;
+  height: 72px;
+  min-width: 56px;
+  font-size: 26px;
   font-weight: 600;
   border-radius: 8px;
 }

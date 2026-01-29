@@ -189,7 +189,7 @@ const LeitorFinalizar = () => {
                     <div className="bg-white rounded-lg shadow-lg p-8">
                         <div className="flex items-center gap-3">
                             <div
-                                className="flex-1 flex items-center border-2 rounded-lg px-4 py-4"
+                                className="flex-1 flex items-center border-2 rounded-lg px-6 py-5"
                                 style={{
                                     borderColor: '#4C79AF',
                                     boxShadow: '0 0 0 3px rgba(76, 121, 175, 0.1)'
@@ -197,7 +197,7 @@ const LeitorFinalizar = () => {
                             >
                                 <InputWithKeyboard
                                     type="text"
-                                    className="flex-1 text-lg outline-none bg-transparent placeholder-gray-400"
+                                    className="flex-1 text-2xl outline-none bg-transparent placeholder-gray-400"
                                     placeholder="Passe o crachá RFID para finalizar"
                                     autoComplete="off"
                                     value={rfidInput}
@@ -205,6 +205,7 @@ const LeitorFinalizar = () => {
                                     onKeyDown={handleKeyDown}
                                     autoFocus
                                     disabled={status !== 'idle'}
+                                    keyboardSize="large"
                                 />
                             </div>
                             <button
