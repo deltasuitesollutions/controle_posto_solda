@@ -87,18 +87,19 @@ const LeitorRfid = () => {
             </div>
 
             <div className="px-6 pb-8 flex items-center justify-center">
-                <div className="w-full max-w-4xl">
-                    <div className="bg-white rounded-lg shadow-lg p-10">
+                <div className="w-full max-w-5xl">
+                    <div className="bg-white rounded-xl shadow-xl p-14">
                         <div
-                            className="flex items-center border-2 rounded-lg px-6 py-5"
+                            className="flex items-center border-3 rounded-xl px-8 py-6"
                             style={{
                                 borderColor: '#4C79AF',
-                                boxShadow: '0 0 0 3px rgba(76, 121, 175, 0.1)'
+                                borderWidth: '3px',
+                                boxShadow: '0 0 0 4px rgba(76, 121, 175, 0.1)'
                             }}
                         >
                             <InputWithKeyboard
                                 type="text"
-                                className="flex-1 text-2xl outline-none bg-transparent placeholder-gray-400"
+                                className="flex-1 text-3xl outline-none bg-transparent placeholder-gray-400"
                                 placeholder="Passe o crachá RFID abaixo"
                                 autoComplete="off"
                                 value={rfidInput}
