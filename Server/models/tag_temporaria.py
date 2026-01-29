@@ -1,6 +1,17 @@
 from typing import Dict, Any, Optional, List, Tuple
 from datetime import datetime, timedelta
 from Server.models.database import DatabaseConnection
+try:
+    from zoneinfo import ZoneInfo
+    TZ_MANAUS = ZoneInfo('America/Manaus')
+except ImportError:
+    import pytz
+    TZ_MANAUS = pytz.timezone('America/Manaus')
+
+
+def _agora_manaus() -> datetime:
+    """Retorna a data/hora atual no fuso horário de Manaus"""
+    return datetime.now(TZ_MANAUS)
 
 
 class TagTemporaria:
@@ -21,7 +32,7 @@ class TagTemporaria:
         
         # Se não fornecida, usar data atual
         if data_criacao is None:
-            data_criacao = datetime.now()
+            data_criacao = _agora_manaus()
         self.data_criacao = data_criacao
         
         # Se não fornecida, calcular 10 horas após criação
@@ -76,9 +87,9 @@ class TagTemporaria:
             try:
                 data_criacao_val = datetime.fromisoformat(data_criacao_val.replace('Z', '+00:00'))
             except:
-                data_criacao_val = datetime.now()
+                data_criacao_val = _agora_manaus()
         else:
-            data_criacao_val = datetime.now()
+            data_criacao_val = _agora_manaus()
         
         data_expiracao_val = row[4] if len(row) > 4 and row[4] is not None else None
         if isinstance(data_expiracao_val, datetime):
@@ -87,9 +98,9 @@ class TagTemporaria:
             try:
                 data_expiracao_val = datetime.fromisoformat(data_expiracao_val.replace('Z', '+00:00'))
             except:
-                data_expiracao_val = datetime.now() + timedelta(hours=10)
+                data_expiracao_val = _agora_manaus() + timedelta(hours=10)
         else:
-            data_expiracao_val = datetime.now() + timedelta(hours=10)
+            data_expiracao_val = _agora_manaus() + timedelta(hours=10)
         
         ativo_val = bool(row[5]) if len(row) > 5 and row[5] is not None else True
         
@@ -155,7 +166,7 @@ class TagTemporaria:
         
         tag = TagTemporaria.from_row(row)
         # Verificar se não expirou
-        if tag.data_expiracao < datetime.now():
+        if tag.data_expiracao < _agora_manaus():
             return None
         
         return tag
@@ -175,7 +186,7 @@ class TagTemporaria:
         
         tags = [TagTemporaria.from_row(row) for row in rows]
         # Filtrar tags expiradas
-        agora = datetime.now()
+        agora = _agora_manaus()
         tags_validas = [tag for tag in tags if tag.data_expiracao >= agora]
         
         return tags_validas
@@ -202,7 +213,7 @@ class TagTemporaria:
     @staticmethod
     def criar(tag_id: str, funcionario_id: int, horas_duracao: int = 10) -> 'TagTemporaria':
         """Método estático para criar uma nova tag temporária"""
-        agora = datetime.now()
+        agora = _agora_manaus()
         expiracao = agora + timedelta(hours=horas_duracao)
         
         tag = TagTemporaria(

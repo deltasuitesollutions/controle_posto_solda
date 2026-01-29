@@ -3,8 +3,20 @@ Service para lógica de negócio de produção
 """
 from typing import Dict, Any, Optional
 from datetime import datetime
+try:
+    from zoneinfo import ZoneInfo
+    TZ_MANAUS = ZoneInfo('America/Manaus')
+except ImportError:
+    # Fallback para Python < 3.9
+    import pytz
+    TZ_MANAUS = pytz.timezone('America/Manaus')
 from Server.models import ProducaoRegistro
 from Server.models.database import DatabaseConnection
+
+
+def _agora_manaus() -> datetime:
+    """Retorna a data/hora atual no fuso horário de Manaus"""
+    return datetime.now(TZ_MANAUS)
 
 
 def _buscar_operacao_id(operacao_codigo: str, posto: Optional[str] = None) -> Optional[int]:
@@ -115,8 +127,9 @@ def registrar_entrada(
     quantidade: Optional[int] = None
 ) -> Dict[str, Any]:
     """Registra a entrada de um funcionário em um posto"""
-    data_atual = datetime.now().strftime('%Y-%m-%d')
-    hora_atual = datetime.now().strftime('%H:%M')
+    agora = _agora_manaus()
+    data_atual = agora.strftime('%Y-%m-%d')
+    hora_atual = agora.strftime('%H:%M')
     
     produto = produto or modelo_codigo
     
@@ -248,7 +261,7 @@ def registrar_saida(
     if registro_obj.fim:
         raise Exception(f"Registro {registro_obj.registro_id} já está fechado")
     
-    hora_atual = datetime.now().strftime('%H:%M')
+    hora_atual = _agora_manaus().strftime('%H:%M')
     hora_inicio = registro_obj.inicio or registro_obj.hora_inicio or '00:00'
     duracao = calcular_duracao(hora_inicio, hora_atual)
     

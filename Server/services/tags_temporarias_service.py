@@ -2,6 +2,12 @@ from typing import Dict, Any, Optional, List
 from Server.models.tag_temporaria import TagTemporaria
 from Server.models.funcionario import Funcionario
 from datetime import datetime, timedelta
+try:
+    from zoneinfo import ZoneInfo
+    TZ_MANAUS = ZoneInfo('America/Manaus')
+except ImportError:
+    import pytz
+    TZ_MANAUS = pytz.timezone('America/Manaus')
 
 
 def criar_tag_temporaria(funcionario_id: int, tag_id: str, horas_duracao: int = 10) -> Dict[str, Any]:
@@ -51,10 +57,9 @@ def limpar_tags_expiradas() -> int:
     TagTemporaria.excluir_expiradas()
     
     # Também excluir fisicamente tags muito antigas (mais de 24 horas expiradas)
-    from datetime import datetime, timedelta
     from Server.models.database import DatabaseConnection
     
-    limite_exclusao = datetime.now() - timedelta(hours=24)
+    limite_exclusao = datetime.now(TZ_MANAUS) - timedelta(hours=24)
     query = """
         DELETE FROM tags_temporarias 
         WHERE data_expiracao < %s

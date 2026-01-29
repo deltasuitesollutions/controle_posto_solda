@@ -4,6 +4,13 @@ Modelo para a entidade ProducaoRegistro
 from typing import Optional, List, Tuple, Any
 from Server.models.database import DatabaseConnection
 from datetime import datetime, time, date
+try:
+    from zoneinfo import ZoneInfo
+    TZ_MANAUS = ZoneInfo('America/Manaus')
+except ImportError:
+    # Fallback para Python < 3.9
+    import pytz
+    TZ_MANAUS = pytz.timezone('America/Manaus')
 
 
 def _format_time(value: Any) -> Optional[str]:
@@ -36,7 +43,7 @@ def _build_timestamp(date_str: Optional[str], time_str: Optional[str]) -> Option
     """Constrói timestamp no formato YYYY-MM-DD HH:MM:SS"""
     if not time_str:
         return None
-    date_part = date_str or datetime.now().strftime('%Y-%m-%d')
+    date_part = date_str or datetime.now(TZ_MANAUS).strftime('%Y-%m-%d')
     time_part = time_str.strip()
     
     # Se já tem data e hora juntos, retornar como está
@@ -125,7 +132,7 @@ class ProducaoRegistro:
         cursor = conn.cursor()
         
         try:
-            data_atual = datetime.now().strftime('%Y-%m-%d')
+            data_atual = datetime.now(TZ_MANAUS).strftime('%Y-%m-%d')
             
             if self.registro_id:
                 # UPDATE

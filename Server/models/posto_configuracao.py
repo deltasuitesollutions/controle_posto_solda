@@ -4,6 +4,17 @@ Modelo para a entidade PostoConfiguracao
 from typing import Dict, Any, Optional, List, Tuple
 from Server.models.database import DatabaseConnection
 from datetime import datetime
+try:
+    from zoneinfo import ZoneInfo
+    TZ_MANAUS = ZoneInfo('America/Manaus')
+except ImportError:
+    import pytz
+    TZ_MANAUS = pytz.timezone('America/Manaus')
+
+
+def _agora_manaus() -> datetime:
+    """Retorna a data/hora atual no fuso horário de Manaus"""
+    return datetime.now(TZ_MANAUS)
 
 
 class PostoConfiguracao:
@@ -23,7 +34,7 @@ class PostoConfiguracao:
         self.funcionario_matricula: Optional[str] = funcionario_matricula
         self.modelo_codigo: Optional[str] = modelo_codigo
         self.turno: Optional[int] = turno
-        self.data_atualizacao: str = data_atualizacao or datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        self.data_atualizacao: str = data_atualizacao or _agora_manaus().strftime('%Y-%m-%d %H:%M:%S')
     
     def to_dict(self, include_relations: bool = False) -> Dict[str, Any]:
         """Converte o objeto para dicionário"""
@@ -108,7 +119,7 @@ class PostoConfiguracao:
                     self.funcionario_matricula, 
                     self.modelo_codigo,
                     self.turno,
-                    datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    _agora_manaus().strftime('%Y-%m-%d %H:%M:%S'),
                     self.id
                 ))
             else:
@@ -127,7 +138,7 @@ class PostoConfiguracao:
                         self.funcionario_matricula, 
                         self.modelo_codigo,
                         self.turno,
-                        datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                        _agora_manaus().strftime('%Y-%m-%d %H:%M:%S'),
                         self.posto
                     ))
                 else:
@@ -140,7 +151,7 @@ class PostoConfiguracao:
                         self.funcionario_matricula, 
                         self.modelo_codigo,
                         self.turno,
-                        datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                        _agora_manaus().strftime('%Y-%m-%d %H:%M:%S')
                     ))
                     result = cursor.fetchone()
                     if result:

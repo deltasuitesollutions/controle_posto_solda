@@ -214,6 +214,13 @@ class DatabaseConnection:
                     conn.set_client_encoding('UTF8')
                 except:
                     pass  # Se falhar, continuar mesmo assim
+                # Configurar timezone para America/Manaus
+                try:
+                    cursor = conn.cursor()
+                    cursor.execute("SET TIME ZONE 'America/Manaus'")
+                    cursor.close()
+                except:
+                    pass  # Se falhar, continuar mesmo assim
                 return conn
             except psycopg2.OperationalError as e:
                 # Se falhar e o host não for localhost, tentar com localhost como fallback
@@ -230,6 +237,13 @@ class DatabaseConnection:
                         )
                         try:
                             conn.set_client_encoding('UTF8')
+                        except:
+                            pass
+                        # Configurar timezone para America/Manaus
+                        try:
+                            cursor = conn.cursor()
+                            cursor.execute("SET TIME ZONE 'America/Manaus'")
+                            cursor.close()
                         except:
                             pass
                         return conn

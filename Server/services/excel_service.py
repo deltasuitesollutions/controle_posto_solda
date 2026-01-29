@@ -1,6 +1,12 @@
 from datetime import datetime
 from io import BytesIO
 from typing import Optional
+try:
+    from zoneinfo import ZoneInfo
+    TZ_MANAUS = ZoneInfo('America/Manaus')
+except ImportError:
+    import pytz
+    TZ_MANAUS = pytz.timezone('America/Manaus')
 from Server.services.export_service import buscar_registros, processar_linha
 
 def exportar_registros_excel(
@@ -76,5 +82,5 @@ def exportar_registros_excel(
     return output
 
 def gerar_nome_arquivo_excel() -> str:
-    timestamp = datetime.now().strftime("%d%m%Y_%H%M%S")
+    timestamp = datetime.now(TZ_MANAUS).strftime("%d%m%Y_%H%M%S")
     return f"registros_producao_{timestamp}.xlsx"

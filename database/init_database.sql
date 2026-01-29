@@ -2,6 +2,11 @@
 -- Este script cria toda a estrutura do banco de dados do zero
 
 -- ============================================
+-- CONFIGURAÇÃO DE TIMEZONE (America/Manaus = UTC-4)
+-- ============================================
+SET TIME ZONE 'America/Manaus';
+
+-- ============================================
 -- TABELAS BASE
 -- ============================================
 
@@ -209,13 +214,14 @@ CREATE TABLE IF NOT EXISTS registros_producao (
 CREATE OR REPLACE FUNCTION set_registros_producao_datas()
 RETURNS TRIGGER AS $$
 BEGIN
+    -- Usar timezone America/Manaus para extrair data e hora corretamente
     IF NEW.inicio IS NOT NULL THEN
-        NEW.data_inicio := NEW.inicio::DATE;
-        NEW.hora_inicio := NEW.inicio::TIME;
-        NEW.mes_ano := TO_CHAR(NEW.inicio, 'YYYY-MM');
+        NEW.data_inicio := (NEW.inicio AT TIME ZONE 'America/Manaus')::DATE;
+        NEW.hora_inicio := (NEW.inicio AT TIME ZONE 'America/Manaus')::TIME;
+        NEW.mes_ano := TO_CHAR(NEW.inicio AT TIME ZONE 'America/Manaus', 'YYYY-MM');
     END IF;
 
-    NEW.atualizado_em := CURRENT_TIMESTAMP;
+    NEW.atualizado_em := CURRENT_TIMESTAMP AT TIME ZONE 'America/Manaus';
 
     RETURN NEW;
 END;
@@ -342,3 +348,10 @@ ON CONFLICT (username) DO UPDATE SET
   role = EXCLUDED.role,
   ativo = EXCLUDED.ativo,
   data_atualizacao = CURRENT_TIMESTAMP;
+
+-- ============================================
+-- CONFIGURAÇÃO PERMANENTE DO TIMEZONE
+-- ============================================
+-- Configura o timezone padrão do banco para America/Manaus (UTC-4)
+-- Isso garante que CURRENT_TIMESTAMP sempre retorne horário de Manaus
+ALTER DATABASE postos SET timezone TO 'America/Manaus';

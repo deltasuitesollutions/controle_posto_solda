@@ -2,6 +2,13 @@
 Service para gerenciar dados do dashboard
 """
 from typing import Dict, Any, List, Optional
+from datetime import datetime
+try:
+    from zoneinfo import ZoneInfo
+    TZ_MANAUS = ZoneInfo('America/Manaus')
+except ImportError:
+    import pytz
+    TZ_MANAUS = pytz.timezone('America/Manaus')
 from Server.models.database import DatabaseConnection
 from Server.models.posto import Posto
 from Server.models.funcionario import Funcionario
@@ -158,8 +165,7 @@ def buscar_postos_em_uso() -> Dict[str, Any]:
             funcionarios_ativos.add(funcionario_id)
             
             # Contar produção de hoje
-            from datetime import datetime
-            hoje = datetime.now().strftime('%Y-%m-%d')
+            hoje = datetime.now(TZ_MANAUS).strftime('%Y-%m-%d')
             if data_inicio and str(data_inicio) == hoje:
                 total_producao_hoje += quantidade if quantidade else 0
             

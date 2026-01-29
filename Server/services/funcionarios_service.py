@@ -196,6 +196,12 @@ def buscar_operacoes_habilitadas(funcionario_id: int) -> List[Dict[str, Any]]:
 # Função para atualizar operações habilitadas de um funcionário
 def atualizar_operacoes_habilitadas(funcionario_id: int, operacoes_ids: List[int]) -> None:
     from datetime import datetime
+    try:
+        from zoneinfo import ZoneInfo
+        TZ_MANAUS = ZoneInfo('America/Manaus')
+    except ImportError:
+        import pytz
+        TZ_MANAUS = pytz.timezone('America/Manaus')
     
     # Verificar se o funcionário existe
     funcionario = Funcionario.buscar_por_id(funcionario_id)
@@ -210,7 +216,7 @@ def atualizar_operacoes_habilitadas(funcionario_id: int, operacoes_ids: List[int
     operacoes_marcadas = set(operacoes_ids) if operacoes_ids else set()
     
     # Operações para habilitar (marcadas)
-    data_habilitacao = datetime.now()
+    data_habilitacao = datetime.now(TZ_MANAUS)
     for operacao_id in operacoes_marcadas:
         # Verificar se a operação existe
         from Server.models.operacao import Operacao
