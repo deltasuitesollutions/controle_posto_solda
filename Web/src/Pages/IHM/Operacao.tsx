@@ -20,7 +20,16 @@ interface OperacaoContexto {
 const Operacao = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const operador = (location.state as { operador?: string })?.operador || '';
+  // Recuperar operador: navegação normal ou sessão salva (após reinicialização)
+  const operador = (() => {
+    const doState = (location.state as { operador?: string })?.operador;
+    if (doState) return doState;
+    try {
+      const sessao = localStorage.getItem('ihm_sessao');
+      if (sessao) return JSON.parse(sessao).operador || '';
+    } catch { /* sessão inválida */ }
+    return '';
+  })();
 
   const [operacao, setOperacao] = useState('');
   const [produto, setProduto] = useState('');
@@ -72,6 +81,21 @@ const Operacao = () => {
     };
     carregarDados();
   }, [operador]);
+
+  // Restaurar operação da sessão salva (após reinicialização)
+  useEffect(() => {
+    if (operacoes.length > 0 && !operacao) {
+      try {
+        const sessao = localStorage.getItem('ihm_sessao');
+        if (sessao) {
+          const dados = JSON.parse(sessao);
+          if (dados.operacao) {
+            setOperacao(dados.operacao);
+          }
+        }
+      } catch { /* sessão inválida, ignorar */ }
+    }
+  }, [operacoes]);
 
   const preencherCamposOperacao = (codigoOperacao: string) => {
     if (!codigoOperacao) {
@@ -177,6 +201,15 @@ const Operacao = () => {
         funcionario_matricula: response.funcionario_matricula,
         produto: response.produto
       });
+
+      // Salvar sessão completa para restauração após reinicialização
+      localStorage.setItem('ihm_sessao', JSON.stringify({
+        operador,
+        funcionarioMatricula,
+        posto: postoAtual,
+        operacao,
+        modelo
+      }));
       
       setCarregando(false);
     } catch (error: any) {

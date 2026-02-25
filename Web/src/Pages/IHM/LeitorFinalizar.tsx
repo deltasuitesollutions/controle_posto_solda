@@ -8,23 +8,39 @@ type StatusAcesso = 'idle' | 'success' | 'error'
 const LeitorFinalizar = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const { posto, funcionario_matricula, operador } = (location.state as { 
+    // Recuperar dados: navegação normal ou sessão salva (após reinicialização)
+    const navegacao = (location.state as { 
         posto?: string; 
         funcionario_matricula?: string; 
         operador?: string 
     }) || {};
+    const sessaoSalva = (() => {
+        try {
+            const s = localStorage.getItem('ihm_sessao');
+            return s ? JSON.parse(s) : null;
+        } catch { return null; }
+    })();
+    const posto = navegacao.posto || sessaoSalva?.posto || '';
+    const funcionario_matricula = navegacao.funcionario_matricula || sessaoSalva?.funcionarioMatricula || '';
+    const operador = navegacao.operador || sessaoSalva?.operador || '';
 
     const [rfidInput, setRfidInput] = useState('')
     const [status, setStatus] = useState<StatusAcesso>('idle')
     const [colaborador, setColaborador] = useState<string | null>(null)
     const [mensagem, setMensagem] = useState<string>('')
 
+    // Limpar sessão e voltar à tela inicial
+    const voltarAoLeitor = () => {
+        localStorage.removeItem('ihm_sessao')
+        navigate('/ihm/leitor', { replace: true })
+    };
+
     useEffect(() => {
         // Se não tiver os dados necessários, redirecionar para o leitor inicial
         if (!posto || !funcionario_matricula) {
-            navigate('/ihm/leitor', { replace: true });
+            voltarAoLeitor();
         }
-    }, [posto, funcionario_matricula, navigate]);
+    }, [posto, funcionario_matricula]);
 
     // Verificar periodicamente se o registro foi cancelado
     useEffect(() => {
@@ -40,7 +56,7 @@ const LeitorFinalizar = () => {
                     setStatus('error');
                     setMensagem('Operação foi cancelada');
                     setTimeout(() => {
-                        navigate('/ihm/leitor', { replace: true });
+                        voltarAoLeitor();
                     }, 2000);
                 }
             } catch (error) {
@@ -48,7 +64,7 @@ const LeitorFinalizar = () => {
                 setStatus('error');
                 setMensagem('Operação foi cancelada');
                 setTimeout(() => {
-                    navigate('/ihm/leitor', { replace: true });
+                    voltarAoLeitor();
                 }, 2000);
             }
         };
@@ -72,7 +88,7 @@ const LeitorFinalizar = () => {
             setStatus('error')
             setMensagem('Dados insuficientes para finalizar')
             setTimeout(() => {
-                navigate('/ihm/leitor', { replace: true });
+                voltarAoLeitor();
             }, 2000);
             return;
         }
@@ -100,7 +116,7 @@ const LeitorFinalizar = () => {
                         setStatus('error')
                         setMensagem('Operação foi cancelada')
                         setTimeout(() => {
-                            navigate('/ihm/leitor', { replace: true });
+                            voltarAoLeitor();
                         }, 2000);
                         return;
                     }
@@ -109,7 +125,7 @@ const LeitorFinalizar = () => {
                     setStatus('error')
                     setMensagem('Operação foi cancelada')
                     setTimeout(() => {
-                        navigate('/ihm/leitor', { replace: true });
+                        voltarAoLeitor();
                     }, 2000);
                     return;
                 }
@@ -127,7 +143,7 @@ const LeitorFinalizar = () => {
                     
                     // Redirecionar para o leitor inicial após 2 segundos
                     setTimeout(() => {
-                        navigate('/ihm/leitor', { replace: true });
+                        voltarAoLeitor();
                     }, 2000);
                 } catch (error: any) {
                     console.error('Erro ao finalizar trabalho:', error);

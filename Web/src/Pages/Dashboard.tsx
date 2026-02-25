@@ -12,8 +12,9 @@ interface CardProps {
   peca_nome: string;
   qtd_real: number;
   operador: string;
-  habilitado: boolean;
+  habilitado: boolean | null;
   turno?: string;
+  operacao_nome?: string;
   comentario?: string;
   comentario_aviso?: string;
   registro_id?: number;
@@ -248,12 +249,6 @@ const Dashboard = () => {
               icone="bi bi-people"
               cor="var(--bg-azul)"
             />
-            <MetricCard
-              titulo="Eficiência"
-              valor={`${metricas.totalPostos > 0 ? Math.round((metricas.postosAtivos / metricas.totalPostos) * 100) : 0}%`}
-              icone="bi bi-speedometer2"
-              cor="var(--bg-laranja)"
-            />
           </div>
 
           {carregando ? (
@@ -279,6 +274,7 @@ const Dashboard = () => {
                       operador={item.operador}
                       habilitado={item.habilitado}
                       turno={item.turno}
+                      operacao_nome={item.operacao_nome}
                       comentario={item.comentario}
                       comentario_aviso={item.comentario_aviso}
                       registro_id={item.registro_id}

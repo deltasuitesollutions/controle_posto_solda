@@ -16,7 +16,24 @@ const LeitorRfid = () => {
         inputRef.current?.focus()
     }, []);
 
+    // Ao carregar, verificar se há sessão anterior (ex: Raspberry reiniciou)
+    useEffect(() => {
+        try {
+            const sessao = localStorage.getItem('ihm_sessao')
+            if (sessao) {
+                const dados = JSON.parse(sessao)
+                if (dados.operador) {
+                    // Sessão encontrada — restaurar para a tela de operação
+                    navigate('/ihm/operacao', { state: { operador: dados.operador } })
+                }
+            }
+        } catch {
+            localStorage.removeItem('ihm_sessao')
+        }
+    }, [navigate])
+
     const handleLogout = () => {
+        localStorage.removeItem('ihm_sessao') // Limpar sessão ao sair
         logout()
         navigate('/login')
     }
@@ -35,6 +52,10 @@ const LeitorRfid = () => {
             if (response.status === 'success' && response.funcionario) {
                 const nomeOperador = response.funcionario.nome
                 setStatus('success')
+
+                // Salvar sessão para restauração após reinicialização
+                localStorage.setItem('ihm_sessao', JSON.stringify({ operador: nomeOperador }))
+
                 setTimeout(() => {
                     navigate('/ihm/operacao', { state: { operador: nomeOperador } })
                 }, 2000)

@@ -7,15 +7,16 @@ interface CardProps {
     peca_nome: string;
     qtd_real: number;
     operador: string;
-    habilitado: boolean;
+    habilitado: boolean | null;
     turno?: string;
+    operacao_nome?: string;
     comentario?: string;
     comentario_aviso?: string;
     registro_id?: number;
 }
 
 
-const Card = ({posto, mod, peca_nome, operador, habilitado, turno, comentario: comentarioInicial, comentario_aviso, registro_id}: CardProps) => {
+const Card = ({posto, mod, peca_nome, operador, habilitado, turno, operacao_nome, comentario: comentarioInicial, comentario_aviso, registro_id}: CardProps) => {
   const [comentario, setComentario] = useState(comentarioInicial || '');
   const [salvando, setSalvando] = useState(false);
   const [mensagemSucesso, setMensagemSucesso] = useState(false);
@@ -50,15 +51,6 @@ const Card = ({posto, mod, peca_nome, operador, habilitado, turno, comentario: c
       <div className='p-3' style={{ backgroundColor: 'var(--bg-azul)' }}>
         <div className='flex items-center justify-between'>
           <h3 className='text-white font-bold text-sm'>{posto}</h3>
-          <div className='flex items-center gap-2'>
-            <div 
-              className='w-2 h-2 rounded-full'
-              style={{ backgroundColor: habilitado ? 'var(--bg-laranja)' : '#EF4444' }}
-            ></div>
-            <span className='text-white text-xs'>
-              {habilitado ? 'Habilitado' : 'Desabilitado'}
-            </span>
-          </div>
         </div>
       </div>
 
@@ -71,18 +63,35 @@ const Card = ({posto, mod, peca_nome, operador, habilitado, turno, comentario: c
             </p>
           </div>
           
+          <div className='bg-blue-50 rounded p-2 border border-blue-200'>
+            <p className='text-xs text-gray-600 mb-1'>Operação</p>
+            <p className='text-sm font-semibold text-gray-800'>{operacao_nome || 'Sem operação'}</p>
+          </div>
+        </div>
+
+        <div className='grid grid-cols-2 gap-2'>
           <div className='bg-orange-50 rounded p-2 border border-orange-200'>
             <p className='text-xs text-gray-600 mb-1'>Operador</p>
             <p className='text-sm font-semibold text-gray-800'>{operador || 'Sem operador'}</p>
           </div>
-        </div>
 
-        <div className='grid grid-cols-1 gap-2'>
           <div className='bg-orange-50 rounded p-2 border border-orange-200'>
             <p className='text-xs text-gray-600 mb-1'>Turno</p>
             <p className='text-sm font-semibold text-gray-800'>{turno || 'Não definido'}</p>
           </div>
         </div>
+
+        {habilitado !== null && (
+          <div className={`rounded p-2 border flex items-center gap-2 ${habilitado ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+            <div 
+              className='w-2 h-2 rounded-full flex-shrink-0'
+              style={{ backgroundColor: habilitado ? '#22C55E' : '#EF4444' }}
+            ></div>
+            <p className={`text-sm font-semibold ${habilitado ? 'text-green-800' : 'text-red-800'}`}>
+              {habilitado ? 'Habilitado' : 'Desabilitado'}
+            </p>
+          </div>
+        )}
 
         {comentario_aviso && (
           <div className='bg-red-50 border border-red-200 rounded p-2'>

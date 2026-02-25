@@ -6,11 +6,20 @@ import { useVirtualKeyboard } from '../../contexts/VirtualKeyboardContext';
 const FinalizarProducao = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { posto, funcionario_matricula } = (location.state as { 
+  // Recuperar dados: navegação normal ou sessão salva (após reinicialização)
+  const navegacao = (location.state as { 
     posto?: string; 
     funcionario_matricula?: string; 
     operador?: string;
   }) || {};
+  const sessaoSalva = (() => {
+    try {
+      const s = localStorage.getItem('ihm_sessao');
+      return s ? JSON.parse(s) : null;
+    } catch { return null; }
+  })();
+  const posto = navegacao.posto || sessaoSalva?.posto || '';
+  const funcionario_matricula = navegacao.funcionario_matricula || sessaoSalva?.funcionarioMatricula || '';
 
   const [quantidade, setQuantidade] = useState<string>('');
   const [carregando, setCarregando] = useState(false);
@@ -18,6 +27,12 @@ const FinalizarProducao = () => {
   const [registroId, setRegistroId] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { showKeyboard, setKeyboardLayout, setKeyboardSize } = useVirtualKeyboard();
+
+  // Limpar sessão e voltar à tela inicial
+  const voltarAoLeitor = () => {
+    localStorage.removeItem('ihm_sessao')
+    navigate('/ihm/leitor', { replace: true })
+  };
   
   useEffect(() => {
     inputRef.current?.focus();
@@ -25,7 +40,7 @@ const FinalizarProducao = () => {
 
   useEffect(() => {
     if (!posto || !funcionario_matricula) {
-      navigate('/ihm/leitor', { replace: true });
+      voltarAoLeitor();
     }
   }, [posto, funcionario_matricula, navigate]);
 
@@ -44,14 +59,14 @@ const FinalizarProducao = () => {
           // Registro não encontrado, redirecionar para o leitor
           setErro('Nenhum registro em aberto encontrado');
           setTimeout(() => {
-            navigate('/ihm/leitor', { replace: true });
+            voltarAoLeitor();
           }, 2000);
         }
       } catch (error) {
         // Se não encontrar registro, redirecionar
         setErro('Nenhum registro em aberto encontrado');
         setTimeout(() => {
-          navigate('/ihm/leitor', { replace: true });
+          voltarAoLeitor();
         }, 2000);
       }
     };
@@ -95,7 +110,7 @@ const FinalizarProducao = () => {
         }
 
         // Redirecionar para o leitor inicial (página de boas-vindas)
-        navigate('/ihm/leitor', { replace: true });
+        voltarAoLeitor();
         return;
       }
 
@@ -107,7 +122,7 @@ const FinalizarProducao = () => {
       });
 
       // Redirecionar para o leitor inicial (página de boas-vindas)
-      navigate('/ihm/leitor', { replace: true });
+      voltarAoLeitor();
     } catch (error: any) {
       console.error('Erro ao finalizar produção:', error);
       setErro(error.message || 'Erro ao finalizar produção');
