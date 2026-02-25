@@ -1,0 +1,284 @@
+@import "tailwindcss";
+@import "bootstrap-icons/font/bootstrap-icons.css";
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg-azul: #4C79AF;
+  --bg-laranja: #D66B1A;
+}
+
+/* Ajusta z-index do TopBar quando menu está aberto */
+body.menu-open .menu-topbar {
+  z-index: 40;
+}
+
+/* Ajusta padding do conteúdo quando menu está aberto (para páginas IHM se necessário) */
+body.menu-open .menu-content {
+  /* Se precisar de padding diferente quando menu aberto, adicione aqui */
+}
+
+@media (min-width: 768px) {
+  /* Ajusta padding do TopBar quando menu desktop está fechado */
+  body:not(.menu-desktop-open) .menu-topbar {
+    padding-left: 4rem; /* 16 * 4 = 64px (w-16) */
+  }
+
+  /* Ajusta padding do TopBar quando menu desktop está aberto */
+  body.menu-desktop-open .menu-topbar {
+    padding-left: 16rem; /* 64 * 4 = 256px (w-64) */
+  }
+
+  /* Ajusta margin-left quando menu desktop está fechado */
+  body:not(.menu-desktop-open) main[class*="ml-20"],
+  body:not(.menu-desktop-open) [class*="ml-20"] {
+    margin-left: 4rem !important; /* 16 * 4 = 64px (w-16) */
+  }
+
+  /* Ajusta margin-left quando menu desktop está aberto */
+  body.menu-desktop-open main[class*="ml-20"],
+  body.menu-desktop-open [class*="ml-20"] {
+    margin-left: 16rem !important; /* 64 * 4 = 256px (w-64) */
+  }
+
+  /* Ajusta padding left quando menu desktop está fechado */
+  body:not(.menu-desktop-open) [class*="md:pl-20"] {
+    padding-left: 5rem !important; /* Espaço para menu fechado (64px + padding) */
+  }
+
+  /* Ajusta padding left quando menu desktop está aberto */
+  body.menu-desktop-open [class*="md:pl-20"] {
+    padding-left: 17rem !important; /* Espaço para menu aberto (256px + padding) */
+  }
+}
+
+/* Animação fade-in para mensagens de acesso */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+/* Scrollbar customizada */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e0 #f7fafc;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f7fafc;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #a0aec0;
+}
+
+/* ===== Virtual Keyboard Styles ===== */
+.virtual-keyboard-container {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+
+.virtual-keyboard-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  pointer-events: auto;
+}
+
+.virtual-keyboard-wrapper {
+  position: relative;
+  background: #f5f5f5;
+  border-top: 2px solid #4C79AF;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+  pointer-events: auto;
+  padding: 4px 8px;
+  padding-bottom: max(4px, env(safe-area-inset-bottom));
+}
+
+.virtual-keyboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 8px 4px 8px;
+}
+
+.virtual-keyboard-close {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e0e0e0;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.virtual-keyboard-close:hover {
+  background: #d0d0d0;
+}
+
+/* Custom theme for react-simple-keyboard */
+.virtual-keyboard-theme {
+  background: transparent !important;
+  border-radius: 0 !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+.virtual-keyboard-theme .hg-row {
+  margin-bottom: 3px;
+}
+
+.virtual-keyboard-theme .hg-row:last-child {
+  margin-bottom: 0;
+}
+
+.virtual-keyboard-theme .hg-button {
+  height: 36px;
+  min-width: 32px;
+  font-size: 15px;
+  font-weight: 500;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  color: #374151;
+  transition: all 0.1s ease;
+}
+
+.virtual-keyboard-theme .hg-button:active,
+.virtual-keyboard-theme .hg-button:hover {
+  background: #4C79AF;
+  color: white;
+  border-color: #4C79AF;
+}
+
+.virtual-keyboard-theme .hg-button[data-skbtn="{space}"] {
+  min-width: 150px;
+  flex-grow: 2;
+}
+
+.virtual-keyboard-theme .hg-button[data-skbtn="{enter}"] {
+  background: #4C79AF;
+  color: white;
+  border-color: #4C79AF;
+  min-width: 60px;
+}
+
+.virtual-keyboard-theme .hg-button[data-skbtn="{enter}"]:hover {
+  background: #3d6a9f;
+}
+
+.virtual-keyboard-theme .hg-button[data-skbtn="{bksp}"] {
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #fecaca;
+  min-width: 50px;
+}
+
+.virtual-keyboard-theme .hg-button[data-skbtn="{bksp}"]:hover {
+  background: #dc2626;
+  color: white;
+  border-color: #dc2626;
+}
+
+.virtual-keyboard-theme .hg-button[data-skbtn="{shift}"] {
+  background: #e0e7ff;
+  color: #4338ca;
+  border-color: #c7d2fe;
+  min-width: 55px;
+}
+
+.virtual-keyboard-theme .hg-button[data-skbtn="{shift}"]:hover,
+.virtual-keyboard-theme .hg-button[data-skbtn="{shift}"].hg-activeButton {
+  background: #4338ca;
+  color: white;
+  border-color: #4338ca;
+}
+
+/* Responsivo para telas menores */
+@media (max-width: 600px) {
+  .virtual-keyboard-theme .hg-button {
+    height: 32px;
+    min-width: 26px;
+    font-size: 14px;
+  }
+  
+  .virtual-keyboard-theme .hg-button[data-skbtn="{space}"] {
+    min-width: 120px;
+  }
+}
+
+/* ===== Teclado Grande (para IHM) ===== */
+.virtual-keyboard-large .virtual-keyboard-theme .hg-row {
+  margin-bottom: 10px;
+}
+
+.virtual-keyboard-large .virtual-keyboard-theme .hg-button {
+  height: 72px;
+  min-width: 56px;
+  font-size: 26px;
+  font-weight: 600;
+  border-radius: 8px;
+}
+
+.virtual-keyboard-large .virtual-keyboard-theme .hg-button[data-skbtn="{space}"] {
+  min-width: 200px;
+}
+
+.virtual-keyboard-large .virtual-keyboard-theme .hg-button[data-skbtn="{enter}"] {
+  min-width: 80px;
+}
+
+.virtual-keyboard-large .virtual-keyboard-theme .hg-button[data-skbtn="{bksp}"] {
+  min-width: 70px;
+}
+
+.virtual-keyboard-large .virtual-keyboard-theme .hg-button[data-skbtn="{shift}"] {
+  min-width: 75px;
+}
+
+.virtual-keyboard-large .virtual-keyboard-header {
+  padding: 6px 12px 8px 12px;
+}
+
+.virtual-keyboard-large .virtual-keyboard-header span {
+  font-size: 16px;
+}
+
+.virtual-keyboard-large .virtual-keyboard-close {
+  width: 40px;
+  height: 40px;
+}
