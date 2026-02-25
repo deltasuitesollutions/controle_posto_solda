@@ -2,14 +2,16 @@ from Server.models.database import DatabaseConnection
 from typing import Dict, Any, Optional, List
 
 class Produto:
-    def __init__(self, nome: str, id: Optional[int] = None):
+    def __init__(self, nome: str, id: Optional[int] = None, data_criacao: Optional[str] = None):
         self.id = id
         self.nome = nome
+        self.data_criacao = data_criacao
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             'id': self.id,
-            'nome': self.nome
+            'nome': self.nome,
+            'data_criacao': self.data_criacao.isoformat() if self.data_criacao and hasattr(self.data_criacao, 'isoformat') else str(self.data_criacao) if self.data_criacao else None
         }
     
     @staticmethod
@@ -34,16 +36,19 @@ class Produto:
 
     @classmethod
     def listarTodos(cls) -> List['Produto']:
-        query = "SELECT produto_id, nome FROM produtos ORDER BY nome"
+        query = "SELECT produto_id, nome, COALESCE(data_criacao, CURRENT_TIMESTAMP) as data_criacao FROM produtos ORDER BY nome"
         resultados = DatabaseConnection.execute_query(query, fetch_all=True)
 
         produtos = []
         if resultados:
             for resultado in resultados:
-                produtos.append(cls(
+                produto = cls(
                     id=resultado[0],
                     nome=resultado[1]
-                ))
+                )
+                if len(resultado) > 2:
+                    produto.data_criacao = resultado[2]
+                produtos.append(produto)
         return produtos
     
     @classmethod

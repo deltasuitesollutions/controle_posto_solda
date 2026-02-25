@@ -48,11 +48,26 @@ def deletar_produto(produto_id):
         if not produto:
             return {'erro': f'Produto com ID {produto_id} não encontrado'}
         
+        # Buscar todos os modelos relacionados ao produto
+        from Server.models import Modelo
+        from Server.services import modelos_service
+        
+        modelos_relacionados = modelos_service.listar_modelos()
+        modelos_do_produto = [m for m in modelos_relacionados if m.get('produto_id') == produto_id]
+        
+        # Deletar todos os modelos relacionados
+        for modelo in modelos_do_produto:
+            try:
+                modelos_service.deletar_modelo(modelo.get('id'))
+            except Exception as e:
+                print(f'Erro ao deletar modelo {modelo.get("id")}: {e}')
+        
+        # Deletar o produto (isso também deletará as relações na tabela produto_modelo por CASCADE)
         produto.deletar()
 
         return {
             'sucesso': True,
-            'mensagem': f'Produto {produto_id} deletado'
+            'mensagem': f'Produto {produto_id} deletado junto com {len(modelos_do_produto)} modelo(s) relacionado(s)'
         }
     
     except Exception as erro:
@@ -67,7 +82,8 @@ def listar_produtos():
         for produto in produtos:
             produto_info = {
                 'id': produto.id,
-                'nome': produto.nome
+                'nome': produto.nome,
+                'data_criacao': produto.data_criacao.isoformat() if produto.data_criacao and hasattr(produto.data_criacao, 'isoformat') else str(produto.data_criacao) if produto.data_criacao else None
             }
             resultado.append(produto_info)
         

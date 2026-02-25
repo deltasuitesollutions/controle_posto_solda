@@ -16,7 +16,8 @@ def listar_modelos():
                 'codigo': modelo.codigo,
                 'nome': modelo.descricao,  
                 'produto_id': produto_id,
-                'pecas': pecas
+                'pecas': pecas,
+                'data_criacao': modelo.data_criacao.isoformat() if modelo.data_criacao and hasattr(modelo.data_criacao, 'isoformat') else str(modelo.data_criacao) if modelo.data_criacao else None
             })
         return resultado
     except Exception as erro:

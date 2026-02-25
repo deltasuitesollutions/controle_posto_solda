@@ -8,17 +8,19 @@ from Server.models.database import DatabaseConnection
 class Modelo:
     """Modelo que representa um modelo/produto"""
     
-    def __init__(self, codigo: str, descricao: Optional[str] = None, id: Optional[int] = None) -> None:
+    def __init__(self, codigo: str, descricao: Optional[str] = None, id: Optional[int] = None, data_criacao: Optional[str] = None) -> None:
         self.id: Optional[int] = id
         self.codigo: str = codigo
         self.descricao: str = descricao or codigo
+        self.data_criacao: Optional[str] = data_criacao
     
     def to_dict(self) -> Dict[str, Any]:
         """Converte o objeto para dicionário"""
         return {
             "id": self.id,
             "codigo": self.codigo,
-            "descricao": self.descricao
+            "descricao": self.descricao,
+            "data_criacao": self.data_criacao.isoformat() if self.data_criacao and hasattr(self.data_criacao, 'isoformat') else str(self.data_criacao) if self.data_criacao else None
         }
     
     @staticmethod
@@ -36,12 +38,14 @@ class Modelo:
     @staticmethod
     def from_row(row: Tuple[Any, ...]) -> 'Modelo':
         """Cria um objeto Modelo a partir de uma linha do banco"""
-        # A tabela tem: modelo_id, nome
+        # A tabela tem: modelo_id, nome, data_criacao (se existir)
         nome_val = str(row[1]) if len(row) > 1 and row[1] is not None else ''
+        data_criacao = row[2] if len(row) > 2 else None
         return Modelo(
             id=row[0] if len(row) > 0 else None,
             codigo=nome_val,  # Usar nome como codigo para compatibilidade
-            descricao=nome_val
+            descricao=nome_val,
+            data_criacao=data_criacao
         )
     
     def save(self) -> 'Modelo':
@@ -84,7 +88,7 @@ class Modelo:
     @staticmethod
     def listar_todos() -> List['Modelo']:
         """Lista todos os modelos"""
-        query = "SELECT modelo_id, nome FROM modelos ORDER BY nome"
+        query = "SELECT modelo_id, nome, COALESCE(data_criacao, CURRENT_TIMESTAMP) as data_criacao FROM modelos ORDER BY nome"
         rows = DatabaseConnection.execute_query(query, fetch_all=True)
         if not rows or not isinstance(rows, list):
             return []

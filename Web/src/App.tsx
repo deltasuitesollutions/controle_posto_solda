@@ -16,6 +16,7 @@ import Usuarios from "./Pages/Usuarios";
 import OperacoesCanceladas from "./Pages/OperacoesCanceladas";
 import CadastroProdutoModelo from "./Pages/CadastroProdutoModelo";
 import ListagemPecas from "./Pages/ListagemPecas";
+import ListagemProdutosModelos from "./Pages/ListagemProdutosModelos";
 import CadastroUsuario from "./Pages/CadastroUsuario";
 import DispositivosRaspberry from "./Pages/DispositivosRaspberry";
 
@@ -58,6 +59,14 @@ function App() {
         element={
           <ProtectedRoute onlyAdmin>
             <ListagemPecas />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/listagem-produtos-modelos" 
+        element={
+          <ProtectedRoute onlyAdmin>
+            <ListagemProdutosModelos />
           </ProtectedRoute>
         } 
       />
