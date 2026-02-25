@@ -263,6 +263,12 @@ def _formatar_registro(row: Tuple, pecas_cache: Dict[int, List[Dict]], totens_di
     # Todos os totens da operação (JSON array)
     operacao_totens_json = row[35] if len(row) > 35 else []
     
+    # Verificar se funcionário está habilitado para a operação
+    habilitado = row[36] if len(row) > 36 else False
+    
+    # Serial do dispositivo Raspberry
+    dispositivo_serial = row[37] if len(row) > 37 else None
+    
     # Buscar peças do modelo (usar cache pré-carregado)
     pecas_modelo = pecas_cache.get(modelo_id, []) if modelo_id else []
     
@@ -352,13 +358,15 @@ def _formatar_registro(row: Tuple, pecas_cache: Dict[int, List[Dict]], totens_di
         "serial": serial,
         "hostname": hostname,
         "dispositivo_id": dispositivo_id,
+        "dispositivo_serial": dispositivo_serial or serial or '',
         "modelo": {
             "id": m_id,
             "codigo": m_nome or 'N/A',
             "descricao": m_nome or 'N/A'
         },
         "quantidade": quantidade,
-        "comentarios": comentarios or None
+        "comentarios": comentarios or None,
+        "habilitado": bool(habilitado)
     }
     
     # Adicionar operação se existir

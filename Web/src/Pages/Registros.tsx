@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { io, Socket } from 'socket.io-client'
 import TopBar from '../Components/topBar/TopBar'
 import MenuLateral from '../Components/MenuLateral/MenuLateral'
 import ModalFiltro from '../Components/Compartilhados/ModalFiltro'
@@ -35,6 +34,7 @@ interface Registro {
     codigo_producao?: string
     serial?: string
     nome?: string
+    habilitado?: boolean
     // Novas propriedades para múltiplas peças e totens da operação
     operacao_pecas?: Array<{ id: number; codigo: string; nome: string }>
     operacao_totens?: Array<{ nome: string }>
@@ -66,6 +66,10 @@ const Registros = () => {
     const [mensagemErro, setMensagemErro] = useState('')
     const [tituloErro, setTituloErro] = useState('Erro!')
 
+    // Estado local do input de horário para não dispara fetch a cada tecla
+    const [horarioInput, setHorarioInput] = useState('')
+    const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
     // Opções de filtros dinâmicas
     const [opcoesProcesso, setOpcoesProcesso] = useState<{ id: string; label: string }[]>([])
     const [opcoesTurno] = useState<{ id: string; label: string }[]>([
@@ -76,64 +80,24 @@ const Registros = () => {
     const [opcoesProduto, setOpcoesProduto] = useState<{ id: string; label: string }[]>([])
     const [opcoesMatricula, setOpcoesMatricula] = useState<{ id: string; label: string }[]>([])
     const [opcoesOperador, setOpcoesOperador] = useState<{ id: string; label: string }[]>([])
-    
-    // Ref para WebSocket
-    const socketRef = useRef<Socket | null>(null)
-    const buscarRegistrosRef = useRef<() => void>(() => {})
 
-    // Configurar WebSocket para atualizações em tempo real
+    // Debounce: só atualiza filtros.horario após o usuário parar de digitar (600ms)
     useEffect(() => {
-        // Configurar WebSocket - usar a mesma origem do frontend para que o proxy funcione
-        // Em produção (nginx), conecta via proxy na mesma porta do frontend
-        // Em desenvolvimento, conecta diretamente ao backend na porta 8000
-        let socketUrl: string
-        
-        if (import.meta.env.VITE_API_URL) {
-            // Se VITE_API_URL está definido, usar sem /api
-            socketUrl = import.meta.env.VITE_API_URL.replace('/api', '')
-        } else if (import.meta.env.DEV) {
-            // Em desenvolvimento, conectar diretamente ao backend
-            socketUrl = `http://${window.location.hostname}:8000`
-        } else {
-            // Em produção (via nginx), usar a mesma origem - nginx fará o proxy
-            socketUrl = window.location.origin
+        if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current)
         }
-        
-        const socket = io(socketUrl, {
-            path: '/socket.io',
-            transports: ['polling', 'websocket'],
-            reconnection: true,
-            reconnectionAttempts: 10,
-            reconnectionDelay: 2000,
-            reconnectionDelayMax: 10000,
-            timeout: 20000,
-        })
-
-        socketRef.current = socket
-
-        socket.on('connect_error', (error) => {
-            console.warn('[Registros] Erro de conexão Socket.IO:', error.message)
-        })
-
-        // Receber notificações de atualização de registros
-        socket.on('registros_update', () => {
-            if (buscarRegistrosRef.current) {
-                buscarRegistrosRef.current()
-            }
-        })
-
-        // Polling como fallback a cada 30 segundos
-        const pollingInterval = setInterval(() => {
-            if (buscarRegistrosRef.current) {
-                buscarRegistrosRef.current()
-            }
-        }, 30000)
-
+        debounceTimerRef.current = setTimeout(() => {
+            setFiltros(prev => {
+                if (prev.horario === horarioInput) return prev
+                return { ...prev, horario: horarioInput }
+            })
+        }, 600)
         return () => {
-            socket.disconnect()
-            clearInterval(pollingInterval)
+            if (debounceTimerRef.current) {
+                clearTimeout(debounceTimerRef.current)
+            }
         }
-    }, [])
+    }, [horarioInput])
 
     // Carregar opções de filtros
     useEffect(() => {
@@ -159,61 +123,72 @@ const Registros = () => {
         carregarOpcoesFiltros()
     }, [])
 
+    // Montar parâmetros de busca (reutilizado por ambas as funções)
+    const montarParams = useCallback(() => {
+        const offset = (paginaAtual - 1) * itensPorPagina
+        const params: any = {
+            limit: itensPorPagina,
+            offset: offset
+        }
+
+        if (filtros.data) {
+            params.data = filtros.data
+        }
+
+        if (filtros.processo.length > 0) {
+            params.posto = filtros.processo[0]
+        }
+
+        if (filtros.turno.length > 0) {
+            params.turno = filtros.turno
+        }
+
+        if (filtros.horario) {
+            params.hora_inicio = filtros.horario
+        }
+
+        return params
+    }, [paginaAtual, itensPorPagina, filtros.data, filtros.processo, filtros.turno, filtros.horario])
+
+    // Mapear resposta do backend para o formato do componente
+    const mapearRegistros = (resposta: any): Registro[] => {
+        return resposta.registros.map((reg: any) => ({
+            id: reg.id,
+            data: reg.data_inicio || '',
+            data_inicio: reg.data_inicio || '',
+            data_fim: reg.data_fim || '',
+            hora: reg.hora_inicio || '',
+            hora_inicio: reg.hora_inicio || '',
+            hora_fim: reg.hora_fim || '',
+            operador: reg.funcionario?.nome || '',
+            matricula: reg.funcionario?.matricula || '',
+            posto: reg.posto?.nome || reg.posto || '',
+            totem: reg.dispositivo_serial || reg.totem?.nome || (reg.totem?.id ? `Totem ${reg.totem.id}` : ''),
+            produto: reg.produto?.nome || reg.modelo?.descricao || reg.modelo?.codigo || '',
+            modelo: reg.modelo?.descricao || reg.modelo?.codigo || '',
+            modelo_codigo: reg.modelo?.codigo || '',
+            quantidade: reg.quantidade || 0,
+            turno: reg.funcionario?.turno || '',
+            operacao: reg.operacao?.nome || reg.operacao?.codigo || '-',
+            comentarios: reg.comentarios || '-',
+            peca: reg.peca?.nome || reg.peca?.codigo || '',
+            pecas: reg.pecas || [],
+            codigo_producao: reg.codigo_producao || '',
+            serial: reg.serial || '',
+            nome: reg.nome || '',
+            habilitado: reg.habilitado ?? false,
+            operacao_pecas: reg.operacao_pecas || [],
+            operacao_totens: reg.operacao_totens || []
+        }))
+    }
+
     // Buscar registros do backend
     const buscarRegistros = useCallback(async () => {
         setCarregando(true)
         try {
-            const offset = (paginaAtual - 1) * itensPorPagina
-            const params: any = {
-                limit: itensPorPagina,
-                offset: offset
-            }
-
-            if (filtros.data) {
-                params.data = filtros.data
-            }
-
-            if (filtros.processo.length > 0) {
-                params.posto = filtros.processo[0]
-            }
-
-            if (filtros.turno.length > 0) {
-                params.turno = filtros.turno
-            }
-
-            if (filtros.horario) {
-                params.hora_inicio = filtros.horario
-            }
-
+            const params = montarParams()
             const resposta = await registrosAPI.listar(params)
-            
-            const registrosMapeados: Registro[] = resposta.registros.map((reg: any) => ({
-                id: reg.id,
-                data: reg.data_inicio || '',
-                data_inicio: reg.data_inicio || '',
-                data_fim: reg.data_fim || '',
-                hora: reg.hora_inicio || '',
-                hora_inicio: reg.hora_inicio || '',
-                hora_fim: reg.hora_fim || '',
-                operador: reg.funcionario?.nome || '',
-                matricula: reg.funcionario?.matricula || '',
-                posto: reg.posto?.nome || reg.posto || '',
-                totem: reg.totem?.nome || (reg.totem?.id ? `Totem ${reg.totem.id}` : ''),
-                produto: reg.produto?.nome || reg.modelo?.descricao || reg.modelo?.codigo || '',
-                modelo: reg.modelo?.descricao || reg.modelo?.codigo || '',
-                modelo_codigo: reg.modelo?.codigo || '',
-                quantidade: reg.quantidade || 0,
-                turno: reg.funcionario?.turno || '',
-                operacao: reg.operacao?.nome || reg.operacao?.codigo || '-',
-                comentarios: reg.comentarios || '-',
-                peca: reg.peca?.nome || reg.peca?.codigo || '',
-                pecas: reg.pecas || [],
-                codigo_producao: reg.codigo_producao || '',
-                serial: reg.serial || '',
-                nome: reg.nome || '',
-                operacao_pecas: reg.operacao_pecas || [],
-                operacao_totens: reg.operacao_totens || []
-            }))
+            const registrosMapeados = mapearRegistros(resposta)
 
             setRegistros(registrosMapeados)
             setTotalRegistros(resposta.total || 0)
@@ -224,12 +199,7 @@ const Registros = () => {
         } finally {
             setCarregando(false)
         }
-    }, [paginaAtual, itensPorPagina, filtros.data, filtros.processo, filtros.turno, filtros.horario])
-
-    // Atualizar ref para WebSocket poder chamar buscarRegistros
-    useEffect(() => {
-        buscarRegistrosRef.current = buscarRegistros
-    }, [buscarRegistros])
+    }, [montarParams])
 
     // Buscar registros quando filtros ou paginação mudarem
     useEffect(() => {
@@ -252,7 +222,8 @@ const Registros = () => {
     }
 
     const handleConfirmarFiltro = (tipo: string, valores: string[]) => {
-        setFiltros({ ...filtros, [tipo]: valores })
+        // Usar functional update para evitar stale closure e garantir batch correto
+        setFiltros(prev => ({ ...prev, [tipo]: valores }))
         setModalAberto(null)
         // Resetar para primeira página quando filtros mudarem
         setPaginaAtual(1)
@@ -315,6 +286,7 @@ const Registros = () => {
             'Totem', 
             'Posto', 
             'Operação', 
+            'Habilitado',
             'Operador', 
             'Matrícula', 
             'Turno', 
@@ -333,6 +305,7 @@ const Registros = () => {
             reg.totem || '',
             reg.posto || '',
             reg.operacao || '',
+            reg.habilitado ? 'Sim' : 'Não',
             reg.operador || '',
             reg.matricula || '',
             String(reg.turno || ''),
@@ -356,6 +329,7 @@ const Registros = () => {
             { wch: 12 }, // Totem
             { wch: 15 }, // Posto
             { wch: 15 }, // Operação
+            { wch: 12 }, // Habilitado
             { wch: 20 }, // Operador
             { wch: 12 }, // Matrícula
             { wch: 10 }, // Turno
@@ -436,13 +410,13 @@ const Registros = () => {
     }
 
     return (
-        <div className="flex min-h-screen bg-gray-50">
+        <div className="flex min-h-screen min-w-fit bg-gray-50">
             <MenuLateral />
             <div className="flex-1 flex flex-col">
                 <TopBar />
                 <div className="flex-1 p-6 pt-32 md:pl-20">
-                    <div className="w-full mx-auto">
-                        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                    <div className="w-full mx-auto overflow-x-auto">
+                        <div className="bg-white rounded-lg shadow-md min-w-fit">
                             {/* Filtros no topo */}
                             <div className="p-6 border-b border-gray-200">
                                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
@@ -470,14 +444,14 @@ const Registros = () => {
                                         <input
                                             type="text"
                                             placeholder="HH:MM"
-                                            value={filtros.horario}
+                                            value={horarioInput}
                                             onChange={(e) => {
-                                                const valorAnterior = filtros.horario
+                                                const valorAnterior = horarioInput
                                                 let valor = e.target.value.replace(/[^0-9:]/g, '')
                                                 
                                                 // Se o usuário está apagando (valor novo é menor), permite apagar tudo
                                                 if (valor.length < valorAnterior.length) {
-                                                    setFiltros({ ...filtros, horario: valor })
+                                                    setHorarioInput(valor)
                                                     return
                                                 }
                                                 
@@ -489,7 +463,7 @@ const Registros = () => {
                                                     valor = valor + ':'
                                                 }
                                                 
-                                                setFiltros({ ...filtros, horario: valor })
+                                                setHorarioInput(valor)
                                             }}
                                             maxLength={5}
                                             className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -521,7 +495,11 @@ const Registros = () => {
                                             <input
                                                 type="date"
                                                 value={filtros.data}
-                                                onChange={(e) => setFiltros({ ...filtros, data: e.target.value })}
+                                                onChange={(e) => {
+                                                    const novaData = e.target.value
+                                                    setFiltros(prev => ({ ...prev, data: novaData }))
+                                                    setPaginaAtual(1)
+                                                }}
                                                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                 placeholder="dd/mm/aaaa"
                                             />
@@ -587,8 +565,8 @@ const Registros = () => {
                                         </p>
                                     </div>
                                 ) : registrosPagina.length > 0 ? (
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full">
+                                    <div>
+                                        <table className="w-full min-w-max">
                                             <thead className="bg-gray-50">
                                                 <tr>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
@@ -610,6 +588,9 @@ const Registros = () => {
                                                     </th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                         Operação
+                                                    </th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Habilitado
                                                     </th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                         Operador
@@ -661,25 +642,16 @@ const Registros = () => {
                                                             />
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {registro.operacao_totens && registro.operacao_totens.length > 1 ? (
-                                                                <select 
-                                                                    className="px-2 py-1 text-sm border border-gray-300 rounded bg-white min-w-[120px]"
-                                                                    defaultValue={registro.totem || ''}
-                                                                    disabled
-                                                                >
-                                                                    {registro.operacao_totens.map((t, idx) => (
-                                                                        <option key={idx} value={t.nome}>{t.nome}</option>
-                                                                    ))}
-                                                                </select>
-                                                            ) : (
-                                                                registro.totem || '-'
-                                                            )}
+                                                            {registro.totem || '-'}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                             {registro.posto || '-'}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                             {registro.operacao || '-'}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {registro.habilitado ? 'Sim' : 'Não'}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                             {registro.operador || '-'}
@@ -697,34 +669,10 @@ const Registros = () => {
                                                             {registro.modelo || '-'}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {registro.operacao_pecas && registro.operacao_pecas.length > 1 ? (
-                                                                <select 
-                                                                    className="px-2 py-1 text-sm border border-gray-300 rounded bg-white min-w-[120px]"
-                                                                    defaultValue={registro.peca || ''}
-                                                                    disabled
-                                                                >
-                                                                    {registro.operacao_pecas.map((p) => (
-                                                                        <option key={p.id} value={p.nome}>{p.nome}</option>
-                                                                    ))}
-                                                                </select>
-                                                            ) : (
-                                                                registro.peca || '-'
-                                                            )}
+                                                            {registro.peca || '-'}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {registro.operacao_pecas && registro.operacao_pecas.length > 1 ? (
-                                                                <select 
-                                                                    className="px-2 py-1 text-sm border border-gray-300 rounded bg-white min-w-[120px]"
-                                                                    defaultValue={registro.codigo_producao || ''}
-                                                                    disabled
-                                                                >
-                                                                    {registro.operacao_pecas.map((p) => (
-                                                                        <option key={p.id} value={p.codigo}>{p.codigo}</option>
-                                                                    ))}
-                                                                </select>
-                                                            ) : (
-                                                                registro.codigo_producao || '-'
-                                                            )}
+                                                            {registro.codigo_producao || '-'}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                             {registro.quantidade || '-'}

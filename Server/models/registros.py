@@ -145,7 +145,22 @@ class RegistroProducao:
                         'nome', ot2.toten_nome
                     )), '[]'::json)
                      FROM operacao_totens ot2
-                     WHERE ot2.operacao_id = r.operacao_id) as operacao_totens_json
+                     WHERE ot2.operacao_id = r.operacao_id) as operacao_totens_json,
+                    -- Verificar se funcionário está habilitado para a operação
+                    (SELECT CASE WHEN EXISTS(
+                        SELECT 1 FROM operacoes_habilitadas oh
+                        WHERE oh.funcionario_id = r.funcionario_id
+                        AND oh.operacao_id = r.operacao_id
+                        AND oh.habilitada = TRUE
+                    ) THEN true ELSE false END) as habilitado,
+                    -- Serial do dispositivo Raspberry (buscar pela nome do dispositivo)
+                    COALESCE(
+                        (SELECT dr.serial FROM dispositivos_raspberry dr WHERE dr.nome = r.dispositivo_nome LIMIT 1),
+                        (SELECT dr2.serial FROM dispositivos_raspberry dr2 
+                         WHERE dr2.nome IN (
+                            SELECT ot.toten_nome FROM operacao_totens ot WHERE ot.operacao_id = r.operacao_id
+                         ) LIMIT 1)
+                    ) as dispositivo_serial
                 FROM registros_producao r
                 LEFT JOIN funcionarios f ON r.funcionario_id = f.funcionario_id
                 LEFT JOIN postos p ON r.posto_id = p.posto_id
