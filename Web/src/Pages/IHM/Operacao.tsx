@@ -159,22 +159,8 @@ const Operacao = () => {
 
     try {
       setCarregando(true);
-      if (registroAberto) {
-        try {
-          const response = await producaoAPI.buscarRegistroAberto(postoAtual, funcionarioMatricula);
-          if (response.registro) {
-            alert('Já existe um registro em aberto. Conclua o trabalho atual antes de iniciar um novo.');
-            setCarregando(false);
-            return;
-          } else {
-            setRegistroAberto(null);
-          }
-        } catch (error) {
-          setRegistroAberto(null);
-        }
-      }
       
-      await producaoAPI.registrarEntrada({
+      const response = await producaoAPI.registrarEntrada({
         posto: postoAtual,
         funcionario_matricula: funcionarioMatricula,
         modelo_codigo: modelo,
@@ -183,11 +169,14 @@ const Operacao = () => {
         codigo: codigo || undefined
       });
 
-      // Atualizar registro aberto
-      const response = await producaoAPI.buscarRegistroAberto(postoAtual, funcionarioMatricula);
-      if (response.registro) {
-        setRegistroAberto(response.registro);
-      }
+      // Usar a resposta diretamente para atualizar o estado
+      setRegistroAberto({
+        registro_id: response.registro_id,
+        hora_inicio: response.hora_inicio,
+        data: response.data,
+        funcionario_matricula: response.funcionario_matricula,
+        produto: response.produto
+      });
       
       setCarregando(false);
     } catch (error: any) {
