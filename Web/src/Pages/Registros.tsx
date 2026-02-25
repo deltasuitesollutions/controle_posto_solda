@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import TopBar from '../Components/topBar/TopBar'
 import MenuLateral from '../Components/MenuLateral/MenuLateral'
 import ModalFiltro from '../Components/Compartilhados/ModalFiltro'
@@ -66,6 +66,9 @@ const Registros = () => {
     const [mensagemErro, setMensagemErro] = useState('')
     const [tituloErro, setTituloErro] = useState('Erro!')
 
+    // Trigger para forçar refetch (após exclusão, por exemplo)
+    const [refetchTrigger, setRefetchTrigger] = useState(0)
+
     // Estado local do input de horário para não dispara fetch a cada tecla
     const [horarioInput, setHorarioInput] = useState('')
     const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -123,97 +126,81 @@ const Registros = () => {
         carregarOpcoesFiltros()
     }, [])
 
-    // Montar parâmetros de busca (reutilizado por ambas as funções)
-    const montarParams = useCallback(() => {
-        const offset = (paginaAtual - 1) * itensPorPagina
-        const params: any = {
-            limit: itensPorPagina,
-            offset: offset
-        }
-
-        if (filtros.data) {
-            params.data = filtros.data
-        }
-
-        if (filtros.processo.length > 0) {
-            params.posto = filtros.processo[0]
-        }
-
-        if (filtros.turno.length > 0) {
-            params.turno = filtros.turno
-        }
-
-        if (filtros.horario) {
-            params.hora_inicio = filtros.horario
-        }
-
-        return params
-    }, [paginaAtual, itensPorPagina, filtros.data, filtros.processo, filtros.turno, filtros.horario])
-
-    // Mapear resposta do backend para o formato do componente
-    const mapearRegistros = (resposta: any): Registro[] => {
-        return resposta.registros.map((reg: any) => ({
-            id: reg.id,
-            data: reg.data_inicio || '',
-            data_inicio: reg.data_inicio || '',
-            data_fim: reg.data_fim || '',
-            hora: reg.hora_inicio || '',
-            hora_inicio: reg.hora_inicio || '',
-            hora_fim: reg.hora_fim || '',
-            operador: reg.funcionario?.nome || '',
-            matricula: reg.funcionario?.matricula || '',
-            posto: reg.posto?.nome || reg.posto || '',
-            totem: reg.dispositivo_serial || reg.totem?.nome || (reg.totem?.id ? `Totem ${reg.totem.id}` : ''),
-            produto: reg.produto?.nome || reg.modelo?.descricao || reg.modelo?.codigo || '',
-            modelo: reg.modelo?.descricao || reg.modelo?.codigo || '',
-            modelo_codigo: reg.modelo?.codigo || '',
-            quantidade: reg.quantidade || 0,
-            turno: reg.funcionario?.turno || '',
-            operacao: reg.operacao?.nome || reg.operacao?.codigo || '-',
-            comentarios: reg.comentarios || '-',
-            peca: reg.peca?.nome || reg.peca?.codigo || '',
-            pecas: reg.pecas || [],
-            codigo_producao: reg.codigo_producao || '',
-            serial: reg.serial || '',
-            nome: reg.nome || '',
-            habilitado: reg.habilitado ?? false,
-            operacao_pecas: reg.operacao_pecas || [],
-            operacao_totens: reg.operacao_totens || []
-        }))
-    }
-
-    // Buscar registros do backend
-    const buscarRegistros = useCallback(async () => {
-        setCarregando(true)
-        try {
-            const params = montarParams()
-            const resposta = await registrosAPI.listar(params)
-            const registrosMapeados = mapearRegistros(resposta)
-
-            setRegistros(registrosMapeados)
-            setTotalRegistros(resposta.total || 0)
-        } catch (error) {
-            console.error('Erro ao buscar registros:', error)
-            setRegistros([])
-            setTotalRegistros(0)
-        } finally {
-            setCarregando(false)
-        }
-    }, [montarParams])
-
-    // Buscar registros quando filtros ou paginação mudarem
+    // Buscar registros quando filtros, paginação ou trigger mudarem (único useEffect)
     useEffect(() => {
-        buscarRegistros()
-    }, [buscarRegistros])
+        let cancelado = false
 
-    // Filtrar registros localmente (filtros adicionais que não são suportados pelo backend)
-    const registrosFiltrados = registros.filter(registro => {
-        return (
+        const buscar = async () => {
+            setCarregando(true)
+            try {
+                // Montar parâmetros inline
+                const offset = (paginaAtual - 1) * itensPorPagina
+                const params: any = { limit: itensPorPagina, offset }
+
+                if (filtros.data) params.data = filtros.data
+                if (filtros.processo.length > 0) params.posto = filtros.processo[0]
+                if (filtros.turno.length > 0) params.turno = filtros.turno
+                if (filtros.horario) params.hora_inicio = filtros.horario
+
+                const resposta = await registrosAPI.listar(params)
+
+                if (cancelado) return
+
+                // Mapear resposta do backend para o formato do componente
+                const registrosMapeados: Registro[] = resposta.registros.map((reg: any) => ({
+                    id: reg.id,
+                    data: reg.data_inicio || '',
+                    data_inicio: reg.data_inicio || '',
+                    data_fim: reg.data_fim || '',
+                    hora: reg.hora_inicio || '',
+                    hora_inicio: reg.hora_inicio || '',
+                    hora_fim: reg.hora_fim || '',
+                    operador: reg.funcionario?.nome || '',
+                    matricula: reg.funcionario?.matricula || '',
+                    posto: reg.posto?.nome || reg.posto || '',
+                    totem: reg.dispositivo_serial || reg.totem?.nome || (reg.totem?.id ? `Totem ${reg.totem.id}` : ''),
+                    produto: reg.produto?.nome || reg.modelo?.descricao || reg.modelo?.codigo || '',
+                    modelo: reg.modelo?.descricao || reg.modelo?.codigo || '',
+                    modelo_codigo: reg.modelo?.codigo || '',
+                    quantidade: reg.quantidade || 0,
+                    turno: reg.funcionario?.turno || '',
+                    operacao: reg.operacao?.nome || reg.operacao?.codigo || '-',
+                    comentarios: reg.comentarios || '-',
+                    peca: reg.peca?.nome || reg.peca?.codigo || '',
+                    pecas: reg.pecas || [],
+                    codigo_producao: reg.codigo_producao || '',
+                    serial: reg.serial || '',
+                    nome: reg.nome || '',
+                    habilitado: reg.habilitado ?? false,
+                    operacao_pecas: reg.operacao_pecas || [],
+                    operacao_totens: reg.operacao_totens || []
+                }))
+
+                setRegistros(registrosMapeados)
+                setTotalRegistros(resposta.total || 0)
+            } catch (error) {
+                if (cancelado) return
+                console.error('Erro ao buscar registros:', error)
+                setRegistros([])
+                setTotalRegistros(0)
+            } finally {
+                if (!cancelado) setCarregando(false)
+            }
+        }
+
+        buscar()
+
+        return () => { cancelado = true }
+    }, [paginaAtual, itensPorPagina, filtros.data, filtros.processo, filtros.turno, filtros.horario, refetchTrigger])
+
+    // Filtrar registros localmente (filtros que não são suportados pelo backend) — memoizado
+    const registrosFiltrados = useMemo(() => {
+        return registros.filter(registro =>
             (filtros.produto.length === 0 || filtros.produto.includes(registro.produto || '')) &&
             (filtros.matricula.length === 0 || filtros.matricula.includes(registro.matricula || '')) &&
             (filtros.operador.length === 0 || filtros.operador.includes(registro.operador || ''))
         )
-    })
+    }, [registros, filtros.produto, filtros.matricula, filtros.operador])
 
     const getTextoFiltro = (valores: string[]) => {
         if (valores.length === 0) return 'Selecione'
@@ -229,7 +216,7 @@ const Registros = () => {
         setPaginaAtual(1)
     }
 
-    // Paginação (usando dados do backend, não precisa slice local)
+    // Paginação (usando dados do backend)
     const totalItens = totalRegistros > 0 ? totalRegistros : registrosFiltrados.length
     const indiceInicial = totalItens > 0 ? (paginaAtual - 1) * itensPorPagina + 1 : 0
     const indiceFinal = Math.min(paginaAtual * itensPorPagina, totalItens)
@@ -390,8 +377,8 @@ const Registros = () => {
             // Limpar seleção
             setRegistrosSelecionados(new Set())
             
-            // Recarregar registros
-            await buscarRegistros()
+            // Recarregar registros via trigger
+            setRefetchTrigger(prev => prev + 1)
             
             // Exibir modal de sucesso
             const mensagem = resultado?.mensagem || `${idsParaExcluir.length} registro(s) excluído(s) com sucesso`
@@ -558,14 +545,17 @@ const Registros = () => {
 
                             {/* Área de conteúdo - Tabela ou mensagem vazia */}
                             <div className="p-4">
-                                {carregando ? (
-                                    <div className="flex flex-col items-center justify-center py-8">
-                                        <p className="text-gray-500 text-sm font-medium">
-                                            Carregando registros...
-                                        </p>
+                                {/* Indicador discreto de carregamento sem desmontar a tabela */}
+                                {carregando && (
+                                    <div className="flex items-center justify-center py-2">
+                                        <span className="text-sm text-blue-600 font-medium animate-pulse">
+                                            Atualizando...
+                                        </span>
                                     </div>
-                                ) : registrosPagina.length > 0 ? (
-                                    <div>
+                                )}
+
+                                {registrosPagina.length > 0 ? (
+                                    <div className={carregando ? 'opacity-50 pointer-events-none transition-opacity' : 'transition-opacity'}>
                                         <table className="w-full min-w-max">
                                             <thead className="bg-gray-50">
                                                 <tr>
@@ -708,13 +698,13 @@ const Registros = () => {
                                             </tbody>
                                         </table>
                                     </div>
-                                ) : (
+                                ) : !carregando ? (
                                     <div className="flex flex-col items-center justify-center py-8">
                                         <p className="text-gray-500 text-sm font-medium">
                                             Nenhum registro encontrado
                                         </p>
                                     </div>
-                                )}
+                                ) : null}
                             </div>
 
                             {/* Rodapé com paginação e exportação */}
