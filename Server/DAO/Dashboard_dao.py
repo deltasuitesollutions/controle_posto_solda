@@ -65,20 +65,18 @@ def buscar_pecas_hoje_por_posto(data_hoje: str) -> Dict[int, int]:
     return {r[0]: r[1] for r in resultados} if resultados else {}
 
 
-def buscar_metricas_hoje() -> Dict[str, int]:
-    hoje = datetime.now(TZ_MANAUS).strftime('%Y-%m-%d')
+def contar_producao_finalizada_hoje(data_hoje: str) -> int:
+    """Conta registros de produção FINALIZADOS (fim IS NOT NULL) do dia."""
     query = """
-        SELECT 
-            COUNT(*) as producao_total,
-            COALESCE(COUNT(DISTINCT funcionario_id), 0) as operadores_ativos
+        SELECT COUNT(*)
         FROM registros_producao
         WHERE data_inicio = %s
+        AND fim IS NOT NULL
     """
-    resultado = DatabaseConnection.execute_query(query, (hoje,), fetch_one=True)
-    return {
-        'producaoHoje': resultado[0] if resultado else 0,
-        'operadoresAtivos': resultado[1] if resultado else 0
-    }
+    resultado = DatabaseConnection.execute_query(query, (data_hoje,), fetch_one=True)
+    if resultado and resultado[0] is not None:
+        return int(resultado[0])
+    return 0
 
 
 def listar_todos_postos() -> List:

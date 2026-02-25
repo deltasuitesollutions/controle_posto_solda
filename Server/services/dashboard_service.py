@@ -10,7 +10,7 @@ from Server.DAO.Dashboard_dao import (
     buscar_registros_abertos,
     buscar_habilitacoes_ativas,
     buscar_pecas_hoje_por_posto,
-    buscar_metricas_hoje,
+    contar_producao_finalizada_hoje,
     listar_todos_postos,
     listar_todas_sublinhas,
 )
@@ -96,14 +96,18 @@ def _extrair_dados_registro(registro) -> Dict[str, Any]:
 
 def buscar_postos_em_uso() -> Dict[str, Any]:
     try:
-        # ---- Todas as consultas ao banco de uma vez (6 queries fixas) ----
-        registros = buscar_registros_abertos()
+        # ---- Todas as consultas ao banco de uma vez ----
+        registros = buscar_registros_abertos()  # registros com fim IS NULL
         todos_postos = listar_todos_postos()
         todas_sublinhas = listar_todas_sublinhas()
         habilitacoes = buscar_habilitacoes_ativas()
         hoje = datetime.now(TZ_MANAUS).strftime('%Y-%m-%d')
         pecas_por_posto = buscar_pecas_hoje_por_posto(hoje)
-        metricas_hoje = buscar_metricas_hoje()
+        producao_hoje = contar_producao_finalizada_hoje(hoje)
+
+        # Operadores ativos: derivado diretamente dos registros abertos (fim IS NULL)
+        # registro[2] = funcionario_id (índice 2 na query buscar_registros_abertos)
+        operadores_ativos = len(set(r[2] for r in registros)) if registros else 0
 
         # Dispositivos carregados 1x (1 query) e indexados por toten_id
         dispositivos_map = _carregar_dispositivos_por_toten(todos_postos)
@@ -207,12 +211,12 @@ def buscar_postos_em_uso() -> Dict[str, Any]:
                 'postos': postos_da_sublinha
             })
 
-        # Métricas
+        # Métricas (derivadas dos dados já carregados — sempre consistentes)
         metricas = {
             'postosAtivos': len(postos_em_uso),
             'totalPostos': len(todos_postos),
-            'producaoHoje': metricas_hoje['producaoHoje'],
-            'operadoresAtivos': metricas_hoje['operadoresAtivos']
+            'producaoHoje': producao_hoje,
+            'operadoresAtivos': operadores_ativos
         }
 
         return {

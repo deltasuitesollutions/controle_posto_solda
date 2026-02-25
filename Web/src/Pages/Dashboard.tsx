@@ -56,92 +56,91 @@ const Dashboard = () => {
   });
   const [carregando, setCarregando] = useState(true);
   const socketRef = useRef<Socket | null>(null);
+  const dadosCarregados = useRef(false);
 
-  // Carregar dados iniciais e configurar WebSocket
+  // Configuração Inicial do WebSocket
   useEffect(() => {
-    // Carregar dados iniciais
     carregarDadosDashboard();
-
-    // Configurar WebSocket - usar a mesma origem do frontend para que o proxy funcione
-    // Em produção (nginx), conecta via proxy na mesma porta do frontend
-    // Em desenvolvimento, conecta diretamente ao backend na porta 8000
     let socketUrl: string;
     
     if (import.meta.env.VITE_API_URL) {
-      // Se VITE_API_URL está definido, usar sem /api
       socketUrl = import.meta.env.VITE_API_URL.replace('/api', '');
     } else if (import.meta.env.DEV) {
-      // Em desenvolvimento, conectar diretamente ao backend
       socketUrl = `http://${window.location.hostname}:8000`;
     } else {
-      // Em produção (via nginx), usar a mesma origem - nginx fará o proxy
       socketUrl = window.location.origin;
     }
     
-    console.log('[Dashboard] Conectando ao Socket.IO:', socketUrl);
-    
     const socket = io(socketUrl, {
       path: '/socket.io',
-      transports: ['polling', 'websocket'], // Polling primeiro, depois upgrade para websocket
+      transports: ['polling', 'websocket'],
       reconnection: true,
       reconnectionAttempts: 10,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
+      reconnectionDelay: 2000,
+      reconnectionDelayMax: 10000,
       timeout: 20000,
-      forceNew: true,
     });
 
     socketRef.current = socket;
-
-    // Eventos de conexão para debug
-    socket.on('connect', () => {
-      console.log('[Dashboard] Socket.IO conectado:', socket.id);
-    });
 
     socket.on('connect_error', (error) => {
       console.warn('[Dashboard] Erro de conexão Socket.IO:', error.message);
     });
 
-    socket.on('disconnect', (reason) => {
-      console.log('[Dashboard] Socket.IO desconectado:', reason);
-    });
-
-    // Receber atualizações do dashboard
     socket.on('dashboard_update', (dados: any) => {
-      console.log('[Dashboard] Atualização recebida via Socket.IO', dados);
       try {
         if (dados && typeof dados === 'object') {
           if (dados.metricas) {
-            console.log('[Dashboard] Atualizando métricas:', dados.metricas);
             setMetricas(dados.metricas);
           }
           if (dados.sublinhas && Array.isArray(dados.sublinhas)) {
-            console.log('[Dashboard] Atualizando sublinhas:', dados.sublinhas.length);
             setSublinhas(dados.sublinhas);
           }
         }
       } catch (error) {
         console.error('[Dashboard] Erro ao processar atualização:', error);
       }
-      setCarregando(false);
+      if (!dadosCarregados.current) {
+        dadosCarregados.current = true;
+        setCarregando(false);
+      }
     });
 
-    // Polling como fallback a cada 30 segundos
     const pollingInterval = setInterval(() => {
-      console.log('[Dashboard] Polling de dados...');
-      carregarDadosDashboard();
+      atualizarDadosSilencioso();
     }, 30000);
 
     return () => {
-      console.log('[Dashboard] Desconectando Socket.IO');
       socket.disconnect();
       clearInterval(pollingInterval);
     };
   }, []);
 
+  // Carregamento inicial — mostra "carregando" apenas na primeira vez
   const carregarDadosDashboard = async () => {
     try {
-      setCarregando(true);
+      const dados = await dashboardAPI.obterDados();
+      
+      if (dados.metricas) {
+        setMetricas(dados.metricas);
+      }
+      
+      if (dados.sublinhas) {
+        setSublinhas(dados.sublinhas);
+      }
+      dadosCarregados.current = true;
+    } catch (error) {
+      console.error('Erro ao carregar dados do dashboard:', error);
+      setTimeout(() => {
+        carregarDadosDashboard();
+      }, 5000);
+    } finally {
+      setCarregando(false);
+    }
+  };
+
+  const atualizarDadosSilencioso = async () => {
+    try {
       const dados = await dashboardAPI.obterDados();
       
       if (dados.metricas) {
@@ -152,13 +151,7 @@ const Dashboard = () => {
         setSublinhas(dados.sublinhas);
       }
     } catch (error) {
-      console.error('Erro ao carregar dados do dashboard:', error);
-      // Em caso de erro, tentar novamente após alguns segundos
-      setTimeout(() => {
-        carregarDadosDashboard();
-      }, 5000);
-    } finally {
-      setCarregando(false);
+      // Silencioso — ignora erro no polling
     }
   };
 

@@ -99,52 +99,37 @@ const Registros = () => {
             socketUrl = window.location.origin
         }
         
-        console.log('[Registros] Conectando ao Socket.IO:', socketUrl)
-        
         const socket = io(socketUrl, {
             path: '/socket.io',
             transports: ['polling', 'websocket'],
             reconnection: true,
             reconnectionAttempts: 10,
-            reconnectionDelay: 1000,
-            reconnectionDelayMax: 5000,
+            reconnectionDelay: 2000,
+            reconnectionDelayMax: 10000,
             timeout: 20000,
-            forceNew: true,
         })
 
         socketRef.current = socket
-
-        socket.on('connect', () => {
-            console.log('[Registros] Socket.IO conectado:', socket.id)
-        })
 
         socket.on('connect_error', (error) => {
             console.warn('[Registros] Erro de conexão Socket.IO:', error.message)
         })
 
-        socket.on('disconnect', (reason) => {
-            console.log('[Registros] Socket.IO desconectado:', reason)
-        })
-
         // Receber notificações de atualização de registros
         socket.on('registros_update', () => {
-            console.log('[Registros] Notificação de atualização recebida via Socket.IO')
-            // Buscar dados atualizados
             if (buscarRegistrosRef.current) {
                 buscarRegistrosRef.current()
             }
         })
 
-        // Polling como fallback a cada 20 segundos
+        // Polling como fallback a cada 30 segundos
         const pollingInterval = setInterval(() => {
-            console.log('[Registros] Polling de dados...')
             if (buscarRegistrosRef.current) {
                 buscarRegistrosRef.current()
             }
-        }, 20000)
+        }, 30000)
 
         return () => {
-            console.log('[Registros] Desconectando Socket.IO')
             socket.disconnect()
             clearInterval(pollingInterval)
         }

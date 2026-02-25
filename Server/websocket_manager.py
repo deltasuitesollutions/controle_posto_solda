@@ -14,7 +14,7 @@ logger.setLevel(logging.INFO)
 # Instância global do SocketIO
 _socketio_instance: Optional[SocketIO] = None
 _last_update_time = 0
-_throttle_interval = 0.5  # Reduzido de 3s para 0.5s para atualizações mais rápidas
+_throttle_interval = 3  # Throttle de 3 segundos para evitar atualizações excessivas
 _connected_clients = set()  # Rastrear clientes conectados
 _clients_lock = threading.Lock()  # Lock para thread safety
 
@@ -29,15 +29,15 @@ def init_socketio(app: Flask) -> SocketIO:
     try:
         _socketio_instance = SocketIO(
             app,
-            cors_allowed_origins="*",  # Liberado para todos os origins
+            cors_allowed_origins="*",
             async_mode=async_mode,
-            logger=True,  # Sempre habilitar logger para debug
-            engineio_logger=True,  # Habilitar também o engineio logger
-            ping_timeout=60,
+            logger=False,
+            engineio_logger=False,  # Desabilitado para não logar ping/pong
+            ping_timeout=120,
             ping_interval=25,
             max_http_buffer_size=1e6,
             allow_upgrades=True,
-            transports=['polling', 'websocket']  # Polling primeiro para maior estabilidade
+            transports=['polling', 'websocket']
         )
 
         print(f"[WebSocket] SocketIO inicializado com async_mode={async_mode}")
@@ -53,8 +53,8 @@ def init_socketio(app: Flask) -> SocketIO:
                 app,
                 cors_allowed_origins="*",
                 async_mode='threading',
-                logger=True,
-                engineio_logger=True,
+                logger=False,
+                engineio_logger=False,
                 transports=['polling', 'websocket']
             )
             return _socketio_instance
@@ -96,18 +96,10 @@ def enviar_atualizacao_dashboard(forcar: bool = False):
 
     try:
         dados = dashboard_service.buscar_postos_em_uso()
-        with _clients_lock:
-            num_clients = len(_connected_clients)
         
-        logger.info(f"[WebSocket] === BROADCAST dashboard_update ===")
-        logger.info(f"[WebSocket] Clientes conectados: {num_clients}")
-        logger.info(f"[WebSocket] Dados: {len(dados.get('sublinhas', []))} sublinhas")
-        
-        # IMPORTANTE: Usar o servidor SocketIO para fazer broadcast
-        # O método emit() do servidor envia para TODOS os clientes quando chamado assim
         socketio_instance.emit('dashboard_update', dados, namespace='/')
         
-        logger.info(f"[WebSocket] Broadcast dashboard_update enviado com sucesso!")
+        logger.debug(f"[WebSocket] Broadcast dashboard_update enviado")
     except Exception as e:
         logger.error(f"[WebSocket] ERRO ao enviar atualização do dashboard: {e}", exc_info=True)
 
@@ -124,16 +116,9 @@ def enviar_atualizacao_registros(forcar: bool = False):
         return
 
     try:
-        with _clients_lock:
-            num_clients = len(_connected_clients)
-        
-        logger.info(f"[WebSocket] === BROADCAST registros_update ===")
-        logger.info(f"[WebSocket] Clientes conectados: {num_clients}")
-        
-        # Emitir evento notificando que houve mudança nos registros
         socketio_instance.emit('registros_update', {'timestamp': time.time()}, namespace='/')
         
-        logger.info(f"[WebSocket] Broadcast registros_update enviado com sucesso!")
+        logger.debug(f"[WebSocket] Broadcast registros_update enviado")
     except Exception as e:
         logger.error(f"[WebSocket] ERRO ao enviar atualização de registros: {e}", exc_info=True)
 
@@ -148,12 +133,11 @@ def register_socketio_events(socketio_instance: SocketIO):
         with _clients_lock:
             _connected_clients.add(sid)
             total = len(_connected_clients)
-        logger.info(f"[WebSocket] +++ Cliente CONECTADO: {sid} (total: {total})")
+        logger.info(f"[WebSocket] Cliente conectado: {sid} (total: {total})")
         # Enviar atualização imediata para o cliente que acabou de conectar
         try:
             dados = dashboard_service.buscar_postos_em_uso()
             emit('dashboard_update', dados)
-            logger.info(f"[WebSocket] Dados iniciais enviados para cliente {sid}")
         except Exception as e:
             logger.error(f"[WebSocket] Erro ao enviar dados iniciais: {e}", exc_info=True)
     
@@ -164,17 +148,15 @@ def register_socketio_events(socketio_instance: SocketIO):
         with _clients_lock:
             _connected_clients.discard(sid)
             total = len(_connected_clients)
-        logger.info(f"[WebSocket] --- Cliente DESCONECTADO: {sid} (total: {total})")
+        logger.info(f"[WebSocket] Cliente desconectado: {sid} (total: {total})")
     
     @socketio_instance.on('request_dashboard_update')
     def handle_request_update():
         """Permite que o cliente solicite atualização manual"""
         sid = request.sid if hasattr(request, 'sid') else 'unknown'
-        logger.info(f"[WebSocket] Cliente {sid} solicitou atualização do dashboard")
         try:
             dados = dashboard_service.buscar_postos_em_uso()
             emit('dashboard_update', dados)
-            logger.info(f"[WebSocket] Dados enviados para cliente {sid}")
         except Exception as e:
             logger.error(f"[WebSocket] Erro ao enviar dados: {e}", exc_info=True)
     
@@ -182,5 +164,4 @@ def register_socketio_events(socketio_instance: SocketIO):
     def handle_request_registros_update():
         """Permite que o cliente solicite atualização manual dos registros"""
         sid = request.sid if hasattr(request, 'sid') else 'unknown'
-        logger.info(f"[WebSocket] Cliente {sid} solicitou atualização dos registros")
         emit('registros_update', {'timestamp': time.time()})
