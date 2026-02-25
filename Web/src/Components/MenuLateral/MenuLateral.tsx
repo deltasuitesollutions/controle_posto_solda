@@ -99,7 +99,7 @@ const MenuLateral = () => {
     // Menu vertical para tablets e desktop (apenas ícones) - lateral esquerda
     const menuHorizontal = (
         <div 
-            className={`hidden md:flex fixed top-0 left-0 z-100 h-screen flex-col items-center justify-start gap-4 pt-4 shadow-lg transition-all duration-300 overflow-hidden ${
+            className={`hidden md:flex fixed top-0 left-0 z-100 h-screen flex-col shadow-lg transition-all duration-300 overflow-hidden ${
                 menuAberto ? 'w-64' : 'w-16'
             }`}
             style={{ backgroundColor: 'var(--bg-azul)' }}
@@ -107,7 +107,7 @@ const MenuLateral = () => {
             {/* Botão de toggle no desktop */}
             <button
                 onClick={() => setMenuAberto(!menuAberto)}
-                className="p-2 rounded-md transition-colors text-white flex items-center justify-center min-w-12 mb-2"
+                className="p-2 rounded-md transition-colors text-white flex items-center justify-center min-w-12 mt-4 mb-2 shrink-0"
                 title={menuAberto ? "Fechar menu" : "Abrir menu"}
                 type="button"
                 onMouseEnter={(e) => {
@@ -117,10 +117,10 @@ const MenuLateral = () => {
                     e.currentTarget.style.backgroundColor = 'transparent';
                 }}
             >
-                <i className={`bi ${menuAberto ? 'bi-chevron-left' : 'bi-chevron-right'} text-2xl`}></i>
+                <i className={`bi ${menuAberto ? 'bi-chevron-left' : 'bi-chevron-right'} text-xl`}></i>
             </button>
 
-            <div className="flex flex-col gap-2 w-full px-2">
+            <div className="flex flex-col gap-2 w-full px-2 overflow-y-auto flex-1 pb-4 menu-scrollbar">
                 {menuItems.map((item) => {
                     const active = isActive(item.to);
                     return (
@@ -139,7 +139,7 @@ const MenuLateral = () => {
                                 e.currentTarget.style.backgroundColor = active ? 'var(--bg-laranja)' : 'transparent';
                             }}
                         >
-                            <i className={`bi ${item.icon} ${menuAberto ? 'text-2xl' : 'text-4xl'} flex-shrink-0`}></i>
+                            <i className={`bi ${item.icon} ${menuAberto ? 'text-xl' : 'text-3xl'} shrink-0`}></i>
                             {menuAberto && (
                                 <span className="font-medium text-sm whitespace-nowrap">{item.label}</span>
                             )}
@@ -179,7 +179,7 @@ const MenuLateral = () => {
                         <i className="bi bi-x-lg text-xl"></i>
                     </button>
                     
-                    <section className="flex-1 flex flex-col overflow-y-auto">
+                    <section className="flex-1 flex flex-col overflow-y-auto menu-scrollbar">
                         <nav className="flex flex-col h-full">
                             <ul className="flex-1 flex flex-col gap-2 p-4 pt-14">
                                 {menuItems.map((item) => {
@@ -199,7 +199,7 @@ const MenuLateral = () => {
                                                     e.currentTarget.style.backgroundColor = active ? 'var(--bg-laranja)' : 'transparent';
                                                 }}
                                             >
-                                                <i className={`bi ${item.icon} text-xl`}></i>
+                                                <i className={`bi ${item.icon} text-lg`}></i>
                                                 <p className="font-medium">{item.label}</p>
                                             </Link>
                                         </li>

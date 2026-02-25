@@ -97,6 +97,22 @@ body.menu-open .menu-content {
   background: #a0aec0;
 }
 
+/* Scrollbar customizada para o menu lateral - invisível mas funcional */
+.menu-scrollbar {
+  scrollbar-width: none; /* Firefox - esconde a barra */
+  -ms-overflow-style: none; /* IE e Edge - esconde a barra */
+}
+
+.menu-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera - esconde a barra */
+}
+
+/* Mantém a funcionalidade de scroll com mouse */
+.menu-scrollbar {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch; /* Scroll suave no iOS */
+}
+
 /* ===== Virtual Keyboard Styles ===== */
 .virtual-keyboard-container {
   position: fixed;
