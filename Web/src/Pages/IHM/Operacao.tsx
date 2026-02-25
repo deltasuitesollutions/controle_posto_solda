@@ -34,14 +34,8 @@ const Operacao = () => {
   const [funcionarioMatricula, setFuncionarioMatricula] = useState<string>('');
   const [postoAtual, setPostoAtual] = useState<string>('');
   const [pecasDisponiveis, setPecasDisponiveis] = useState<Array<{nome: string; codigo: string}>>([]);
-  const [erros, setErros] = useState({
-    operacao: false,
-    produto: false,
-    modelo: false,
-    peca: false,
-    codigo: false,
-  });
-  const tinhaRegistroRef = useRef(false);
+  const [erroOperacao, setErroOperacao] = useState(false);
+  const [erroPeca, setErroPeca] = useState(false);
   const operacoesMapRef = useRef<Map<string, OperacaoContexto>>(new Map());
 
   useEffect(() => {
@@ -122,58 +116,32 @@ const Operacao = () => {
         try {
           const response = await producaoAPI.buscarRegistroAberto(postoAtual, funcionarioMatricula);
           if (response.registro) {
-            tinhaRegistroRef.current = true;
             setRegistroAberto(response.registro);
-            // Se há registro aberto, apenas atualizar o estado (não redirecionar)
-            // O botão mudará para "Finalizar processo"
           } else {
-            // Se havia registro aberto antes e agora não há mais (foi cancelado), redirecionar para o leitor
-            if (tinhaRegistroRef.current) {
-              tinhaRegistroRef.current = false;
-              navigate('/ihm/leitor', { replace: true });
-              return;
-            }
-            tinhaRegistroRef.current = false;
             setRegistroAberto(null);
           }
         } catch (error) {
-          // Se não encontrar registro e havia um registro aberto antes (foi cancelado), redirecionar
-          if (tinhaRegistroRef.current) {
-            tinhaRegistroRef.current = false;
-            navigate('/ihm/leitor', { replace: true });
-            return;
-          }
-          // Se não encontrar registro, não é erro - limpar estado
-          tinhaRegistroRef.current = false;
           setRegistroAberto(null);
         }
       } else {
-        tinhaRegistroRef.current = false;
         setRegistroAberto(null);
       }
     };
     verificarRegistroAberto();
-    
-    // Verificar periodicamente para manter sincronizado (a cada 5 segundos)
-    const interval = setInterval(verificarRegistroAberto, 5000);
-    return () => clearInterval(interval);
-  }, [operacao, funcionarioMatricula, postoAtual, navigate, operador]);
+  }, [operacao, funcionarioMatricula, postoAtual]);
 
   const validarFormulario = (): boolean => {
-    const novosErros = {
-      operacao: !operacao,
-      produto: !produto,
-      modelo: !modelo,
-      peca: !peca,
-      codigo: !codigo,
-    };
-
-    setErros(novosErros);
-    return !Object.values(novosErros).some(erro => erro);
+    const faltaOperacao = !operacao;
+    const faltaPeca = pecasDisponiveis.length > 1 && !peca;
+    
+    setErroOperacao(faltaOperacao);
+    setErroPeca(faltaPeca);
+    
+    return !faltaOperacao && !faltaPeca;
   };
 
+  // Esse trecho valida se todos os campos obrigatórios estão preenchidos.
   const handleIniciarTrabalho = async () => {
-    // Validar que todos os campos obrigatórios estão preenchidos
     if (!validarFormulario()) {
       alert('Preencha todos os campos obrigatórios antes de iniciar o trabalho.');
       return;
@@ -191,32 +159,19 @@ const Operacao = () => {
 
     try {
       setCarregando(true);
-      
-      // Verificar se há registro aberto antes de tentar criar novo
-      // Se houver, atualizar o estado para garantir que está sincronizado
       if (registroAberto) {
         try {
           const response = await producaoAPI.buscarRegistroAberto(postoAtual, funcionarioMatricula);
           if (response.registro) {
-            // Ainda há registro aberto, não pode criar novo
             alert('Já existe um registro em aberto. Conclua o trabalho atual antes de iniciar um novo.');
             setCarregando(false);
             return;
           } else {
-            // Registro foi fechado, limpar estado
             setRegistroAberto(null);
           }
         } catch (error) {
-          // Se não encontrar registro, está ok, pode criar novo
           setRegistroAberto(null);
         }
-      }
-      
-      // Sempre usar o modelo selecionado, que é o que existe no banco
-      if (!modelo) {
-        alert('Selecione um modelo antes de iniciar o trabalho.');
-        setCarregando(false);
-        return;
       }
       
       await producaoAPI.registrarEntrada({
@@ -272,13 +227,13 @@ const Operacao = () => {
             onChange={(e) => {
               const codigoOperacao = e.target.value;
               setOperacao(codigoOperacao);
-              if (erros.operacao) setErros({ ...erros, operacao: false });
+              if (erroOperacao) setErroOperacao(false);
               
               if (operacoes.length > 0) {
                 preencherCamposOperacao(codigoOperacao);
               }
             }}
-            className={`w-full px-5 py-4 text-5xl border-4 rounded-lg focus:outline-none bg-white appearance-none cursor-pointer ${erros.operacao ? 'border-red-500' : 'border-gray-400 focus:border-blue-500'}`}
+            className={`w-full px-5 py-4 text-5xl border-4 rounded-lg focus:outline-none bg-white appearance-none cursor-pointer ${erroOperacao ? 'border-red-500' : 'border-gray-400 focus:border-blue-500'}`}
             style={{
               backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
               backgroundRepeat: 'no-repeat',
@@ -307,7 +262,7 @@ const Operacao = () => {
             type="text"
             value={produto}
             readOnly
-            className={`w-full px-4 py-3 text-4xl border-2 rounded-lg focus:outline-none bg-gray-100 cursor-not-allowed ${erros.produto ? 'border-red-500' : 'border-gray-400'}`}
+            className="w-full px-4 py-3 text-4xl border-2 border-gray-400 rounded-lg focus:outline-none bg-gray-100 cursor-not-allowed"
             style={{ minHeight: '55px' }}
           />
         </div>
@@ -320,7 +275,7 @@ const Operacao = () => {
             type="text"
             value={modeloDescricao}
             readOnly
-            className={`w-full px-4 py-3 text-4xl border-2 rounded-lg focus:outline-none bg-gray-100 cursor-not-allowed ${erros.modelo ? 'border-red-500' : 'border-gray-400'}`}
+            className="w-full px-4 py-3 text-4xl border-2 border-gray-400 rounded-lg focus:outline-none bg-gray-100 cursor-not-allowed"
             style={{ minHeight: '55px' }}
           />
         </div>
@@ -335,16 +290,13 @@ const Operacao = () => {
               onChange={(e) => {
                 const novaPeca = e.target.value;
                 setPeca(novaPeca);
-                if (erros.peca) setErros({ ...erros, peca: false });
-                // Atualizar código correspondente à peça selecionada
+                if (erroPeca) setErroPeca(false);
                 const pecaSelecionada = pecasDisponiveis.find(p => p.nome === novaPeca);
                 if (pecaSelecionada) {
-                  const novoCodigo = pecaSelecionada.codigo || '';
-                  setCodigo(novoCodigo);
-                  if (novoCodigo && erros.codigo) setErros({ ...erros, codigo: false });
+                  setCodigo(pecaSelecionada.codigo || '');
                 }
               }}
-              className={`w-full px-4 py-3 text-4xl border-2 rounded-lg focus:outline-none bg-white appearance-none cursor-pointer ${erros.peca ? 'border-red-500' : 'border-gray-400 focus:border-blue-500'}`}
+              className={`w-full px-4 py-3 text-4xl border-2 rounded-lg focus:outline-none bg-white appearance-none cursor-pointer ${erroPeca ? 'border-red-500' : 'border-gray-400 focus:border-blue-500'}`}
               style={{
                 backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
                 backgroundRepeat: 'no-repeat',
@@ -362,7 +314,7 @@ const Operacao = () => {
               type="text"
               value={peca}
               readOnly
-              className={`w-full px-4 py-3 text-4xl border-2 rounded-lg focus:outline-none bg-gray-100 cursor-not-allowed ${erros.peca ? 'border-red-500' : 'border-gray-400'}`}
+              className="w-full px-4 py-3 text-4xl border-2 border-gray-400 rounded-lg focus:outline-none bg-gray-100 cursor-not-allowed"
               style={{ minHeight: '55px' }}
             />
           )}
@@ -376,7 +328,7 @@ const Operacao = () => {
             type="text"
             value={codigo}
             readOnly
-            className={`w-full px-4 py-3 text-4xl border-2 rounded-lg focus:outline-none bg-gray-100 cursor-not-allowed ${erros.codigo ? 'border-red-500' : 'border-gray-400'}`}
+            className="w-full px-4 py-3 text-4xl border-2 border-gray-400 rounded-lg focus:outline-none bg-gray-100 cursor-not-allowed"
             style={{ minHeight: '55px' }}
           />
         </div>
@@ -399,7 +351,7 @@ const Operacao = () => {
 
           <button
             onClick={registroAberto ? handleFinalizarProcesso : handleIniciarTrabalho}
-            disabled={carregando || (!registroAberto && (!operacao || !produto || !modelo || !peca || !codigo))}
+            disabled={carregando || (!registroAberto && !operacao)}
             className="px-12 py-6 text-white text-7xl font-bold rounded-lg shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ 
               backgroundColor: registroAberto ? '#28a745' : 'var(--bg-laranja)',

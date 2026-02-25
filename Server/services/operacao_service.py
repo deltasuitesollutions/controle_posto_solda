@@ -253,7 +253,9 @@ def criar_operacao(
         todas_pecas = Peca.listar_todas()
         pecas_encontradas = []
         if pecas and len(pecas) > 0:
-            for nome_peca in pecas:
+            for item_peca in pecas:
+                # Suporte ao formato "nome - codigo" ou apenas "nome"
+                nome_peca = item_peca.split(' - ')[0].strip() if ' - ' in item_peca else item_peca.strip()
                 for p in todas_pecas:
                     if p.nome == nome_peca:
                         pecas_encontradas.append(p)
@@ -354,7 +356,8 @@ def atualizar_operacao(
             DatabaseConnection.execute_query(query_delete_pecas, (operacao_id,))
             if len(pecas) > 0:
                 todas_pecas = Peca.listar_todas()
-                for nome_peca in pecas:
+                for item_peca in pecas:
+                    nome_peca = item_peca.split(' - ')[0].strip() if ' - ' in item_peca else item_peca.strip()
                     for p in todas_pecas:
                         if p.nome == nome_peca:
                             query_insert_peca = """
