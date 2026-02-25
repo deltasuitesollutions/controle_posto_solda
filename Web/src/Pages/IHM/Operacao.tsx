@@ -241,7 +241,7 @@ const Operacao = () => {
     <div className="bg-gray-50 min-h-screen flex flex-col p-6">
       <div className="flex justify-between items-start mb-8 gap-6">
         <div className="flex-1">
-          <label className="block text-gray-700 text-4xl font-bold mb-3">
+          <label className="block text-gray-700 text-5xl font-bold mb-3">
             OPERAÇÃO
           </label>
           <select
@@ -277,7 +277,7 @@ const Operacao = () => {
 
       <div className="grid grid-cols-4 gap-6 mb-8">
         <div>
-          <label className="text-gray-700 text-4xl font-bold mb-3 block">
+          <label className="text-gray-700 text-5xl font-bold mb-3 block">
             PRODUTO
           </label>
           <input
@@ -290,7 +290,7 @@ const Operacao = () => {
         </div>
 
         <div>
-          <label className="text-gray-700 text-4xl font-bold mb-3 block">
+          <label className="text-gray-700 text-5xl font-bold mb-3 block">
             MODELO
           </label>
           <input
@@ -303,7 +303,7 @@ const Operacao = () => {
         </div>
 
         <div>
-          <label className="text-gray-700 text-4xl font-bold mb-3 block">
+          <label className="text-gray-700 text-5xl font-bold mb-3 block">
             PEÇA
           </label>
           {pecasDisponiveis.length > 1 ? (
@@ -343,14 +343,14 @@ const Operacao = () => {
         </div>
 
         <div>
-          <label className="text-gray-700 text-4xl font-bold mb-3 block">
+          <label className="text-gray-700 text-5xl font-bold mb-3 block">
             CÓDIGO
           </label>
           <input
             type="text"
             value={codigo}
             readOnly
-            className="w-full px-4 py-3 text-4xl border-2 border-gray-400 rounded-lg focus:outline-none bg-gray-100 cursor-not-allowed"
+            className="w-full px-4 py-3 text-3xl border-2 border-gray-400 rounded-lg focus:outline-none bg-gray-100 cursor-not-allowed"
             style={{ minHeight: '55px' }}
           />
         </div>
