@@ -1,11 +1,17 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 
 const MenuLateral = () => {
     // Menu começa fechado no desktop, mas pode ser aberto
     const [menuAberto, setMenuAberto] = useState(false);
     const { isOperador, isAdmin, isMaster, user } = useAuth();
+    const location = useLocation();
+
+    // Verifica se o item é a página ativa
+    const isActive = (path: string) => {
+        return location.pathname === path;
+    };
 
     // Escuta evento de toggle do menu
     useEffect(() => {
@@ -113,27 +119,31 @@ const MenuLateral = () => {
             </button>
 
             <div className="flex flex-col gap-2 w-full px-2">
-                {menuItems.map((item) => (
-                    <Link 
-                        key={item.to}
-                        to={item.to} 
-                        title={item.title}
-                        className={`flex items-center gap-3 p-2 rounded-md transition-colors text-white ${
-                            menuAberto ? 'justify-start' : 'justify-center'
-                        }`}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'var(--bg-laranja)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                        }}
-                    >
-                        <i className={`bi ${item.icon} ${menuAberto ? 'text-2xl' : 'text-4xl'} flex-shrink-0`}></i>
-                        {menuAberto && (
-                            <span className="font-medium text-sm whitespace-nowrap">{item.label}</span>
-                        )}
-                    </Link>
-                ))}
+                {menuItems.map((item) => {
+                    const active = isActive(item.to);
+                    return (
+                        <Link 
+                            key={item.to}
+                            to={item.to} 
+                            title={item.title}
+                            className={`flex items-center gap-3 p-2 rounded-md transition-colors text-white ${
+                                menuAberto ? 'justify-start' : 'justify-center'
+                            }`}
+                            style={{ backgroundColor: active ? 'var(--bg-laranja)' : 'transparent' }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = 'var(--bg-laranja)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = active ? 'var(--bg-laranja)' : 'transparent';
+                            }}
+                        >
+                            <i className={`bi ${item.icon} ${menuAberto ? 'text-2xl' : 'text-4xl'} flex-shrink-0`}></i>
+                            {menuAberto && (
+                                <span className="font-medium text-sm whitespace-nowrap">{item.label}</span>
+                            )}
+                        </Link>
+                    );
+                })}
             </div>
         </div>
     );
@@ -170,25 +180,29 @@ const MenuLateral = () => {
                     <section className="flex-1 flex flex-col overflow-y-auto">
                         <nav className="flex flex-col h-full">
                             <ul className="flex-1 flex flex-col gap-2 p-4 pt-14">
-                                {menuItems.map((item) => (
-                                    <li key={item.to}>
-                                        <Link 
-                                            to={item.to} 
-                                            title={item.title}
-                                            className="flex items-center gap-3 p-3 rounded-md transition-colors text-white"
-                                            onClick={handleClose}
-                                            onMouseEnter={(e) => {
-                                                e.currentTarget.style.backgroundColor = 'var(--bg-laranja)';
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.currentTarget.style.backgroundColor = 'transparent';
-                                            }}
-                                        >
-                                            <i className={`bi ${item.icon} text-xl`}></i>
-                                            <p className="font-medium">{item.label}</p>
-                                        </Link>
-                                    </li>
-                                ))}
+                                {menuItems.map((item) => {
+                                    const active = isActive(item.to);
+                                    return (
+                                        <li key={item.to}>
+                                            <Link 
+                                                to={item.to} 
+                                                title={item.title}
+                                                className="flex items-center gap-3 p-3 rounded-md transition-colors text-white"
+                                                style={{ backgroundColor: active ? 'var(--bg-laranja)' : 'transparent' }}
+                                                onClick={handleClose}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.backgroundColor = 'var(--bg-laranja)';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.backgroundColor = active ? 'var(--bg-laranja)' : 'transparent';
+                                                }}
+                                            >
+                                                <i className={`bi ${item.icon} text-xl`}></i>
+                                                <p className="font-medium">{item.label}</p>
+                                            </Link>
+                                        </li>
+                                    );
+                                })}
                             </ul>
                         </nav>
                     </section>
