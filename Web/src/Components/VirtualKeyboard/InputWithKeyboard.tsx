@@ -1,4 +1,4 @@
-import React, { useRef, useCallback } from 'react'
+import React, { useRef, useCallback, forwardRef } from 'react'
 import { useVirtualKeyboard } from '../../contexts/VirtualKeyboardContext'
 
 interface InputWithKeyboardProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
@@ -8,14 +8,14 @@ interface InputWithKeyboardProps extends Omit<React.InputHTMLAttributes<HTMLInpu
   keyboardSize?: 'normal' | 'large'
 }
 
-const InputWithKeyboard: React.FC<InputWithKeyboardProps> = ({
+const InputWithKeyboard = forwardRef<HTMLInputElement, InputWithKeyboardProps>(({
   value,
   onChange,
   keyboardLayout = 'default',
   keyboardSize = 'normal',
   onFocus,
   ...props
-}) => {
+}, ref) => {
   const inputRef = useRef<HTMLInputElement>(null)
   const { showKeyboard, setKeyboardLayout, setKeyboardSize } = useVirtualKeyboard()
 
@@ -30,16 +30,28 @@ const InputWithKeyboard: React.FC<InputWithKeyboardProps> = ({
     onChange(e.target.value)
   }, [onChange])
 
+  // Use a ref callback para sincronizar a ref externa
+  const setRefs = (element: HTMLInputElement) => {
+    inputRef.current = element
+    if (typeof ref === 'function') {
+      ref(element)
+    } else if (ref) {
+      ref.current = element
+    }
+  }
+
   return (
     <input
-      ref={inputRef}
+      ref={setRefs}
       value={value}
       onChange={handleChange}
       onFocus={handleFocus}
       {...props}
     />
   )
-}
+})
+
+InputWithKeyboard.displayName = 'InputWithKeyboard'
 
 export default InputWithKeyboard
 

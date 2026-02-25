@@ -14,7 +14,7 @@ const LeitorRfid = () => {
     const inputRef = useRef<HTMLInputElement>(null)
     useEffect(() => {
         inputRef.current?.focus()
-    }, [])
+    }, []);
 
     const handleLogout = () => {
         logout()
