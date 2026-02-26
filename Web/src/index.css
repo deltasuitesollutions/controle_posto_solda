@@ -165,6 +165,13 @@ body.menu-open .menu-content {
   background: #d0d0d0;
 }
 
+/* Scroll otimizado para telas touch fullscreen */
+.touch-scroll-container {
+  -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+
 /* Custom theme for react-simple-keyboard */
 .virtual-keyboard-theme {
   background: transparent !important;

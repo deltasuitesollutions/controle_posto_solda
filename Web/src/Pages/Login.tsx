@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { InputWithKeyboard } from '../Components/VirtualKeyboard';
@@ -13,6 +13,9 @@ const Login = () => {
   const [carregando, setCarregando] = useState(false);
   const { login, user, isOperador, isAdmin, isMaster } = useAuth();
   const navigate = useNavigate();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const usernameInputRef = useRef<HTMLInputElement>(null);
+  const senhaInputRef = useRef<HTMLInputElement>(null);
 
   // Redireciona se já estiver logado
   useEffect(() => {
@@ -24,6 +27,32 @@ const Login = () => {
       }
     }
   }, [user, isOperador, isAdmin, isMaster, navigate]);
+
+  // Função para fazer scroll quando o input recebe foco
+  const handleInputFocus = (inputRef: React.RefObject<HTMLInputElement | null>) => {
+    return () => {
+      // Aguarda um pouco para o teclado começar a aparecer
+      setTimeout(() => {
+        if (inputRef.current && containerRef.current) {
+          const inputRect = inputRef.current.getBoundingClientRect();
+          const containerRect = containerRef.current.getBoundingClientRect();
+          const scrollTop = containerRef.current.scrollTop;
+          
+          // Calcula a posição do input em relação ao container
+          const inputTop = inputRect.top - containerRect.top + scrollTop;
+          
+          // Scroll para posicionar o input um pouco acima do centro visível
+          // Deixa espaço para o teclado (aproximadamente 30% da altura visível)
+          const targetScroll = inputTop - (containerRect.height * 0.3);
+          
+          containerRef.current.scrollTo({
+            top: Math.max(0, targetScroll),
+            behavior: 'smooth'
+          });
+        }
+      }, 300); // Delay para aguardar o teclado começar a aparecer
+    };
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,8 +77,24 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-10 rounded-xl shadow-xl w-full max-w-4xl">
+    <div 
+      ref={containerRef}
+      className="flex items-center justify-center bg-gray-100 touch-scroll-container touch-pan-y"
+      style={{ 
+        minHeight: '100dvh', // Dynamic viewport height para telas touch (ajusta quando teclado aparece)
+        height: '100dvh',
+        padding: '1rem',
+        paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' // Espaço extra para quando o teclado aparecer + safe area
+      }}
+    >
+      <div 
+        className="bg-white p-10 rounded-xl shadow-xl w-full max-w-4xl my-auto"
+        style={{
+          marginTop: 'auto',
+          marginBottom: 'auto',
+          minHeight: 'fit-content'
+        }}
+      >
         <h2 className="text-4xl font-bold mb-8 text-center" style={{ color: '#4C79AF' }}>
           Login
         </h2>
@@ -64,9 +109,11 @@ const Login = () => {
               Usuário
             </label>
             <InputWithKeyboard
+              ref={usernameInputRef}
               type="text"
               value={username}
               onChange={setUsername}
+              onFocus={handleInputFocus(usernameInputRef)}
               className="w-full px-6 py-4 text-2xl border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="Digite seu usuário"
               autoComplete="username"
@@ -80,9 +127,11 @@ const Login = () => {
               Senha
             </label>
             <InputWithKeyboard
+              ref={senhaInputRef}
               type="password"
               value={senha}
               onChange={setSenha}
+              onFocus={handleInputFocus(senhaInputRef)}
               className="w-full px-6 py-4 text-2xl border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="Digite sua senha"
               autoComplete="current-password"
