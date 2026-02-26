@@ -14,7 +14,7 @@ interface Operacao {
     modelo: string
     linha: string
     posto: string
-    totens: string[]
+    toten: string
     pecas: string[]
 }
 
@@ -59,15 +59,10 @@ interface Peca {
 interface Posto {
     posto_id: number
     nome: string
+    toten_id?: number
+    totem_nome?: string
 }
 
-interface Toten {
-    id: number
-    nome: string
-    serial?: string
-    nome?: string
-    dispositivo_id?: number
-}
 
 const Operacoes = () => {
     const [abaAtiva, setAbaAtiva] = useState<'cadastrar' | 'listar'>('cadastrar')
@@ -89,9 +84,8 @@ const Operacoes = () => {
     const [modelo, setModelo] = useState('')
     const [linha, setLinha] = useState('')
     const [posto, setPosto] = useState('')
-    const [totens, setTotens] = useState<string[]>([])
+    const [toten, setToten] = useState('')
     const [pecas, setPecas] = useState<string[]>([])
-    const [totenTemp, setTotenTemp] = useState('')
     const [pecaTemp, setPecaTemp] = useState('')
     const [operacaoEditandoId, setOperacaoEditandoId] = useState<string | null>(null)
     
@@ -104,7 +98,6 @@ const Operacoes = () => {
     const [modelos, setModelos] = useState<Modelo[]>([]) // Modelos filtrados por produto
     const [linhasComSublinhas, setLinhasComSublinhas] = useState<LinhaComSublinha[]>([])
     const [postos, setPostos] = useState<Posto[]>([])
-    const [totensDisponiveis, setTotensDisponiveis] = useState<Toten[]>([])
     const [pecasDisponiveis, setPecasDisponiveis] = useState<Peca[]>([])
 
     // Carregar dados ao montar o componente
@@ -158,6 +151,22 @@ const Operacoes = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [modelo])
 
+    // Atualizar totem quando posto mudar
+    useEffect(() => {
+        if (posto && !isLoadingEditData.current) {
+            // Buscar o posto selecionado para obter o totem relacionado
+            const postoSelecionado = postos.find(p => p.nome === posto)
+            if (postoSelecionado && postoSelecionado.totem_nome) {
+                setToten(postoSelecionado.totem_nome)
+            } else {
+                setToten('')
+            }
+        } else if (!posto && !isLoadingEditData.current) {
+            setToten('')
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [posto, postos])
+
     const carregarDadosDropdowns = async () => {
         try {
             // Carregar produtos
@@ -188,22 +197,17 @@ const Operacoes = () => {
             // Carregar linhas e sublinhas
             await carregarLinhasComSublinhas()
 
-            // Carregar postos
+            // Carregar postos com informações de totem
             const postosData = await postosAPI.listarTodos()
-            setPostos(postosData.map((p: any) => ({ posto_id: p.posto_id, nome: p.nome })))
+            setPostos(postosData.map((p: any) => ({ 
+                posto_id: p.posto_id, 
+                nome: p.nome,
+                toten_id: p.toten_id,
+                totem_nome: p.totem_nome || ''
+            })))
 
-            // Carregar totens (usuários Raspberry)
-            const totensData = await postosAPI.listarUsuariosRaspberry()
-            console.log('Totens carregados:', totensData)
-            if (Array.isArray(totensData)) {
-                setTotensDisponiveis(totensData)
-            } else {
-                console.warn('Totens não retornou um array:', totensData)
-                setTotensDisponiveis([])
-            }
         } catch (error) {
             console.error('Erro ao carregar dados dos dropdowns:', error)
-            setTotensDisponiveis([])
         }
     }
 
@@ -291,7 +295,7 @@ const Operacoes = () => {
                 modelo: op.modelo,
                 linha: op.linha,
                 posto: op.posto,
-                totens: op.totens || [],
+                toten: op.toten || op.totens?.[0] || '',
                 pecas: op.pecas || [],
                 serial: op.serial || '',
                 nome: op.nome || ''
@@ -304,15 +308,6 @@ const Operacoes = () => {
         }
     }
 
-    const adicionarToten = () => {
-        if (!totenTemp.trim() || totens.includes(totenTemp.trim())) return
-        setTotens([...totens, totenTemp.trim()])
-        setTotenTemp('')
-    }
-
-    const removerToten = (index: number) => {
-        setTotens(totens.filter((_, i) => i !== index))
-    }
 
     const adicionarPeca = () => {
         if (!pecaTemp.trim()) return
@@ -341,9 +336,8 @@ const Operacoes = () => {
         setModelo('')
         setLinha('')
         setPosto('')
-        setTotens([])
+        setToten('')
         setPecas([])
-        setTotenTemp('')
         setPecaTemp('')
         setOperacaoEditandoId(null)
     }
@@ -381,7 +375,7 @@ const Operacoes = () => {
                 modelo,
                 linha: nomeLinha,
                 posto,
-                totens: totens.length > 0 ? totens : undefined,
+                totens: toten ? [toten] : undefined,
                 pecas: pecas.length > 0 ? pecas : undefined
             }
 
@@ -468,7 +462,7 @@ const Operacoes = () => {
         }
         
         setPosto(op.posto)
-        setTotens([...op.totens])
+        setToten(op.toten || op.totens?.[0] || '')
         setPecas([...op.pecas])
         setOperacaoEditandoId(op.id)
         setAbaAtiva('cadastrar')
@@ -625,48 +619,30 @@ const Operacoes = () => {
                                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                                     Toten/ID
                                                 </label>
-                                                <div className="flex gap-2">
-                                                    <select
-                                                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                        value={totenTemp}
-                                                        onChange={(e) => setTotenTemp(e.target.value)}
-                                                    >
-                                                        <option value="">
-                                                            {totensDisponiveis.length === 0 
-                                                                ? 'Nenhum toten disponível' 
-                                                                : 'Selecione'}
-                                                        </option>
-                                                        {totensDisponiveis.map((t) => (
-                                                            <option key={t.id} value={t.nome}>
-                                                                {t.nome} {t.serial ? `(Serial: ${t.serial})` : ''}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                    <button
-                                                        type="button"
-                                                        onClick={adicionarToten}
-                                                        disabled={!totenTemp.trim() || totens.includes(totenTemp.trim())}
-                                                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-                                                    >
-                                                        <i className="bi bi-plus-lg"></i>
-                                                    </button>
-                                                </div>
-                                                {totens.length > 0 && (
-                                                    <div className="mt-2 flex flex-wrap gap-2">
-                                                        {totens.map((toten, index) => (
-                                                            <span key={index} className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded text-sm">
-                                                                {toten}
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => removerToten(index)}
-                                                                    className="text-blue-600 hover:text-blue-800"
-                                                                >
-                                                                    <i className="bi bi-x"></i>
-                                                                </button>
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                )}
+                                                <select
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                                    value={toten}
+                                                    onChange={(e) => setToten(e.target.value)}
+                                                    disabled={!posto}
+                                                >
+                                                    <option value="">
+                                                        {!posto 
+                                                            ? 'Selecione um posto primeiro' 
+                                                            : 'Selecione'}
+                                                    </option>
+                                                    {(() => {
+                                                        if (!posto) return null
+                                                        const postoSelecionado = postos.find(p => p.nome === posto)
+                                                        if (postoSelecionado && postoSelecionado.totem_nome) {
+                                                            return (
+                                                                <option key={postoSelecionado.toten_id} value={postoSelecionado.totem_nome}>
+                                                                    {postoSelecionado.totem_nome}
+                                                                </option>
+                                                            )
+                                                        }
+                                                        return null
+                                                    })()}
+                                                </select>
                                             </div>
 
                                             <div>
@@ -753,7 +729,7 @@ const Operacoes = () => {
                                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Modelo</th>
                                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Linha</th>
                                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Posto</th>
-                                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Totens</th>
+                                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Toten</th>
                                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Peças</th>
                                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ações</th>
                                                         </tr>
@@ -767,14 +743,10 @@ const Operacoes = () => {
                                                                 <td className="px-4 py-4 text-sm text-gray-900">{op.linha}</td>
                                                                 <td className="px-4 py-4 text-sm text-gray-900">{op.posto}</td>
                                                                 <td className="px-4 py-4 text-sm text-gray-900">
-                                                                    {op.totens && op.totens.length > 0 ? (
-                                                                        <div className="flex flex-wrap gap-1">
-                                                                            {op.totens.map((toten, idx) => (
-                                                                                <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
-                                                                                    {toten}
-                                                                                </span>
-                                                                            ))}
-                                                                        </div>
+                                                                    {op.toten ? (
+                                                                        <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
+                                                                            {op.toten}
+                                                                        </span>
                                                                     ) : (
                                                                         <span className="text-gray-400">-</span>
                                                                     )}

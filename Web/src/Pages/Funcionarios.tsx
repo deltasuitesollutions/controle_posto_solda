@@ -137,7 +137,9 @@ const Funcionarios = () => {
                 ...func,
                 id: func.id || func.funcionario_id,
                 tag: func.tag || func.tag_id || '',
-                ativo: func.ativo !== undefined ? func.ativo : true
+                ativo: func.ativo !== undefined ? func.ativo : true,
+                // Garantir que turnos seja sempre um array
+                turnos: Array.isArray(func.turnos) ? func.turnos : (func.turno ? [func.turno] : [])
             }))
             setFuncionarios(dadosNormalizados)
         } catch (error: any) {
@@ -231,7 +233,8 @@ const Funcionarios = () => {
                 nome: funcionarioAtualizado.nome,
                 ativo: funcionarioAtualizado.ativo,
             }
-            if (funcionarioAtualizado.turnos && funcionarioAtualizado.turnos.length > 0) {
+            // Sempre enviar turnos (mesmo que vazio) para manter sincronizado com backend
+            if (funcionarioAtualizado.turnos !== undefined) {
                 dadosAtualizacao.turnos = funcionarioAtualizado.turnos
             }
             if (funcionarioAtualizado.tag !== undefined) {
@@ -323,8 +326,12 @@ const Funcionarios = () => {
                 nome: funcionarioSelecionado.nome,
                 ativo: novoStatus,
             }
-            if (funcionarioSelecionado.turnos && funcionarioSelecionado.turnos.length > 0) {
+            // Sempre enviar turnos (mesmo que vazio) para manter sincronizado com backend
+            if (funcionarioSelecionado.turnos !== undefined) {
                 dadosAtualizacao.turnos = funcionarioSelecionado.turnos
+            } else if (funcionarioSelecionado.turno) {
+                // Compatibilidade: se tiver turno singular, converter para array
+                dadosAtualizacao.turnos = [funcionarioSelecionado.turno]
             }
             const tagAtual = funcionarioSelecionado.tag || (funcionarioSelecionado as any).tag_id
             if (tagAtual) {
@@ -361,7 +368,7 @@ const Funcionarios = () => {
                 <TopBar />
                 <div className="flex-1 p-6 pt-32 pb-20 md:pb-24 md:pl-20 transition-all duration-300">
                     <div className="max-w-[95%] mx-auto">
-                        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                        <div className="bg-white rounded-lg shadow-md">
                             <div className="flex border-b border-gray-200">
                                 <button
                                     onClick={() => setAbaAtiva('cadastrar')}
@@ -389,7 +396,7 @@ const Funcionarios = () => {
                                 </button>
                             </div>
 
-                            <div className="p-6">
+                            <div className="p-6" style={{ overflow: 'visible' }}>
                                 {abaAtiva === 'cadastrar' ? (
                                     <form id="form-funcionario" onSubmit={handleSubmit}>
                                         <div className="mb-4">
@@ -483,7 +490,7 @@ const Funcionarios = () => {
                                                 </div>
                                             </div>
 
-                                            <div className="relative" ref={operacoesDropdownRef}>
+                                            <div className="relative z-50" ref={operacoesDropdownRef}>
                                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                                     Habilitado na Operação
                                                 </label>
@@ -504,7 +511,7 @@ const Funcionarios = () => {
                                                     <i className={`bi bi-chevron-${operacoesDropdownAberto ? 'up' : 'down'} text-gray-500`}></i>
                                                 </button>
                                                 {operacoesDropdownAberto && (
-                                                    <div className="absolute z-50 w-full top-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                                                    <div className="absolute z-[9999px] w-full top-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
                                                         {operacoesDisponiveis.length > 0 ? (
                                                             operacoesDisponiveis.map((op) => (
                                                                 <label

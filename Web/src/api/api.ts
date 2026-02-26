@@ -122,12 +122,12 @@ export const pecasAPI = {
 export const funcionariosAPI = {
   listar: () => fetchAPI('/funcionarios'),
   listarTodos: () => fetchAPI('/funcionarios/todos'),
-  criar: (data: { matricula: string; nome: string; ativo?: boolean; tag?: string; turno: string; operacoes_ids?: number[]}) => 
+  criar: (data: { matricula: string; nome: string; ativo?: boolean; tag?: string; turno?: string; turnos?: string[]; operacoes_ids?: number[]}) => 
     fetchAPI('/funcionarios', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  atualizar: (id: number, data: { nome: string; ativo?: boolean; tag?: string; turno: string; operacoes_ids?: number[] }) =>
+  atualizar: (id: number, data: { nome: string; ativo?: boolean; tag?: string; turno?: string; turnos?: string[]; operacoes_ids?: number[] }) =>
     fetchAPI(`/funcionarios/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),

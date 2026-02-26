@@ -282,7 +282,7 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
                 </div>
                 
                 {/* Conteúdo do Modal - Scrollable */}
-                <form id="funcionario-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 bg-gray-50">
+                <form id="funcionario-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 bg-gray-50" style={{ overflowX: 'visible' }}>
                     <div className="space-y-4">
                         {/* Seção: Informações Básicas */}
                         <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-200">
@@ -509,7 +509,7 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
                                     </p>
                                 </div>
 
-                                <div className="relative" ref={operacoesDropdownRef}>
+                                <div className="relative z-[9999]" ref={operacoesDropdownRef}>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                         Habilitado na Operação
                                     </label>
@@ -529,7 +529,7 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
                                         <i className={`bi bi-chevron-${operacoesDropdownAberto ? 'up' : 'down'} text-gray-500`}></i>
                                     </button>
                                                 {operacoesDropdownAberto && (
-                                                    <div className="absolute z-50 w-full top-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                                    <div className="absolute z-[9999] w-full top-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                                                         {operacoesDisponiveis.length > 0 ? (
                                                             operacoesDisponiveis.map((op) => (
                                                                 <label

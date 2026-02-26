@@ -7,6 +7,7 @@ import FormCadastrarSublinha from '../Components/Linhas/FormCadastrarSublinha'
 import CardLinha from '../Components/Linhas/CardLinha'
 import ModalSucesso from '../Components/Modais/ModalSucesso'
 import ModalErro from '../Components/Modais/ModalErro'
+import ModalConfirmacao from '../Components/Compartilhados/ModalConfirmacao'
 import { linhasAPI, sublinhasAPI } from '../api/api'
 
 interface Sublinha {
@@ -46,6 +47,10 @@ const Linhas = () => {
     const [mensagemSucesso, setMensagemSucesso] = useState('')
     const [mensagemErro, setMensagemErro] = useState('')
     const [tituloErro, setTituloErro] = useState('Erro!')
+    const [modalConfirmacaoLinhaAberto, setModalConfirmacaoLinhaAberto] = useState(false)
+    const [modalConfirmacaoSublinhaAberto, setModalConfirmacaoSublinhaAberto] = useState(false)
+    const [linhaIdParaExcluir, setLinhaIdParaExcluir] = useState<number | null>(null)
+    const [sublinhaIdParaExcluir, setSublinhaIdParaExcluir] = useState<number | null>(null)
 
     useEffect(() => {
         if (abaAtiva === 'listar') {
@@ -149,38 +154,48 @@ const Linhas = () => {
         }
     }
 
-    const handleExcluirLinha = async (linhaId: number) => {
-        if (!window.confirm('Tem certeza que deseja excluir esta linha? Todas as sublinhas associadas também serão excluídas.')) {
-            return
-        }
+    const handleExcluirLinha = (linhaId: number) => {
+        setLinhaIdParaExcluir(linhaId)
+        setModalConfirmacaoLinhaAberto(true)
+    }
+
+    const confirmarExcluirLinha = async () => {
+        if (!linhaIdParaExcluir) return
 
         try {
-            const resposta = await linhasAPI.deletar(linhaId)
+            const resposta = await linhasAPI.deletar(linhaIdParaExcluir)
             await carregarLinhas()
             const mensagem = resposta?.mensagem || 'Linha excluída com sucesso!'
             setMensagemSucesso(mensagem)
             setModalSucessoAberto(true)
+            setLinhaIdParaExcluir(null)
         } catch (error: any) {
             setTituloErro('Erro!')
             setMensagemErro(`Erro ao excluir linha: ${error?.message || 'Tente novamente.'}`)
             setModalErroAberto(true)
+            setLinhaIdParaExcluir(null)
         }
     }
 
-    const handleExcluirSublinha = async (sublinhaId: number) => {
-        if (!window.confirm('Tem certeza que deseja excluir esta sublinha?')) {
-            return
-        }
+    const handleExcluirSublinha = (sublinhaId: number) => {
+        setSublinhaIdParaExcluir(sublinhaId)
+        setModalConfirmacaoSublinhaAberto(true)
+    }
+
+    const confirmarExcluirSublinha = async () => {
+        if (!sublinhaIdParaExcluir) return
 
         try {
-            await sublinhasAPI.deletar(sublinhaId)
+            await sublinhasAPI.deletar(sublinhaIdParaExcluir)
             await carregarLinhas()
             setMensagemSucesso('Sublinha excluída com sucesso!')
             setModalSucessoAberto(true)
+            setSublinhaIdParaExcluir(null)
         } catch (error: any) {
             setTituloErro('Erro!')
             setMensagemErro(`Erro ao excluir sublinha: ${error?.message || 'Tente novamente.'}`)
             setModalErroAberto(true)
+            setSublinhaIdParaExcluir(null)
         }
     }
 
@@ -399,6 +414,34 @@ const Linhas = () => {
                 onClose={() => setModalErroAberto(false)}
                 mensagem={mensagemErro}
                 titulo={tituloErro}
+            />
+
+            <ModalConfirmacao
+                isOpen={modalConfirmacaoLinhaAberto}
+                onClose={() => {
+                    setModalConfirmacaoLinhaAberto(false)
+                    setLinhaIdParaExcluir(null)
+                }}
+                onConfirm={confirmarExcluirLinha}
+                titulo="Confirmar Exclusão"
+                mensagem="Tem certeza que deseja excluir esta linha? Todas as sublinhas associadas também serão excluídas."
+                textoConfirmar="Excluir"
+                textoCancelar="Cancelar"
+                corHeader="vermelho"
+            />
+
+            <ModalConfirmacao
+                isOpen={modalConfirmacaoSublinhaAberto}
+                onClose={() => {
+                    setModalConfirmacaoSublinhaAberto(false)
+                    setSublinhaIdParaExcluir(null)
+                }}
+                onConfirm={confirmarExcluirSublinha}
+                titulo="Confirmar Exclusão"
+                mensagem="Tem certeza que deseja excluir esta sublinha?"
+                textoConfirmar="Excluir"
+                textoCancelar="Cancelar"
+                corHeader="vermelho"
             />
         </div>
     )
