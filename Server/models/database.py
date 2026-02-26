@@ -545,3 +545,128 @@ class DatabaseConnection:
                 
         except Exception as e:
             print(f"[AVISO] ensure_dispositivo_nome_column: {e}")
+
+    @classmethod
+    def ensure_funcionarios_turnos_table(cls) -> None:
+        """
+        Garante que a tabela funcionarios_turnos exista.
+        Esta tabela permite que um funcionário tenha múltiplos turnos.
+        """
+        try:
+            if cls.table_exists('funcionarios_turnos'):
+                return  # Tabela já existe
+            
+            conn = cls.get_connection()
+            cursor = conn.cursor()
+            
+            try:
+                # Criar a tabela
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS funcionarios_turnos (
+                        funcionario_id INTEGER NOT NULL,
+                        turno TEXT NOT NULL,
+                        PRIMARY KEY (funcionario_id, turno),
+                        FOREIGN KEY (funcionario_id) REFERENCES funcionarios(funcionario_id) ON DELETE CASCADE
+                    )
+                """)
+                
+                # Criar índices
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_funcionarios_turnos_funcionario_id 
+                    ON funcionarios_turnos(funcionario_id)
+                """)
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_funcionarios_turnos_turno 
+                    ON funcionarios_turnos(turno)
+                """)
+                
+                conn.commit()
+                print("[MIGRAÇÃO] Tabela funcionarios_turnos criada com sucesso")
+                
+                # Migrar dados existentes do campo 'turno' para a nova tabela
+                cursor.execute("""
+                    INSERT INTO funcionarios_turnos (funcionario_id, turno)
+                    SELECT funcionario_id, turno
+                    FROM funcionarios
+                    WHERE turno IS NOT NULL 
+                      AND turno != ''
+                      AND NOT EXISTS (
+                        SELECT 1 FROM funcionarios_turnos ft 
+                        WHERE ft.funcionario_id = funcionarios.funcionario_id 
+                        AND ft.turno = funcionarios.turno
+                      )
+                """)
+                conn.commit()
+                print("[MIGRAÇÃO] Dados de turnos migrados com sucesso")
+                
+            except Exception as e:
+                conn.rollback()
+                print(f"[AVISO] Erro ao criar tabela funcionarios_turnos: {e}")
+            finally:
+                cursor.close()
+                conn.close()
+                
+        except Exception as e:
+            print(f"[AVISO] ensure_funcionarios_turnos_table: {e}")
+
+    @classmethod
+    def ensure_turno_registros_producao(cls) -> None:
+        """
+        Garante que a coluna turno exista na tabela registros_producao.
+        Esta coluna armazena o turno específico de cada registro baseado na hora de início.
+        """
+        try:
+            if not cls.table_exists('registros_producao'):
+                return
+            
+            if cls.column_exists('registros_producao', 'turno'):
+                return  # Coluna já existe
+            
+            conn = cls.get_connection()
+            cursor = conn.cursor()
+            
+            try:
+                # Adicionar a coluna
+                cursor.execute("ALTER TABLE registros_producao ADD COLUMN turno TEXT")
+                
+                # Criar índice
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_registros_producao_turno 
+                    ON registros_producao(turno)
+                """)
+                
+                conn.commit()
+                print("[MIGRAÇÃO] Coluna turno adicionada à tabela registros_producao")
+                
+                # Migrar dados existentes - calcular turno baseado na hora_inicio
+                cursor.execute("""
+                    UPDATE registros_producao
+                    SET turno = CASE
+                        WHEN hora_inicio IS NOT NULL THEN
+                            CASE
+                                WHEN hora_inicio::time >= '06:00'::time AND hora_inicio::time < '12:00'::time THEN 'matutino'
+                                WHEN hora_inicio::time >= '12:00'::time AND hora_inicio::time < '18:00'::time THEN 'vespertino'
+                                ELSE 'noturno'
+                            END
+                        WHEN inicio IS NOT NULL THEN
+                            CASE
+                                WHEN EXTRACT(HOUR FROM inicio) >= 6 AND EXTRACT(HOUR FROM inicio) < 12 THEN 'matutino'
+                                WHEN EXTRACT(HOUR FROM inicio) >= 12 AND EXTRACT(HOUR FROM inicio) < 18 THEN 'vespertino'
+                                ELSE 'noturno'
+                            END
+                        ELSE NULL
+                    END
+                    WHERE turno IS NULL
+                """)
+                conn.commit()
+                print("[MIGRAÇÃO] Dados de turnos migrados com sucesso para registros existentes")
+                
+            except Exception as e:
+                conn.rollback()
+                print(f"[AVISO] Erro ao adicionar coluna turno em registros_producao: {e}")
+            finally:
+                cursor.close()
+                conn.close()
+                
+        except Exception as e:
+            print(f"[AVISO] ensure_turno_registros_producao: {e}")

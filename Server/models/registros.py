@@ -105,7 +105,9 @@ class RegistroProducao:
                     f.funcionario_id as f_id,
                     f.nome as f_nome,
                     f.matricula as f_matricula,
-                    f.turno as f_turno,
+                    (SELECT STRING_AGG(ft.turno, ', ' ORDER BY ft.turno)
+                     FROM funcionarios_turnos ft
+                     WHERE ft.funcionario_id = f.funcionario_id) as f_turno,
                     -- Posto
                     p.posto_id as p_id,
                     p.nome as p_nome,
@@ -240,7 +242,9 @@ class RegistroProducao:
                     r.*,
                     f.nome as funcionario_nome,
                     f.matricula as funcionario_matricula,
-                    f.turno as funcionario_turno,
+                    (SELECT STRING_AGG(ft.turno, ', ' ORDER BY ft.turno)
+                     FROM funcionarios_turnos ft
+                     WHERE ft.funcionario_id = f.funcionario_id) as funcionario_turno,
                     p.nome as posto_nome,
                     p.toten_id as posto_toten_id,
                     m.nome as modelo_nome,

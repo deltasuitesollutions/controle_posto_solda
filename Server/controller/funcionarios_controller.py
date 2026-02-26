@@ -38,7 +38,8 @@ def criar_funcionario():
         ativo = data.get('ativo', True)
         # Aceita tanto 'tag' quanto 'tag_id' para compatibilidade
         tag_id = data.get('tag_id') or data.get('tag')
-        turno = data.get('turno')
+        turno = data.get('turno')  # Compatibilidade: aceita turno único
+        turnos = data.get('turnos')  # Novo: aceita array de turnos
         operacoes_ids = data.get('operacoes_ids', [])
 
         if not matricula or not nome:
@@ -50,6 +51,7 @@ def criar_funcionario():
             ativo,
             tag_id,
             turno,
+            turnos,
             operacoes_ids if operacoes_ids else None
         )
 
@@ -71,7 +73,8 @@ def atualizar_funcionario(funcionario_id):
         ativo = data.get('ativo', True)
         # Aceita tanto 'tag' quanto 'tag_id' para compatibilidade
         tag_id = data.get('tag_id') or data.get('tag')
-        turno = data.get('turno')
+        turno = data.get('turno')  # Compatibilidade: aceita turno único
+        turnos = data.get('turnos')  # Novo: aceita array de turnos
         operacoes_ids = data.get('operacoes_ids')
 
         if not nome:
@@ -87,6 +90,7 @@ def atualizar_funcionario(funcionario_id):
             ativo,
             tag_id,
             turno,
+            turnos,
             operacoes_ids if operacoes_ids is not None else None
         )
 

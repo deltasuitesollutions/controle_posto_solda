@@ -23,7 +23,9 @@ def buscar_registros_abertos() -> List[Tuple]:
             p.sublinha_id,
             f.nome as funcionario_nome,
             f.matricula,
-            f.turno,
+            (SELECT STRING_AGG(ft.turno, ', ' ORDER BY ft.turno)
+             FROM funcionarios_turnos ft
+             WHERE ft.funcionario_id = f.funcionario_id) as turno,
             m.nome as modelo_nome,
             o.operacao_id as operacao_id_check,
             o.codigo_operacao,

@@ -166,10 +166,14 @@ def _construir_filtros(
         where_conditions.append("r.data_inicio = %s")
         params.append(data)
     
-    # Filtro por turno (através do funcionário)
+    # Filtro por turno (através do funcionário usando a tabela funcionarios_turnos)
     if turno and len(turno) > 0:
         placeholders = ','.join(['%s'] * len(turno))
-        where_conditions.append(f"f.turno IN ({placeholders})")
+        where_conditions.append(f"""EXISTS (
+            SELECT 1 FROM funcionarios_turnos ft 
+            WHERE ft.funcionario_id = r.funcionario_id 
+            AND ft.turno IN ({placeholders})
+        )""")
         params.extend(turno)
     
     # Filtro por hora de início

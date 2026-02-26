@@ -26,6 +26,7 @@ interface Funcionario {
     habilitado_operacao?: boolean
     operacao?: string
     turno?: string
+    turnos?: string[]
     operacoes_habilitadas?: OperacaoHabilitada[]
 }
 
@@ -36,6 +37,7 @@ const Funcionarios = () => {
     const [tag, setTag] = useState('')
     const [ativo, setAtivo] = useState(true)
     const [turno, setTurno] = useState('')
+    const [turnosSelecionados, setTurnosSelecionados] = useState<string[]>([])
     const [funcionarios, setFuncionarios] = useState<Funcionario[]>([])
     const [carregando, setCarregando] = useState(false)
     const [modalEditarAberto, setModalEditarAberto] = useState(false)
@@ -152,14 +154,16 @@ const Funcionarios = () => {
         e.preventDefault()
         
         try {
-            const dadosFuncionario: { matricula: string; nome: string; ativo?: boolean; tag?: string; turno: string; operacoes_ids?: number[] } = {
+            const dadosFuncionario: { matricula: string; nome: string; ativo?: boolean; tag?: string; turnos?: string[]; operacoes_ids?: number[] } = {
                 matricula,
                 nome,
                 ativo,
-                turno: turno || '',
             }
             if (tag.trim()) {
                 dadosFuncionario.tag = tag.trim()
+            }
+            if (turnosSelecionados.length > 0) {
+                dadosFuncionario.turnos = turnosSelecionados
             }
             if (operacoesSelecionadas.length > 0) {
                 dadosFuncionario.operacoes_ids = operacoesSelecionadas
@@ -172,6 +176,7 @@ const Funcionarios = () => {
             setTag('')
             setAtivo(true)
             setTurno('')
+            setTurnosSelecionados([])
             setOperacoesSelecionadas([])
             
             if (abaAtiva === 'listar') {
@@ -210,7 +215,7 @@ const Funcionarios = () => {
         setModalEditarAberto(true)
     }
 
-    const handleSalvarEdicao = async (funcionarioAtualizado: Omit<Funcionario, 'id'> & { operacoes_ids?: number[] }) => {
+    const handleSalvarEdicao = async (funcionarioAtualizado: Omit<Funcionario, 'id'> & { operacoes_ids?: number[]; turnos?: string[] }) => {
         if (!funcionarioSelecionado) return
         
         const funcionarioId = funcionarioSelecionado.id || (funcionarioSelecionado as any).funcionario_id
@@ -222,10 +227,12 @@ const Funcionarios = () => {
         }
         
         try {
-            const dadosAtualizacao: { nome: string; ativo?: boolean; tag?: string; turno: string; operacoes_ids?: number[] } = {
+            const dadosAtualizacao: { nome: string; ativo?: boolean; tag?: string; turnos?: string[]; operacoes_ids?: number[] } = {
                 nome: funcionarioAtualizado.nome,
                 ativo: funcionarioAtualizado.ativo,
-                turno: funcionarioAtualizado.turno || '',
+            }
+            if (funcionarioAtualizado.turnos && funcionarioAtualizado.turnos.length > 0) {
+                dadosAtualizacao.turnos = funcionarioAtualizado.turnos
             }
             if (funcionarioAtualizado.tag !== undefined) {
                 dadosAtualizacao.tag = funcionarioAtualizado.tag || ''
@@ -312,10 +319,12 @@ const Funcionarios = () => {
         
         try {
             const novoStatus = !funcionarioSelecionado.ativo
-            const dadosAtualizacao: { nome: string; ativo: boolean; turno: string; tag?: string } = {
+            const dadosAtualizacao: { nome: string; ativo: boolean; turnos?: string[]; tag?: string } = {
                 nome: funcionarioSelecionado.nome,
                 ativo: novoStatus,
-                turno: funcionarioSelecionado.turno || '',
+            }
+            if (funcionarioSelecionado.turnos && funcionarioSelecionado.turnos.length > 0) {
+                dadosAtualizacao.turnos = funcionarioSelecionado.turnos
             }
             const tagAtual = funcionarioSelecionado.tag || (funcionarioSelecionado as any).tag_id
             if (tagAtual) {
@@ -392,7 +401,7 @@ const Funcionarios = () => {
                                                 type="text"
                                                 id='funcionario-tag-rfid'
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                placeholder='Passe o crachá na marcação abaixo'
+                                                placeholder='Ex: 123456789'
                                                 value={tag}
                                                 onChange={(e) => setTag(e.target.value)}
                                                 autoFocus
@@ -448,19 +457,30 @@ const Funcionarios = () => {
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                    Turno
+                                                    Turnos
                                                 </label>
-                                                <select
-                                                    id='funcionario-turno'
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                    value={turno}
-                                                    onChange={(e) => setTurno(e.target.value)}
-                                                >
-                                                    <option value="">Selecione o turno</option>
-                                                    <option value="matutino">Matutino</option>
-                                                    <option value="vespertino">Vespertino</option>
-                                                    <option value="noturno">Noturno</option>
-                                                </select>
+                                                <div className="flex gap-4 px-3 py-2 border border-gray-300 rounded-md bg-white">
+                                                    {['matutino', 'vespertino', 'noturno'].map((turnoOption) => (
+                                                        <label
+                                                            key={turnoOption}
+                                                            className="flex items-center gap-2 cursor-pointer"
+                                                        >
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={turnosSelecionados.includes(turnoOption)}
+                                                                onChange={(e) => {
+                                                                    if (e.target.checked) {
+                                                                        setTurnosSelecionados([...turnosSelecionados, turnoOption])
+                                                                    } else {
+                                                                        setTurnosSelecionados(turnosSelecionados.filter(t => t !== turnoOption))
+                                                                    }
+                                                                }}
+                                                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                                            />
+                                                            <span className="text-sm text-gray-700 capitalize">{turnoOption}</span>
+                                                        </label>
+                                                    ))}
+                                                </div>
                                             </div>
 
                                             <div className="relative" ref={operacoesDropdownRef}>
@@ -600,7 +620,18 @@ const Funcionarios = () => {
                                                                     )}
                                                                 </td>
                                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                                    {funcionario.turno ? (
+                                                                    {funcionario.turnos && funcionario.turnos.length > 0 ? (
+                                                                        <div className="flex flex-wrap gap-1">
+                                                                            {funcionario.turnos.map((turno, index) => (
+                                                                                <span 
+                                                                                    key={index}
+                                                                                    className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800 capitalize"
+                                                                                >
+                                                                                    {turno}
+                                                                                </span>
+                                                                            ))}
+                                                                        </div>
+                                                                    ) : funcionario.turno ? (
                                                                         <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800 capitalize">
                                                                             {funcionario.turno}
                                                                         </span>

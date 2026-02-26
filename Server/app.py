@@ -64,6 +64,20 @@ def create_app():
     except Exception:
         pass
 
+    # Garantir que a tabela funcionarios_turnos exista
+    # (permite que um funcionário tenha múltiplos turnos)
+    try:
+        DatabaseConnection.ensure_funcionarios_turnos_table()
+    except Exception:
+        pass
+
+    # Garantir que a coluna turno exista na tabela registros_producao
+    # (armazena o turno específico de cada registro)
+    try:
+        DatabaseConnection.ensure_turno_registros_producao()
+    except Exception:
+        pass
+
     return app, socketio
 
 

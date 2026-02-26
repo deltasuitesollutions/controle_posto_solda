@@ -19,13 +19,14 @@ interface Funcionario {
     habilitado_operacao?: boolean
     operacao?: string
     turno?: string
+    turnos?: string[]
     operacoes_habilitadas?: OperacaoHabilitada[]
 }
 
 interface ModalEditarFuncionarioProps {
     isOpen: boolean
     onClose: () => void
-    onSave: (funcionario: Omit<Funcionario, 'id'> & { operacoes_ids?: number[] }) => void
+    onSave: (funcionario: Omit<Funcionario, 'id'> & { operacoes_ids?: number[]; turnos?: string[] }) => void
     funcionarioEditando?: Funcionario | null
 }
 
@@ -35,6 +36,7 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
     const [tag, setTag] = useState('')
     const [ativo, setAtivo] = useState(true)
     const [turno, setTurno] = useState('')
+    const [turnosSelecionados, setTurnosSelecionados] = useState<string[]>([])
     const [operacoesDisponiveis, setOperacoesDisponiveis] = useState<Array<{id: number; operacao: string}>>([])
     const [operacoesSelecionadas, setOperacoesSelecionadas] = useState<number[]>([])
     const [operacoesDropdownAberto, setOperacoesDropdownAberto] = useState(false)
@@ -54,6 +56,14 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
             setTag(funcionarioEditando.tag || '')
             setAtivo(funcionarioEditando.ativo !== undefined ? funcionarioEditando.ativo : true)
             setTurno(funcionarioEditando.turno || '')
+            // Usar turnos se disponível, senão usar turno (compatibilidade)
+            if (funcionarioEditando.turnos && funcionarioEditando.turnos.length > 0) {
+                setTurnosSelecionados(funcionarioEditando.turnos)
+            } else if (funcionarioEditando.turno) {
+                setTurnosSelecionados([funcionarioEditando.turno])
+            } else {
+                setTurnosSelecionados([])
+            }
             setTagTemporaria('')
             // Carregar operações habilitadas (filtrar apenas as que têm habilitada = true)
             if (funcionarioEditando.operacoes_habilitadas) {
@@ -72,6 +82,7 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
             setTag('')
             setAtivo(true)
             setTurno('')
+            setTurnosSelecionados([])
             setOperacoesSelecionadas([])
             setTagTemporaria('')
             setTagsTemporariasAtivas([])
@@ -175,7 +186,7 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
             nome, 
             tag, 
             ativo, 
-            turno,
+            turnos: turnosSelecionados,
             operacoes_ids: operacoesSelecionadas
         })
         onClose()
@@ -373,20 +384,32 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
                             <div className="space-y-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Turno
+                                        Turnos
                                     </label>
-                                    <select
-                                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
-                                        value={turno}
-                                        onChange={(e) => setTurno(e.target.value)}
-                                    >
-                                        <option value="">Selecione o turno</option>
-                                        <option value="matutino">Matutino</option>
-                                        <option value="vespertino">Vespertino</option>
-                                        <option value="noturno">Noturno</option>
-                                    </select>
+                                    <div className="flex gap-4 px-4 py-2.5 border border-gray-300 rounded-lg bg-white">
+                                        {['matutino', 'vespertino', 'noturno'].map((turnoOption) => (
+                                            <label
+                                                key={turnoOption}
+                                                className="flex items-center gap-2 cursor-pointer"
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={turnosSelecionados.includes(turnoOption)}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setTurnosSelecionados([...turnosSelecionados, turnoOption])
+                                                        } else {
+                                                            setTurnosSelecionados(turnosSelecionados.filter(t => t !== turnoOption))
+                                                        }
+                                                    }}
+                                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                                />
+                                                <span className="text-sm text-gray-700 capitalize">{turnoOption}</span>
+                                            </label>
+                                        ))}
+                                    </div>
                                     <p className="text-xs text-gray-500 mt-1.5">
-                                        Turno de trabalho do funcionário
+                                        Selecione um ou mais turnos de trabalho do funcionário
                                     </p>
                                 </div>
 

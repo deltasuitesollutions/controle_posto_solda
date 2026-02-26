@@ -19,8 +19,14 @@ def listar_funcionarios() -> List[Dict[str, Any]]:
         if f.tag_id:
             item["tag"] = f.tag_id  
             item["tag_id"] = f.tag_id
-        if f.turno:
-            item["turno"] = f.turno
+        # Buscar turnos da tabela funcionarios_turnos
+        if f.funcionario_id:
+            turnos_funcionario = buscar_turnos_funcionario(f.funcionario_id)
+            item['turnos'] = turnos_funcionario
+            if len(turnos_funcionario) == 1:
+                item['turno'] = turnos_funcionario[0]
+            elif len(turnos_funcionario) > 1:
+                item['turno'] = ', '.join(turnos_funcionario)
         resultado.append(item)
     
     return resultado
@@ -33,10 +39,17 @@ def listar_todos_funcionarios() -> List[Dict[str, Any]]:
     
     for f in funcionarios:
         funcionario_dict = f.to_dict()
-        # Buscar operações habilitadas para cada funcionário
+        # Buscar operações habilitadas e turnos para cada funcionário
         if f.funcionario_id:
             operacoes_habilitadas = buscar_operacoes_habilitadas(f.funcionario_id)
             funcionario_dict['operacoes_habilitadas'] = operacoes_habilitadas
+            turnos_funcionario = buscar_turnos_funcionario(f.funcionario_id)
+            funcionario_dict['turnos'] = turnos_funcionario
+            # Manter compatibilidade: se houver apenas um turno, colocar no campo turno também
+            if len(turnos_funcionario) == 1:
+                funcionario_dict['turno'] = turnos_funcionario[0]
+            elif len(turnos_funcionario) > 1:
+                funcionario_dict['turno'] = ', '.join(turnos_funcionario)
         resultado.append(funcionario_dict)
     
     return resultado
@@ -49,6 +62,7 @@ def criar_funcionario(
     ativo: bool = True, 
     tag_id: Optional[str] = None,
     turno: Optional[str] = None,
+    turnos: Optional[List[str]] = None,
     operacoes_ids: Optional[List[int]] = None
 ) -> Dict[str, Any]:
     
@@ -66,23 +80,37 @@ def criar_funcionario(
         if funcionario_com_tag:
             raise Exception(f"Tag RFID '{tag_id}' já está em uso pelo funcionário {funcionario_com_tag.nome}")
     
+    # Usar turno antigo se turnos não for fornecido (compatibilidade)
+    turnos_finais = turnos if turnos is not None else ([turno] if turno else [])
+    
     funcionario = Funcionario.criar(
         matricula=matricula, 
         nome=nome, 
         ativo=ativo, 
         tag_id=tag_id,
-        turno=turno
+        turno=None  # Não usar mais o campo turno, usar a tabela funcionarios_turnos
     )
+    
+    # Atualizar turnos se fornecidos
+    if turnos_finais and funcionario.funcionario_id:
+        atualizar_turnos_funcionario(funcionario.funcionario_id, turnos_finais)
     
     # Habilitar operações se fornecidas
     if operacoes_ids and funcionario.funcionario_id:
         atualizar_operacoes_habilitadas(funcionario.funcionario_id, operacoes_ids)
     
-    # Buscar operações habilitadas para retornar
+    # Buscar operações habilitadas e turnos para retornar
     funcionario_dict = funcionario.to_dict()
     if funcionario.funcionario_id:
         operacoes_habilitadas = buscar_operacoes_habilitadas(funcionario.funcionario_id)
         funcionario_dict['operacoes_habilitadas'] = operacoes_habilitadas
+        turnos_funcionario = buscar_turnos_funcionario(funcionario.funcionario_id)
+        funcionario_dict['turnos'] = turnos_funcionario
+        # Manter compatibilidade: se houver apenas um turno, colocar no campo turno também
+        if len(turnos_funcionario) == 1:
+            funcionario_dict['turno'] = turnos_funcionario[0]
+        elif len(turnos_funcionario) > 1:
+            funcionario_dict['turno'] = ', '.join(turnos_funcionario)
     
     return funcionario_dict
 
@@ -94,6 +122,7 @@ def atualizar_funcionario(
     ativo: bool, 
     tag_id: Optional[str] = None,
     turno: Optional[str] = None,
+    turnos: Optional[List[str]] = None,
     operacoes_ids: Optional[List[int]] = None
 ) -> Dict[str, Any]:
     
@@ -103,7 +132,7 @@ def atualizar_funcionario(
     
     funcionario.nome = nome
     funcionario.ativo = ativo
-    funcionario.turno = turno
+    # Não atualizar mais o campo turno, usar a tabela funcionarios_turnos
     
     if tag_id is not None:
         tag_id = tag_id.strip() if tag_id else None
@@ -118,14 +147,28 @@ def atualizar_funcionario(
     
     funcionario.save()
     
+    # Atualizar turnos se fornecidos (prioridade para turnos, depois turno para compatibilidade)
+    if turnos is not None:
+        atualizar_turnos_funcionario(funcionario_id, turnos)
+    elif turno is not None:
+        # Compatibilidade: se turno for fornecido mas turnos não, usar turno
+        atualizar_turnos_funcionario(funcionario_id, [turno] if turno else [])
+    
     # Atualizar operações habilitadas se fornecidas
     if operacoes_ids is not None:
         atualizar_operacoes_habilitadas(funcionario_id, operacoes_ids)
     
-    # Buscar operações habilitadas para retornar
+    # Buscar operações habilitadas e turnos para retornar
     funcionario_dict = funcionario.to_dict()
     operacoes_habilitadas = buscar_operacoes_habilitadas(funcionario_id)
     funcionario_dict['operacoes_habilitadas'] = operacoes_habilitadas
+    turnos_funcionario = buscar_turnos_funcionario(funcionario_id)
+    funcionario_dict['turnos'] = turnos_funcionario
+    # Manter compatibilidade: se houver apenas um turno, colocar no campo turno também
+    if len(turnos_funcionario) == 1:
+        funcionario_dict['turno'] = turnos_funcionario[0]
+    elif len(turnos_funcionario) > 1:
+        funcionario_dict['turno'] = ', '.join(turnos_funcionario)
     
     return funcionario_dict
 
@@ -243,3 +286,65 @@ def atualizar_operacoes_habilitadas(funcionario_id: int, operacoes_ids: List[int
             WHERE funcionario_id = %s AND operacao_id = %s
         """
         DatabaseConnection.execute_query(query_desabilitar, (funcionario_id, operacao_id))
+
+
+# Função para buscar turnos de um funcionário
+def buscar_turnos_funcionario(funcionario_id: int) -> List[str]:
+    """Busca os turnos de um funcionário"""
+    try:
+        query = """
+            SELECT turno
+            FROM funcionarios_turnos
+            WHERE funcionario_id = %s
+            ORDER BY turno ASC
+        """
+        rows = DatabaseConnection.execute_query(query, (funcionario_id,), fetch_all=True)
+        
+        if not rows:
+            return []
+        
+        turnos = [row[0] for row in rows if row[0]]
+        return turnos
+    except Exception as e:
+        print(f'Erro ao buscar turnos do funcionário: {e}')
+        return []
+
+
+# Função para atualizar turnos de um funcionário
+def atualizar_turnos_funcionario(funcionario_id: int, turnos: List[str]) -> None:
+    """Atualiza os turnos de um funcionário"""
+    # Verificar se o funcionário existe
+    funcionario = Funcionario.buscar_por_id(funcionario_id)
+    if not funcionario:
+        raise Exception(f"Funcionário com ID {funcionario_id} não encontrado")
+    
+    # Filtrar turnos válidos e remover duplicatas
+    turnos_validos = ['matutino', 'vespertino', 'noturno']
+    turnos_limpos = [t.lower().strip() for t in turnos if t and t.strip().lower() in turnos_validos]
+    turnos_unicos = list(dict.fromkeys(turnos_limpos))  # Remove duplicatas mantendo ordem
+    
+    # Buscar turnos atuais do funcionário
+    query_atuais = "SELECT turno FROM funcionarios_turnos WHERE funcionario_id = %s"
+    rows = DatabaseConnection.execute_query(query_atuais, (funcionario_id,), fetch_all=True)
+    turnos_atuais = set(row[0] for row in rows) if rows else set()
+    
+    turnos_marcados = set(turnos_unicos)
+    
+    # Turnos para adicionar (marcados que não existiam antes)
+    turnos_adicionar = turnos_marcados - turnos_atuais
+    for turno in turnos_adicionar:
+        query_inserir = """
+            INSERT INTO funcionarios_turnos (funcionario_id, turno)
+            VALUES (%s, %s)
+            ON CONFLICT (funcionario_id, turno) DO NOTHING
+        """
+        DatabaseConnection.execute_query(query_inserir, (funcionario_id, turno))
+    
+    # Turnos para remover (desmarcados que existiam antes)
+    turnos_remover = turnos_atuais - turnos_marcados
+    for turno in turnos_remover:
+        query_remover = """
+            DELETE FROM funcionarios_turnos
+            WHERE funcionario_id = %s AND turno = %s
+        """
+        DatabaseConnection.execute_query(query_remover, (funcionario_id, turno))

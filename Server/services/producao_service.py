@@ -19,6 +19,74 @@ def _agora_manaus() -> datetime:
     return datetime.now(TZ_MANAUS)
 
 
+def calcular_turno_por_hora(hora_inicio: str) -> str:
+    """
+    Calcula o turno baseado na hora de início do registro.
+    
+    Regras:
+    - Matutino: 06:00 - 11:59
+    - Vespertino: 12:00 - 17:59
+    - Noturno: 18:00 - 05:59
+    
+    Args:
+        hora_inicio: Hora no formato 'HH:MM' ou 'HH:MM:SS'
+    
+    Returns:
+        'matutino', 'vespertino' ou 'noturno'
+    """
+    try:
+        # Remover segundos se existirem
+        hora_limpa = hora_inicio.split(':')[0:2]
+        if len(hora_limpa) < 2:
+            return 'noturno'  # Default se formato inválido
+        
+        hora = int(hora_limpa[0])
+        
+        if 6 <= hora < 12:
+            return 'matutino'
+        elif 12 <= hora < 18:
+            return 'vespertino'
+        else:
+            return 'noturno'
+    except (ValueError, IndexError, AttributeError):
+        # Se houver erro, retornar noturno como padrão
+        return 'noturno'
+
+
+def validar_turno_funcionario(funcionario_id: int, turno_calculado: str) -> str:
+    """
+    Valida se o turno calculado está nos turnos cadastrados do funcionário.
+    Se não estiver, retorna o primeiro turno cadastrado ou o turno calculado.
+    
+    Args:
+        funcionario_id: ID do funcionário
+        turno_calculado: Turno calculado pela hora
+    
+    Returns:
+        Turno válido para o funcionário
+    """
+    from Server.services import funcionarios_service
+    
+    try:
+        turnos_funcionario = funcionarios_service.buscar_turnos_funcionario(funcionario_id)
+        
+        # Se o funcionário tem turnos cadastrados
+        if turnos_funcionario:
+            # Verificar se o turno calculado está nos turnos do funcionário
+            if turno_calculado in turnos_funcionario:
+                return turno_calculado
+            else:
+                # Se não estiver, usar o primeiro turno cadastrado
+                return turnos_funcionario[0]
+        else:
+            # Se não tem turnos cadastrados, usar o turno calculado
+            return turno_calculado
+    except Exception as e:
+        print(f'Erro ao validar turno do funcionário: {e}')
+        # Em caso de erro, retornar o turno calculado
+        return turno_calculado
+
+
 def _buscar_operacao_id(operacao_codigo: str, posto: Optional[str] = None) -> Optional[int]:
     """Busca ID da operação pelo código/nome e opcionalmente pelo posto"""
     from Server.services import operacao_service

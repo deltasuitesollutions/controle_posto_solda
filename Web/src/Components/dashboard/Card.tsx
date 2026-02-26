@@ -144,7 +144,7 @@ const Card = ({posto, mod, peca_nome, operador, habilitado, turno, operacao_nome
               {mensagemSucesso && (
                 <span className='text-xs text-green-600 flex items-center gap-1'>
                   <i className='bi bi-check-circle-fill'></i>
-                  Salvo com sucesso!
+                  Enviado com sucesso!
                 </span>
               )}
             </div>
