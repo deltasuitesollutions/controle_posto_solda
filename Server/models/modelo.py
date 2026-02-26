@@ -87,20 +87,19 @@ class Modelo:
     
     @staticmethod
     def listar_todos() -> List['Modelo']:
-        """Lista todos os modelos"""
-        query = "SELECT modelo_id, nome, COALESCE(data_criacao, CURRENT_TIMESTAMP) as data_criacao FROM modelos ORDER BY nome"
+        """Lista todos os modelos não deletados"""
+        query = "SELECT modelo_id, nome, COALESCE(data_criacao, CURRENT_TIMESTAMP) as data_criacao FROM modelos WHERE COALESCE(deleted, FALSE) = FALSE ORDER BY nome"
         rows = DatabaseConnection.execute_query(query, fetch_all=True)
         if not rows or not isinstance(rows, list):
             return []
         return [Modelo.from_row(row) for row in rows]
     
     def delete(self) -> None:
-        """Remove o modelo do banco de dados"""
+        """Faz soft delete do modelo (marca como deletado, mas não remove do banco)"""
         if not self.id:
             raise Exception("Modelo não possui ID")
-        query = "DELETE FROM modelos WHERE modelo_id = %s"
+        query = "UPDATE modelos SET deleted = TRUE WHERE modelo_id = %s"
         DatabaseConnection.execute_query(query, (self.id,))
-        self.id = None
     
     @staticmethod
     def criar(codigo: str, descricao: Optional[str] = None) -> 'Modelo':

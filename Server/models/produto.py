@@ -36,7 +36,7 @@ class Produto:
 
     @classmethod
     def listarTodos(cls) -> List['Produto']:
-        query = "SELECT produto_id, nome, COALESCE(data_criacao, CURRENT_TIMESTAMP) as data_criacao FROM produtos ORDER BY nome"
+        query = "SELECT produto_id, nome, COALESCE(data_criacao, CURRENT_TIMESTAMP) as data_criacao FROM produtos WHERE COALESCE(deleted, FALSE) = FALSE ORDER BY nome"
         resultados = DatabaseConnection.execute_query(query, fetch_all=True)
 
         produtos = []
@@ -70,14 +70,14 @@ class Produto:
         return None
     
     def deletar(self) -> None:
+        """Faz soft delete do produto (marca como deletado, mas não remove do banco)"""
         if self.id is None:
             raise ValueError("Produto não foi salvo no banco de dados")
 
         try:
             produto_id = self.id
-            query = "DELETE FROM produtos WHERE produto_id = %s"
+            query = "UPDATE produtos SET deleted = TRUE WHERE produto_id = %s"
             DatabaseConnection.execute_query(query, (produto_id,))
-            self.id = None
         except ValueError as e:
             raise e
         except Exception as e:

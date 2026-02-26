@@ -42,14 +42,20 @@ CREATE TABLE IF NOT EXISTS sublinhas (
 -- Tabela de produtos
 CREATE TABLE IF NOT EXISTS produtos (
     produto_id SERIAL PRIMARY KEY,
-    nome TEXT NOT NULL UNIQUE
+    nome TEXT NOT NULL UNIQUE,
+    deleted BOOLEAN DEFAULT FALSE
 );
+
+CREATE INDEX IF NOT EXISTS idx_produtos_deleted ON produtos(deleted);
 
 -- Tabela de modelos
 CREATE TABLE IF NOT EXISTS modelos (
     modelo_id SERIAL PRIMARY KEY,
-    nome TEXT NOT NULL
+    nome TEXT NOT NULL,
+    deleted BOOLEAN DEFAULT FALSE
 );
+
+CREATE INDEX IF NOT EXISTS idx_modelos_deleted ON modelos(deleted);
 
 -- Tabela de peças
 CREATE TABLE IF NOT EXISTS pecas (

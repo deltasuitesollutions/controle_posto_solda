@@ -39,10 +39,6 @@ const ListagemPecas = () => {
     const [carregando, setCarregando] = useState(true)
     const [modalEdicaoAberto, setModalEdicaoAberto] = useState(false)
     const [pecaEditando, setPecaEditando] = useState<Peca | null>(null)
-    const [modalEdicaoModeloAberto, setModalEdicaoModeloAberto] = useState(false)
-    const [modeloEditando, setModeloEditando] = useState<{ id: number; nome: string; produto_id?: number } | null>(null)
-    const [modalEdicaoProdutoAberto, setModalEdicaoProdutoAberto] = useState(false)
-    const [produtoEditando, setProdutoEditando] = useState<{ id: number; nome: string } | null>(null)
     const [modalConfirmacao, setModalConfirmacao] = useState(false)
     const [itemParaDeletar, setItemParaDeletar] = useState<Peca | null>(null)
     const [modalErroDuplicado, setModalErroDuplicado] = useState(false)
@@ -143,148 +139,6 @@ const ListagemPecas = () => {
             console.error('Erro ao salvar peça:', err)
             setErro(err instanceof Error ? err.message : 'Erro ao salvar peça')
             // Em caso de erro, recarregar dados para garantir consistência
-            await carregarDados()
-        }
-    }
-
-    const handleEditarModelo = (peca: Peca) => {
-        if (!peca.modelo_id) return
-        const modelo = modelos.find(m => m.id === peca.modelo_id)
-        if (modelo) {
-            setModeloEditando({
-                id: modelo.id,
-                nome: modelo.nome || peca.modelo_nome || '',
-                produto_id: peca.produto_id
-            })
-            setModalEdicaoModeloAberto(true)
-        }
-    }
-
-    const handleSalvarModelo = async (dados: Record<string, any>) => {
-        if (!modeloEditando) return
-
-        try {
-            setErro(null)
-            
-            const nomeModelo = dados.nome_modelo && dados.nome_modelo.trim() !== '' 
-                ? dados.nome_modelo.trim() 
-                : modeloEditando.nome
-            
-            if (!nomeModelo) {
-                setErro('O nome do modelo não pode estar vazio')
-                return
-            }
-
-            // Verificar se o nome já existe em outro modelo (ignorando o modelo atual)
-            const modeloExistente = modelos.find(m => 
-                m.nome.toLowerCase() === nomeModelo.toLowerCase() && m.id !== modeloEditando.id
-            )
-            
-            if (modeloExistente) {
-                setMensagemErroDuplicado(`O modelo "${nomeModelo}" já está cadastrado no sistema.`)
-                setModalErroDuplicado(true)
-                return
-            }
-
-            // Verificar se o usuário alterou o produto_id
-            const produtoIdFoiAlterado = 'produto_id' in dados
-            let produtoIdFinal: number | undefined = undefined
-            
-            if (produtoIdFoiAlterado) {
-                // Usuário interagiu com o campo
-                if (dados.produto_id === '' || dados.produto_id === null || dados.produto_id === undefined) {
-                    // Tentou remover produto (selecionou "Nenhum")
-                    if (modeloEditando.produto_id) {
-                        setErro('O produto não pode ser removido do modelo. Selecione um produto ou mantenha o atual.')
-                        return
-                    }
-                    produtoIdFinal = undefined
-                } else {
-                    // Selecionou um produto válido
-                    produtoIdFinal = Number(dados.produto_id)
-                }
-            } else {
-                // Não alterou o campo, manter o original
-                produtoIdFinal = modeloEditando.produto_id
-            }
-
-            const dadosModelo: { nome: string; produto_id?: number } = { nome: nomeModelo }
-            if (produtoIdFinal) {
-                dadosModelo.produto_id = produtoIdFinal
-            }
-
-            await modelosAPI.atualizar(modeloEditando.id, dadosModelo)
-            
-            // Recarregar dados para garantir que tudo está sincronizado
-            await carregarDados()
-            
-            setModalEdicaoModeloAberto(false)
-            setModeloEditando(null)
-        } catch (err) {
-            console.error('Erro ao salvar modelo:', err)
-            setErro(err instanceof Error ? err.message : 'Erro ao salvar modelo')
-            await carregarDados()
-        }
-    }
-
-    const handleEditarProduto = (peca: Peca) => {
-        if (!peca.produto_id) return
-        const produto = produtos.find(p => p.id === peca.produto_id)
-        if (produto) {
-            setProdutoEditando({
-                id: produto.id,
-                nome: produto.nome
-            })
-            setModalEdicaoProdutoAberto(true)
-        }
-    }
-
-    const handleSalvarProduto = async (dados: Record<string, any>) => {
-        if (!produtoEditando) return
-
-        try {
-            setErro(null)
-            
-            const nomeProduto = dados.nome_produto && dados.nome_produto.trim() !== '' 
-                ? dados.nome_produto.trim() 
-                : produtoEditando.nome
-            
-            if (!nomeProduto) {
-                setErro('O nome do produto não pode estar vazio')
-                return
-            }
-
-            // Verificar se o nome já existe em outro produto (ignorando o produto atual)
-            const produtoExistente = produtos.find(p => 
-                p.nome.toLowerCase() === nomeProduto.toLowerCase() && p.id !== produtoEditando.id
-            )
-            
-            if (produtoExistente) {
-                setMensagemErroDuplicado(`O produto "${nomeProduto}" já está cadastrado no sistema.`)
-                setModalErroDuplicado(true)
-                return
-            }
-
-            await produtosAPI.atualizar(produtoEditando.id, { nome: nomeProduto })
-            
-            // Atualizar estado local otimisticamente
-            setProdutos(produtos.map(p => p.id === produtoEditando.id ? { ...p, nome: nomeProduto } : p))
-            
-            // Atualizar peças que usam este produto
-            setPecas(pecas.map(p => 
-                p.produto_id === produtoEditando.id
-                    ? {
-                        ...p,
-                        produto_nome: nomeProduto
-                    }
-                    : p
-            ))
-            
-            setModalEdicaoProdutoAberto(false)
-            setProdutoEditando(null)
-        } catch (err) {
-            console.error('Erro ao salvar produto:', err)
-            setErro(err instanceof Error ? err.message : 'Erro ao salvar produto')
             await carregarDados()
         }
     }
@@ -463,32 +317,10 @@ const ListagemPecas = () => {
                                                                 <div className="text-sm text-gray-900">{peca.nome}</div>
                                                             </td>
                                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="text-sm text-gray-900">{peca.modelo_nome || '-'}</span>
-                                                                    {peca.modelo_id && (
-                                                                        <button
-                                                                            onClick={() => handleEditarModelo(peca)}
-                                                                            className="text-blue-600 hover:text-blue-800 transition-colors"
-                                                                            title="Editar Modelo"
-                                                                        >
-                                                                            <i className="bi bi-pencil-square text-xs"></i>
-                                                                        </button>
-                                                                    )}
-                                                                </div>
+                                                                <div className="text-sm text-gray-900">{peca.modelo_nome || '-'}</div>
                                                             </td>
                                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="text-sm text-gray-900">{peca.produto_nome || '-'}</span>
-                                                                    {peca.produto_id && (
-                                                                        <button
-                                                                            onClick={() => handleEditarProduto(peca)}
-                                                                            className="text-blue-600 hover:text-blue-800 transition-colors"
-                                                                            title="Editar Produto"
-                                                                        >
-                                                                            <i className="bi bi-pencil-square text-xs"></i>
-                                                                        </button>
-                                                                    )}
-                                                                </div>
+                                                                <div className="text-sm text-gray-900">{peca.produto_nome || '-'}</div>
                                                             </td>
                                                             <td className="px-6 py-4 whitespace-nowrap text-center">
                                                                 <div className="flex items-center justify-center gap-2">
@@ -563,72 +395,6 @@ const ListagemPecas = () => {
                 textoBotao="Salvar"
                 icone="bi bi-boxes"
                 secaoTitulo="Informações da Peça"
-            />
-
-            <ModalFormulario
-                isOpen={modalEdicaoModeloAberto}
-                onClose={() => {
-                    setModalEdicaoModeloAberto(false)
-                    setModeloEditando(null)
-                    setErro(null)
-                }}
-                onSave={handleSalvarModelo}
-                itemEditando={modeloEditando ? {
-                    nome_modelo: modeloEditando.nome,
-                    produto_id: modeloEditando.produto_id ? modeloEditando.produto_id.toString() : ''
-                } : null}
-                tituloNovo="Novo Modelo"
-                tituloEditar="Editar Modelo"
-                campos={[
-                    {
-                        nome: 'nome_modelo',
-                        label: 'Nome do Modelo',
-                        tipo: 'text',
-                        placeholder: 'Ex: Modelo A',
-                        required: true
-                    },
-                    {
-                        nome: 'produto_id',
-                        label: 'Associar a Produto',
-                        tipo: 'select',
-                        placeholder: 'Selecione o produto',
-                        required: false,
-                        opcoes: [
-                            { valor: '', label: 'Nenhum' },
-                            ...produtos.map(p => ({ valor: p.id.toString(), label: p.nome }))
-                        ]
-                    }
-                ]}
-                textoBotao="Salvar"
-                icone="bi bi-box-seam"
-                secaoTitulo="Informações do Modelo"
-            />
-
-            <ModalFormulario
-                isOpen={modalEdicaoProdutoAberto}
-                onClose={() => {
-                    setModalEdicaoProdutoAberto(false)
-                    setProdutoEditando(null)
-                    setErro(null)
-                }}
-                onSave={handleSalvarProduto}
-                itemEditando={produtoEditando ? {
-                    nome_produto: produtoEditando.nome
-                } : null}
-                tituloNovo="Novo Produto"
-                tituloEditar="Editar Produto"
-                campos={[
-                    {
-                        nome: 'nome_produto',
-                        label: 'Nome do Produto',
-                        tipo: 'text',
-                        placeholder: 'Ex: Produto A',
-                        required: true
-                    }
-                ]}
-                textoBotao="Salvar"
-                icone="bi bi-tag"
-                secaoTitulo="Informações do Produto"
             />
 
             <ModalConfirmacao
