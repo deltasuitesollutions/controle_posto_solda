@@ -26,6 +26,7 @@ interface Produto {
 interface Modelo {
     id: number
     nome: string
+    produto_id?: number
 }
 
 interface Linha {
@@ -99,7 +100,8 @@ const Operacoes = () => {
 
     // Dados para os dropdowns
     const [produtos, setProdutos] = useState<Produto[]>([])
-    const [modelos, setModelos] = useState<Modelo[]>([])
+    const [todosModelos, setTodosModelos] = useState<Modelo[]>([]) // Todos os modelos carregados
+    const [modelos, setModelos] = useState<Modelo[]>([]) // Modelos filtrados por produto
     const [linhasComSublinhas, setLinhasComSublinhas] = useState<LinhaComSublinha[]>([])
     const [postos, setPostos] = useState<Posto[]>([])
     const [totensDisponiveis, setTotensDisponiveis] = useState<Toten[]>([])
@@ -112,6 +114,30 @@ const Operacoes = () => {
             carregarOperacoes()
         }
     }, [abaAtiva])
+
+    // Filtrar modelos quando produto mudar
+    useEffect(() => {
+        if (produto) {
+            // Encontrar o produto selecionado pelo nome
+            const produtoSelecionado = produtos.find(p => p.nome === produto)
+            if (produtoSelecionado) {
+                // Filtrar modelos pelo produto_id
+                const modelosFiltrados = todosModelos.filter(m => m.produto_id === produtoSelecionado.id)
+                setModelos(modelosFiltrados)
+            } else {
+                setModelos([])
+            }
+            // Limpar modelo selecionado quando produto mudar (exceto se estiver carregando dados de edição)
+            if (!isLoadingEditData.current) {
+                setModelo('')
+            }
+        } else {
+            setModelos([])
+            if (!isLoadingEditData.current) {
+                setModelo('')
+            }
+        }
+    }, [produto, produtos, todosModelos])
 
     // Carregar peças quando modelo mudar
     useEffect(() => {
@@ -129,17 +155,35 @@ const Operacoes = () => {
                 setPecaTemp('')
             }
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [modelo])
 
     const carregarDadosDropdowns = async () => {
         try {
             // Carregar produtos
             const produtosData = await produtosAPI.listar()
-            setProdutos(produtosData.map((p: any) => ({ id: p.id, nome: p.nome })))
+            const produtosFormatados = produtosData.map((p: any) => ({ id: p.id, nome: p.nome }))
+            setProdutos(produtosFormatados)
 
             // Carregar modelos
             const modelosData = await modelosAPI.listarTodos()
-            setModelos(modelosData.map((m: any) => ({ id: m.id, nome: m.nome })))
+            const modelosCompleto = modelosData.map((m: any) => ({ 
+                id: m.id, 
+                nome: m.nome,
+                produto_id: m.produto_id 
+            }))
+            setTodosModelos(modelosCompleto)
+            // Se já houver um produto selecionado, filtrar os modelos
+            if (produto) {
+                const produtoSelecionado = produtosFormatados.find(p => p.nome === produto)
+                if (produtoSelecionado) {
+                    setModelos(modelosCompleto.filter(m => m.produto_id === produtoSelecionado.id))
+                } else {
+                    setModelos([])
+                }
+            } else {
+                setModelos([])
+            }
 
             // Carregar linhas e sublinhas
             await carregarLinhasComSublinhas()
@@ -214,8 +258,8 @@ const Operacoes = () => {
                 return
             }
 
-            // Encontrar o modelo selecionado
-            const modeloSelecionado = modelos.find(m => m.nome === modelo)
+            // Encontrar o modelo selecionado (buscar em todosModelos para garantir que encontre mesmo se não estiver filtrado)
+            const modeloSelecionado = todosModelos.find(m => m.nome === modelo) || modelos.find(m => m.nome === modelo)
             if (!modeloSelecionado) {
                 setPecasDisponiveis([])
                 return
@@ -431,7 +475,7 @@ const Operacoes = () => {
         
         // Carregar peças do modelo se houver modelo selecionado
         if (op.modelo) {
-            const modeloSelecionado = modelos.find(m => m.nome === op.modelo)
+            const modeloSelecionado = todosModelos.find(m => m.nome === op.modelo)
             if (modeloSelecionado) {
                 await carregarPecasPorModelo()
             }

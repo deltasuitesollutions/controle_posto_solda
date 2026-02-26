@@ -59,8 +59,10 @@ class Modelo:
             params: Tuple[Any, ...] = (nome, self.id)
             DatabaseConnection.execute_query(query, params)
         else:
-            # Inserir com RETURNING modelo_id para PostgreSQL
-            query = "INSERT INTO modelos (nome) VALUES (%s) RETURNING modelo_id"
+            # Sempre criar novo modelo (mesmo que exista um deletado)
+            # Modelos não têm constraint UNIQUE no nome, então sempre pode criar novo
+            # Incluir data_criacao explicitamente para garantir data atual
+            query = "INSERT INTO modelos (nome, data_criacao) VALUES (%s, CURRENT_TIMESTAMP) RETURNING modelo_id"
             params = (nome,)
             result = DatabaseConnection.execute_query(query, params, fetch_one=True)
             if result and isinstance(result, tuple) and len(result) > 0:
@@ -78,7 +80,16 @@ class Modelo:
     
     @staticmethod
     def buscar_por_codigo(codigo: str) -> Optional['Modelo']:
-        """Busca um modelo pelo código (nome)"""
+        """Busca um modelo pelo código (nome), apenas não deletados"""
+        query = "SELECT modelo_id, nome FROM modelos WHERE nome = %s AND COALESCE(deleted, FALSE) = FALSE"
+        row = DatabaseConnection.execute_query(query, (codigo,), fetch_one=True)
+        if not row:
+            return None
+        return Modelo.from_row(row)
+    
+    @staticmethod
+    def buscar_por_codigo_incluindo_deletados(codigo: str) -> Optional['Modelo']:
+        """Busca um modelo pelo código (nome), incluindo deletados"""
         query = "SELECT modelo_id, nome FROM modelos WHERE nome = %s"
         row = DatabaseConnection.execute_query(query, (codigo,), fetch_one=True)
         if not row:

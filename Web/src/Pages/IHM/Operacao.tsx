@@ -97,7 +97,7 @@ const Operacao = () => {
     }
   }, [operacoes]);
 
-  const preencherCamposOperacao = (codigoOperacao: string) => {
+  const preencherCamposOperacao = (codigoOperacao: string, restaurarDadosSalvos: boolean = false) => {
     if (!codigoOperacao) {
       setProduto('');
       setModelo('');
@@ -112,6 +112,43 @@ const Operacao = () => {
     const op = operacoesMapRef.current.get(codigoOperacao);
     if (!op) return;
     
+    // Se estiver restaurando dados salvos, usar os valores do localStorage
+    if (restaurarDadosSalvos) {
+      try {
+        const sessao = localStorage.getItem('ihm_sessao');
+        if (sessao) {
+          const dados = JSON.parse(sessao);
+          if (dados.operacao === codigoOperacao) {
+            // Restaurar valores salvos
+            setProduto(dados.produto || op.produto);
+            setModelo(dados.modelo || op.modelo.codigo);
+            setModeloDescricao(dados.modeloDescricao || op.modelo.descricao);
+            setPostoAtual(dados.posto || op.posto);
+            setPecasDisponiveis(op.pecas);
+            
+            // Restaurar peça e código salvos, ou usar padrão
+            if (dados.peca) {
+              setPeca(dados.peca);
+            } else if (op.pecas.length > 0) {
+              setPeca(op.pecas[0].nome);
+            } else {
+              setPeca('');
+            }
+            
+            if (dados.codigo) {
+              setCodigo(dados.codigo);
+            } else if (op.pecas.length > 0) {
+              setCodigo(op.pecas[0].codigo || op.codigos[0] || '');
+            } else {
+              setCodigo(op.codigos[0] || '');
+            }
+            return;
+          }
+        }
+      } catch { /* ignorar erros */ }
+    }
+    
+    // Preencher normalmente se não estiver restaurando
     setProduto(op.produto);
     setModelo(op.modelo.codigo);
     setModeloDescricao(op.modelo.descricao);
@@ -129,16 +166,49 @@ const Operacao = () => {
 
   useEffect(() => {
     if (operacao && operacoes.length > 0) {
-      preencherCamposOperacao(operacao);
+      // Verificar se temos dados salvos para esta operação
+      try {
+        const sessao = localStorage.getItem('ihm_sessao');
+        if (sessao) {
+          const dados = JSON.parse(sessao);
+          if (dados.operacao === operacao) {
+            // Restaurar dados salvos
+            preencherCamposOperacao(operacao, true);
+            return;
+          }
+        }
+      } catch { /* ignorar erros */ }
+      
+      // Se não tiver dados salvos, preencher normalmente
+      preencherCamposOperacao(operacao, false);
     }
   }, [operacao, operacoes]);
 
   // Verificar registro aberto quando operação e matrícula estiverem disponíveis
   useEffect(() => {
     const verificarRegistroAberto = async () => {
-      if (operacao && funcionarioMatricula && postoAtual) {
+      // Se não tiver postoAtual ainda, tentar pegar do localStorage
+      let postoParaVerificar = postoAtual;
+      let matriculaParaVerificar = funcionarioMatricula;
+      
+      if (!postoParaVerificar || !matriculaParaVerificar) {
         try {
-          const response = await producaoAPI.buscarRegistroAberto(postoAtual, funcionarioMatricula);
+          const sessao = localStorage.getItem('ihm_sessao');
+          if (sessao) {
+            const dados = JSON.parse(sessao);
+            if (!postoParaVerificar && dados.posto) {
+              postoParaVerificar = dados.posto;
+            }
+            if (!matriculaParaVerificar && dados.funcionarioMatricula) {
+              matriculaParaVerificar = dados.funcionarioMatricula;
+            }
+          }
+        } catch { /* ignorar erros */ }
+      }
+      
+      if (operacao && matriculaParaVerificar && postoParaVerificar) {
+        try {
+          const response = await producaoAPI.buscarRegistroAberto(postoParaVerificar, matriculaParaVerificar);
           if (response.registro) {
             setRegistroAberto(response.registro);
           } else {
@@ -152,7 +222,7 @@ const Operacao = () => {
       }
     };
     verificarRegistroAberto();
-  }, [operacao, funcionarioMatricula, postoAtual]);
+  }, [operacao, funcionarioMatricula, postoAtual, navigate, operador]);
 
   const validarFormulario = (): boolean => {
     const faltaOperacao = !operacao;
@@ -208,7 +278,11 @@ const Operacao = () => {
         funcionarioMatricula,
         posto: postoAtual,
         operacao,
-        modelo
+        modelo,
+        modeloDescricao,
+        peca,
+        codigo,
+        produto
       }));
       
       setCarregando(false);

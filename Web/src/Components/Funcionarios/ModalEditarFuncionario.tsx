@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { operacoesAPI, tagsTemporariasAPI } from '../../api/api'
+import ModalConfirmacao from '../Compartilhados/ModalConfirmacao'
+import ModalSucesso from '../Modais/ModalSucesso'
+import ModalErro from '../Modais/ModalErro'
 
 interface OperacaoHabilitada {
     operacao_habilitada_id: number
@@ -44,6 +47,14 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
     const [tagTemporaria, setTagTemporaria] = useState('')
     const [tagsTemporariasAtivas, setTagsTemporariasAtivas] = useState<Array<{id: number; tag_id: string; data_expiracao: string}>>([])
     const [carregandoTags, setCarregandoTags] = useState(false)
+    const [criandoTag, setCriandoTag] = useState(false)
+    const [modalExcluirTagAberto, setModalExcluirTagAberto] = useState(false)
+    const [tagParaExcluir, setTagParaExcluir] = useState<string | null>(null)
+    const [modalSucessoAberto, setModalSucessoAberto] = useState(false)
+    const [modalErroAberto, setModalErroAberto] = useState(false)
+    const [mensagemSucesso, setMensagemSucesso] = useState('')
+    const [mensagemErro, setMensagemErro] = useState('')
+    const [tituloErro, setTituloErro] = useState('Erro!')
 
     useEffect(() => {
         carregarOperacoes()
@@ -95,7 +106,16 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
         setCarregandoTags(true)
         try {
             const tags = await tagsTemporariasAPI.listarPorFuncionario(funcionarioEditando.id)
-            setTagsTemporariasAtivas(Array.isArray(tags) ? tags : [])
+            console.log('Tags temporárias carregadas:', tags)
+            // Garantir que é um array e tem a estrutura correta
+            if (Array.isArray(tags)) {
+                const tagsValidadas = tags.filter(tag => tag && tag.tag_id && tag.data_expiracao)
+                setTagsTemporariasAtivas(tagsValidadas)
+                console.log('Tags validadas:', tagsValidadas)
+            } else {
+                console.warn('Resposta da API não é um array:', tags)
+                setTagsTemporariasAtivas([])
+            }
         } catch (error: any) {
             console.error('Erro ao carregar tags temporárias:', error)
             setTagsTemporariasAtivas([])
@@ -106,43 +126,73 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
 
     const handleCriarTagTemporaria = async () => {
         if (!funcionarioEditando?.id) {
-            alert('Erro: ID do funcionário não encontrado')
+            setTituloErro('Erro!')
+            setMensagemErro('Erro: ID do funcionário não encontrado')
+            setModalErroAberto(true)
             return
         }
 
         if (!tagTemporaria.trim()) {
-            alert('Por favor, informe o código da tag temporária')
+            setTituloErro('Atenção!')
+            setMensagemErro('Por favor, informe o código da tag temporária')
+            setModalErroAberto(true)
             return
         }
 
+        setCriandoTag(true)
         try {
-            await tagsTemporariasAPI.criar({
+            const tagCriada = await tagsTemporariasAPI.criar({
                 funcionario_id: funcionarioEditando.id,
                 tag_id: tagTemporaria.trim(),
                 horas_duracao: 10
             })
             
+            console.log('Tag criada com sucesso:', tagCriada)
+            
+            // Limpar o campo
             setTagTemporaria('')
+            
+            // Aguardar um pouco para garantir que o banco processou
+            await new Promise(resolve => setTimeout(resolve, 300))
+            
+            // Recarregar as tags
             await carregarTagsTemporarias()
-            alert('Tag temporária cadastrada com sucesso! Ela será válida por 10 horas.')
+            
+            setMensagemSucesso('Tag temporária cadastrada com sucesso! Ela será válida por 10 horas.')
+            setModalSucessoAberto(true)
         } catch (error: any) {
+            console.error('Erro ao criar tag temporária:', error)
             const errorMessage = error?.message || 'Erro ao cadastrar tag temporária. Tente novamente.'
-            alert(`Erro ao cadastrar tag temporária: ${errorMessage}`)
+            setTituloErro('Erro!')
+            setMensagemErro(`Erro ao cadastrar tag temporária: ${errorMessage}`)
+            setModalErroAberto(true)
+        } finally {
+            setCriandoTag(false)
         }
     }
 
-    const handleExcluirTagTemporaria = async (tagId: string) => {
-        if (!confirm('Tem certeza que deseja excluir esta tag temporária?')) {
-            return
-        }
+    const handleExcluirTagTemporaria = (tagId: string) => {
+        setTagParaExcluir(tagId)
+        setModalExcluirTagAberto(true)
+    }
+
+    const handleConfirmarExclusaoTag = async () => {
+        if (!tagParaExcluir) return
 
         try {
-            await tagsTemporariasAPI.excluir(tagId)
+            await tagsTemporariasAPI.excluir(tagParaExcluir)
             await carregarTagsTemporarias()
-            alert('Tag temporária excluída com sucesso!')
+            setModalExcluirTagAberto(false)
+            setTagParaExcluir(null)
+            setMensagemSucesso('Tag temporária excluída com sucesso!')
+            setModalSucessoAberto(true)
         } catch (error: any) {
             const errorMessage = error?.message || 'Erro ao excluir tag temporária. Tente novamente.'
-            alert(`Erro ao excluir tag temporária: ${errorMessage}`)
+            setTituloErro('Erro!')
+            setMensagemErro(`Erro ao excluir tag temporária: ${errorMessage}`)
+            setModalErroAberto(true)
+            setModalExcluirTagAberto(false)
+            setTagParaExcluir(null)
         }
     }
 
@@ -278,10 +328,20 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
                                         <button
                                             type="button"
                                             onClick={handleCriarTagTemporaria}
-                                            className="px-4 py-2.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-medium text-sm"
+                                            disabled={criandoTag}
+                                            className="px-4 py-2.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
-                                            <i className="bi bi-plus-circle mr-1"></i>
-                                            Cadastrar
+                                            {criandoTag ? (
+                                                <>
+                                                    <i className="bi bi-hourglass-split mr-1"></i>
+                                                    Criando...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <i className="bi bi-plus-circle mr-1"></i>
+                                                    Cadastrar
+                                                </>
+                                            )}
                                         </button>
                                     </div>
                                     <p className="text-xs text-gray-500 mt-1.5">
@@ -289,24 +349,60 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
                                     </p>
                                     
                                     {/* Lista de tags temporárias ativas */}
-                                    {carregandoTags ? (
-                                        <p className="text-xs text-gray-500 mt-2">Carregando...</p>
+                                    {carregandoTags || criandoTag ? (
+                                        <p className="text-xs text-gray-500 mt-2">
+                                            {criandoTag ? 'Criando tag...' : 'Carregando...'}
+                                        </p>
                                     ) : tagsTemporariasAtivas.length > 0 ? (
                                         <div className="mt-3 space-y-2">
-                                            <p className="text-xs font-medium text-gray-700">Tags temporárias ativas:</p>
                                             {tagsTemporariasAtivas.map((tagTemp) => {
-                                                const dataExpiracao = new Date(tagTemp.data_expiracao)
+                                                // Função auxiliar para parsear data com timezone
+                                                const parsearData = (dataStr: string): Date => {
+                                                    try {
+                                                        // Verificar se já tem timezone (formato ISO com timezone: "2024-01-15T14:30:00-04:00" ou "2024-01-15T14:30:00+00:00")
+                                                        const temTimezone = /[+-]\d{2}:\d{2}$/.test(dataStr) || dataStr.endsWith('Z')
+                                                        
+                                                        if (temTimezone) {
+                                                            return new Date(dataStr)
+                                                        }
+                                                        
+                                                        // Se não tem timezone, assumir que está em UTC e adicionar 'Z'
+                                                        // Formato ISO sem timezone: "2024-01-15T14:30:00"
+                                                        if (dataStr.includes('T')) {
+                                                            return new Date(dataStr + 'Z')
+                                                        }
+                                                        
+                                                        // Fallback: tentar parsear diretamente
+                                                        return new Date(dataStr)
+                                                    } catch (e) {
+                                                        console.error('Erro ao parsear data:', dataStr, e)
+                                                        return new Date()
+                                                    }
+                                                }
+
+                                                const dataExpiracao = parsearData(tagTemp.data_expiracao)
                                                 const agora = new Date()
-                                                const horasRestantes = Math.max(0, Math.floor((dataExpiracao.getTime() - agora.getTime()) / (1000 * 60 * 60)))
-                                                const minutosRestantes = Math.max(0, Math.floor((dataExpiracao.getTime() - agora.getTime()) / (1000 * 60)) % 60)
+                                                const diferencaMs = dataExpiracao.getTime() - agora.getTime()
+                                                
+                                                // Calcular horas e minutos restantes
+                                                const horasRestantes = Math.max(0, Math.floor(diferencaMs / (1000 * 60 * 60)))
+                                                const minutosRestantes = Math.max(0, Math.floor((diferencaMs % (1000 * 60 * 60)) / (1000 * 60)))
+                                                
+                                                // Usar uma chave única combinando id e tag_id
+                                                const chaveUnica = `${tagTemp.id || 'temp'}-${tagTemp.tag_id}`
                                                 
                                                 return (
-                                                    <div key={tagTemp.id} className="flex items-center justify-between p-2 bg-orange-50 border border-orange-200 rounded-lg">
-                                                        <div className="flex-1">
-                                                            <p className="text-xs font-medium text-gray-800">{tagTemp.tag_id}</p>
-                                                            <p className="text-xs text-gray-600">
-                                                                Expira em: {horasRestantes}h {minutosRestantes}m
-                                                            </p>
+                                                    <div key={chaveUnica} className="flex items-center justify-between p-2 bg-orange-50 border border-orange-200 rounded-lg">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-sm font-medium text-gray-800">{tagTemp.tag_id}</span>
+                                                            <span className="text-xs text-gray-500">•</span>
+                                                            <span className="text-xs text-gray-600">
+                                                                {diferencaMs > 0 ? (
+                                                                    `${horasRestantes}h ${minutosRestantes}m`
+                                                                ) : (
+                                                                    <span className="text-red-600">Expirada</span>
+                                                                )}
+                                                            </span>
                                                         </div>
                                                         <button
                                                             type="button"
@@ -498,6 +594,37 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
                     </button>
                 </div>
             </div>
+
+            {/* Modal de Confirmação de Exclusão de Tag Temporária */}
+            <ModalConfirmacao
+                isOpen={modalExcluirTagAberto}
+                onClose={() => {
+                    setModalExcluirTagAberto(false)
+                    setTagParaExcluir(null)
+                }}
+                onConfirm={handleConfirmarExclusaoTag}
+                titulo="Excluir Tag Temporária"
+                mensagem="Tem certeza que deseja excluir esta tag temporária?"
+                textoConfirmar="Excluir"
+                textoCancelar="Cancelar"
+                corHeader="laranja"
+            />
+
+            {/* Modal de Sucesso */}
+            <ModalSucesso
+                isOpen={modalSucessoAberto}
+                onClose={() => setModalSucessoAberto(false)}
+                mensagem={mensagemSucesso}
+                titulo="Sucesso!"
+            />
+
+            {/* Modal de Erro */}
+            <ModalErro
+                isOpen={modalErroAberto}
+                onClose={() => setModalErroAberto(false)}
+                mensagem={mensagemErro}
+                titulo={tituloErro}
+            />
         </div>
     )
 }

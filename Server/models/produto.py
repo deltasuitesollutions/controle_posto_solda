@@ -23,7 +23,10 @@ class Produto:
     
     def salvar(self) -> None:
         if self.id is None:
-            query = "INSERT INTO produtos (nome) VALUES (%s) RETURNING produto_id"
+            # Sempre criar novo produto (mesmo que exista um deletado)
+            # A constraint UNIQUE parcial permite isso
+            # Incluir data_criacao explicitamente para garantir data atual
+            query = "INSERT INTO produtos (nome, data_criacao) VALUES (%s, CURRENT_TIMESTAMP) RETURNING produto_id"
             params = (self.nome,)
             resultado = DatabaseConnection.execute_query(query, params=params, fetch_one=True)
 
@@ -53,6 +56,17 @@ class Produto:
     
     @classmethod
     def buscarNome(cls, nome: str) -> Optional['Produto']:
+        """Busca produto por nome, apenas não deletados"""
+        query = "SELECT produto_id, nome FROM produtos WHERE nome = %s AND COALESCE(deleted, FALSE) = FALSE"
+        resultado = DatabaseConnection.execute_query(query, (nome,), fetch_one=True)
+        
+        if resultado:
+            return cls(id=resultado[0], nome=resultado[1])
+        return None
+    
+    @classmethod
+    def buscarNomeIncluindoDeletados(cls, nome: str) -> Optional['Produto']:
+        """Busca produto por nome, incluindo deletados"""
         query = "SELECT produto_id, nome FROM produtos WHERE nome = %s"
         resultado = DatabaseConnection.execute_query(query, (nome,), fetch_one=True)
         

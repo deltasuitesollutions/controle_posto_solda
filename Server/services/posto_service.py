@@ -7,20 +7,18 @@ from Server.services import dispositivo_raspberry_service
 def _buscar_info_dispositivo_por_toten(toten_id: int) -> Dict[str, Any]:
     """
     Busca informações do dispositivo Raspberry baseado no toten_id
+    O toten_id corresponde ao id do dispositivo Raspberry
     Retorna dict com serial, nome e dispositivo_id ou valores vazios
     """
     try:
-        dispositivos = dispositivo_raspberry_service.listar_dispositivos()
-        if dispositivos and len(dispositivos) > 0:
-            # Associar sequencialmente: dispositivo 0 -> toten 1, dispositivo 1 -> toten 2, etc.
-            toten_index = toten_id - 1 if toten_id > 0 else 0
-            if toten_index < len(dispositivos):
-                dispositivo = dispositivos[toten_index]
-                return {
-                    'serial': dispositivo.get('serial', ''),
-                    'nome': dispositivo.get('nome', ''),
-                    'dispositivo_id': dispositivo.get('id')
-                }
+        # O toten_id é o id do dispositivo Raspberry
+        dispositivo = dispositivo_raspberry_service.buscar_dispositivo_por_id(toten_id)
+        if dispositivo:
+            return {
+                'serial': dispositivo.get('serial', ''),
+                'nome': dispositivo.get('nome', ''),
+                'dispositivo_id': dispositivo.get('id')
+            }
     except Exception as e:
         print(f'Erro ao buscar dispositivo por toten: {e}')
     
@@ -196,15 +194,10 @@ def listar_totens_disponiveis() -> List[Dict[str, Any]]:
         toten_dict = toten.copy()
         
         # Tentar encontrar dispositivo correspondente
-        # Se o toten_id corresponder ao dispositivo_id, usar esse
+        # O toten_id corresponde ao id do dispositivo Raspberry
         dispositivo_correspondente = None
-        if dispositivos and len(dispositivos) > 0:
-            # Se houver apenas um dispositivo, associar ao primeiro toten
-            # Ou podemos usar uma lógica diferente baseada no toten_id
-            # Por enquanto, vamos associar sequencialmente
-            toten_index = toten_id - 1 if toten_id > 0 else 0
-            if toten_index < len(dispositivos):
-                dispositivo_correspondente = dispositivos[toten_index]
+        if toten_id:
+            dispositivo_correspondente = dispositivo_raspberry_service.buscar_dispositivo_por_id(toten_id)
         
         # Adicionar informações do dispositivo se encontrado
         if dispositivo_correspondente:

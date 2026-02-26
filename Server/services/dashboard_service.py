@@ -19,24 +19,21 @@ from Server.services import dispositivo_raspberry_service
 
 def _carregar_dispositivos_por_toten(todos_postos) -> Dict[int, Dict[str, Any]]:
     """
-    Carrega a lista de dispositivos UMA única vez e monta um dict
+    Carrega a lista de dispositivos e monta um dict
     indexado por toten_id para acesso O(1).
+    O toten_id corresponde ao id do dispositivo Raspberry.
     """
     resultado = {}
     try:
-        dispositivos = dispositivo_raspberry_service.listar_dispositivos()
-        if not dispositivos:
-            return resultado
-
         for posto in todos_postos:
             toten_id = posto.toten_id
-            toten_index = toten_id - 1 if toten_id > 0 else 0
-            if toten_index < len(dispositivos):
-                d = dispositivos[toten_index]
+            # O toten_id é o id do dispositivo Raspberry
+            dispositivo = dispositivo_raspberry_service.buscar_dispositivo_por_id(toten_id)
+            if dispositivo:
                 resultado[toten_id] = {
-                    'serial': d.get('serial', ''),
-                    'nome': d.get('nome', ''),
-                    'dispositivo_id': d.get('id')
+                    'serial': dispositivo.get('serial', ''),
+                    'nome': dispositivo.get('nome', ''),
+                    'dispositivo_id': dispositivo.get('id')
                 }
     except Exception as e:
         print(f'Erro ao carregar dispositivos: {e}')
@@ -151,10 +148,13 @@ def buscar_postos_em_uso() -> Dict[str, Any]:
                 continue
 
             # Verificar habilitação via set em memória (sem query)
-            habilitado = True
+            # Se houver operação associada, verificar se está habilitado
+            # Se não houver operação, não mostrar status (None)
+            habilitado = None
             comentario_aviso = None
 
             if dados['operacao_id_check']:
+                # Verificar se o funcionário está habilitado para esta operação
                 habilitado = (dados['funcionario_id'], dados['operacao_id_check']) in habilitacoes
                 if not habilitado:
                     comentario_aviso = (

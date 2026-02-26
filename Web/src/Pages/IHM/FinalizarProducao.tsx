@@ -21,17 +21,53 @@ const FinalizarProducao = () => {
   const posto = navegacao.posto || sessaoSalva?.posto || '';
   const funcionario_matricula = navegacao.funcionario_matricula || sessaoSalva?.funcionarioMatricula || '';
 
-  const [quantidade, setQuantidade] = useState<string>('');
+  // Restaurar quantidade do localStorage se existir
+  const quantidadeInicial = (() => {
+    try {
+      const sessao = localStorage.getItem('ihm_sessao');
+      if (sessao) {
+        const dados = JSON.parse(sessao);
+        return dados.quantidadeFinalizacao || '';
+      }
+    } catch { /* ignorar erros */ }
+    return '';
+  })();
+
+  const [quantidade, setQuantidade] = useState<string>(quantidadeInicial);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [registroId, setRegistroId] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { showKeyboard, setKeyboardLayout, setKeyboardSize } = useVirtualKeyboard();
 
+  // Salvar quantidade no localStorage sempre que mudar
+  useEffect(() => {
+    try {
+      const sessao = localStorage.getItem('ihm_sessao');
+      if (sessao) {
+        const dados = JSON.parse(sessao);
+        dados.quantidadeFinalizacao = quantidade;
+        localStorage.setItem('ihm_sessao', JSON.stringify(dados));
+      }
+    } catch { /* ignorar erros */ }
+  }, [quantidade]);
+
   // Limpar sessão e voltar à tela inicial
   const voltarAoLeitor = () => {
-    localStorage.removeItem('ihm_sessao')
-    navigate('/ihm/leitor', { replace: true })
+    // Limpar apenas os dados de finalização, manter o resto da sessão se necessário
+    try {
+      const sessao = localStorage.getItem('ihm_sessao');
+      if (sessao) {
+        const dados = JSON.parse(sessao);
+        delete dados.quantidadeFinalizacao;
+        delete dados.registroId;
+        localStorage.setItem('ihm_sessao', JSON.stringify(dados));
+      }
+    } catch { /* ignorar erros */ }
+    
+    // Remover completamente a sessão apenas quando finalizar com sucesso
+    localStorage.removeItem('ihm_sessao');
+    navigate('/ihm/leitor', { replace: true });
   };
   
   useEffect(() => {
@@ -52,9 +88,31 @@ const FinalizarProducao = () => {
 
     const buscarRegistro = async () => {
       try {
+        // Tentar restaurar registroId do localStorage primeiro
+        try {
+          const sessao = localStorage.getItem('ihm_sessao');
+          if (sessao) {
+            const dados = JSON.parse(sessao);
+            if (dados.registroId) {
+              setRegistroId(dados.registroId);
+            }
+          }
+        } catch { /* ignorar erros */ }
+
         const registroResponse = await producaoAPI.buscarRegistroAberto(posto, funcionario_matricula);
         if (registroResponse.registro && registroResponse.registro.id) {
-          setRegistroId(registroResponse.registro.id);
+          const id = registroResponse.registro.id;
+          setRegistroId(id);
+          
+          // Salvar registroId no localStorage
+          try {
+            const sessao = localStorage.getItem('ihm_sessao');
+            if (sessao) {
+              const dados = JSON.parse(sessao);
+              dados.registroId = id;
+              localStorage.setItem('ihm_sessao', JSON.stringify(dados));
+            }
+          } catch { /* ignorar erros */ }
         } else {
           // Registro não encontrado, redirecionar para o leitor
           setErro('Nenhum registro em aberto encontrado');

@@ -42,7 +42,11 @@ def listar_tags_temporarias_funcionario(funcionario_id):
         tags = tags_temporarias_service.listar_tags_temporarias_funcionario(funcionario_id)
         return jsonify(tags)
     except Exception as e:
-        return jsonify({"erro": str(e)}), 500
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"Erro ao listar tags temporárias do funcionário {funcionario_id}:")
+        print(error_trace)
+        return jsonify({"erro": str(e), "traceback": error_trace}), 500
 
 
 # Excluir tag temporária

@@ -44,12 +44,25 @@ class TagTemporaria:
     
     def to_dict(self) -> Dict[str, Any]:
         """Converte o objeto para dicionário"""
+        def formatar_data(data_val: Any) -> str:
+            """Formata uma data para string ISO"""
+            if data_val is None:
+                return ''
+            if isinstance(data_val, datetime):
+                # Se for timezone-aware, usar isoformat diretamente
+                # Se for timezone-naive, adicionar timezone de Manaus
+                if data_val.tzinfo is None:
+                    # Converter para timezone-aware (Manaus)
+                    data_val = data_val.replace(tzinfo=TZ_MANAUS)
+                return data_val.isoformat()
+            return str(data_val)
+        
         return {
             "id": self.id,
             "tag_id": self.tag_id,
             "funcionario_id": self.funcionario_id,
-            "data_criacao": self.data_criacao.isoformat() if isinstance(self.data_criacao, datetime) else str(self.data_criacao),
-            "data_expiracao": self.data_expiracao.isoformat() if isinstance(self.data_expiracao, datetime) else str(self.data_expiracao),
+            "data_criacao": formatar_data(self.data_criacao),
+            "data_expiracao": formatar_data(self.data_expiracao),
             "ativo": self.ativo
         }
     
@@ -82,10 +95,15 @@ class TagTemporaria:
         
         data_criacao_val = row[3] if len(row) > 3 and row[3] is not None else None
         if isinstance(data_criacao_val, datetime):
-            pass  # Já é datetime
+            # Se for timezone-naive, adicionar timezone de Manaus
+            if data_criacao_val.tzinfo is None:
+                data_criacao_val = data_criacao_val.replace(tzinfo=TZ_MANAUS)
         elif isinstance(data_criacao_val, str):
             try:
                 data_criacao_val = datetime.fromisoformat(data_criacao_val.replace('Z', '+00:00'))
+                # Garantir que tem timezone
+                if data_criacao_val.tzinfo is None:
+                    data_criacao_val = data_criacao_val.replace(tzinfo=TZ_MANAUS)
             except:
                 data_criacao_val = _agora_manaus()
         else:
@@ -93,10 +111,15 @@ class TagTemporaria:
         
         data_expiracao_val = row[4] if len(row) > 4 and row[4] is not None else None
         if isinstance(data_expiracao_val, datetime):
-            pass  # Já é datetime
+            # Se for timezone-naive, adicionar timezone de Manaus
+            if data_expiracao_val.tzinfo is None:
+                data_expiracao_val = data_expiracao_val.replace(tzinfo=TZ_MANAUS)
         elif isinstance(data_expiracao_val, str):
             try:
                 data_expiracao_val = datetime.fromisoformat(data_expiracao_val.replace('Z', '+00:00'))
+                # Garantir que tem timezone
+                if data_expiracao_val.tzinfo is None:
+                    data_expiracao_val = data_expiracao_val.replace(tzinfo=TZ_MANAUS)
             except:
                 data_expiracao_val = _agora_manaus() + timedelta(hours=10)
         else:
@@ -184,12 +207,25 @@ class TagTemporaria:
         if not rows:
             return []
         
-        tags = [TagTemporaria.from_row(row) for row in rows]
-        # Filtrar tags expiradas
+        tags = []
         agora = _agora_manaus()
-        tags_validas = [tag for tag in tags if tag.data_expiracao >= agora]
         
-        return tags_validas
+        for row in rows:
+            try:
+                tag = TagTemporaria.from_row(row)
+                # Garantir que ambas as datas têm timezone para comparação
+                if tag.data_expiracao.tzinfo is None:
+                    tag.data_expiracao = tag.data_expiracao.replace(tzinfo=TZ_MANAUS)
+                
+                # Filtrar tags expiradas
+                if tag.data_expiracao >= agora:
+                    tags.append(tag)
+            except Exception as e:
+                # Log do erro mas continua processando outras tags
+                print(f"Erro ao processar tag temporária da linha {row}: {e}")
+                continue
+        
+        return tags
     
     @staticmethod
     def excluir_expiradas() -> int:
