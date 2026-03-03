@@ -1,5 +1,6 @@
 services:
   backend:
+    image: portal-st-backend:latest
     build:
       context: .
       dockerfile: Server/Dockerfile
@@ -17,6 +18,7 @@ services:
       - app-network
 
   frontend:
+    image: portal-st-frontend:latest
     build:
       context: .
       dockerfile: Web/Dockerfile
