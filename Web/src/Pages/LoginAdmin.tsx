@@ -34,14 +34,7 @@ const LoginAdmin = () => {
         return;
       }
 
-      const userData = await login(username.trim(), senha);
-      
-      // Verificar se é admin ou master
-      if (userData.tipo === 'operador') {
-        setErro('Acesso restrito a administradores. Use a tela de operador.');
-        setCarregando(false);
-        return;
-      }
+      await login(username.trim(), senha);
       
       // O redirecionamento será feito pelo useEffect quando o user for atualizado
     } catch (error: any) {
