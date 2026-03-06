@@ -1,5 +1,6 @@
 from typing import Dict, Any, List
 from datetime import datetime
+import re
 try:
     from zoneinfo import ZoneInfo
     TZ_MANAUS = ZoneInfo('America/Manaus')
@@ -65,6 +66,34 @@ def _criar_posto_vazio(posto=None, sublinha_id=None, posto_nome='', info_disposi
     }
 
 
+def _extrair_numero_posto(nome_posto: str) -> int:
+    """
+    Extrai o número do nome do posto para ordenação numérica.
+    Ex: "Posto 4" -> 4, "Posto 12" -> 12
+    Se não encontrar número, retorna 999999 para colocar no final.
+    """
+    if not nome_posto:
+        return 999999
+    match = re.search(r'\d+', str(nome_posto))
+    if match:
+        return int(match.group())
+    return 999999
+
+
+def _extrair_numero_sublinha(nome_sublinha: str) -> int:
+    """
+    Extrai o número do nome da sublinha para ordenação numérica.
+    Ex: "Sublinha 1" -> 1, "Sublinha 2" -> 2, "Sublinha 3" -> 3
+    Se não encontrar número, retorna 999999 para colocar no final.
+    """
+    if not nome_sublinha:
+        return 999999
+    match = re.search(r'\d+', str(nome_sublinha))
+    if match:
+        return int(match.group())
+    return 999999
+
+
 def _extrair_dados_registro(registro) -> Dict[str, Any]:
     return {
         'registro_id': registro[0],
@@ -119,7 +148,17 @@ def buscar_postos_em_uso() -> Dict[str, Any]:
 
             info_dispositivo = dispositivos_map.get(posto.toten_id)
             posto_info = _criar_posto_vazio(posto=posto, info_dispositivo=info_dispositivo)
+            # Guardar o nome original do posto para uso posterior
+            posto_info['posto_original'] = posto.nome
             postos_por_sublinha[posto.sublinha_id].append(posto_info)
+
+        # IMPORTANTE: Ordenar os postos ANTES de processar os registros
+        # Isso garante que os postos sejam ordenados pelo número original
+        for sublinha_id in postos_por_sublinha:
+            postos_por_sublinha[sublinha_id].sort(key=lambda p: (
+                _extrair_numero_posto(p.get('posto_original', '')),
+                p.get('posto_id', 999999)
+            ))
 
         # Processar registros abertos
         postos_em_uso = set()
@@ -148,8 +187,6 @@ def buscar_postos_em_uso() -> Dict[str, Any]:
                 continue
 
             # Verificar habilitação via set em memória (sem query)
-            # Se houver operação associada, verificar se está habilitado
-            # Se não houver operação, não mostrar status (None)
             habilitado = None
             comentario_aviso = None
 
@@ -181,29 +218,35 @@ def buscar_postos_em_uso() -> Dict[str, Any]:
             posto_info['comentario_aviso'] = comentario_aviso
 
         # Organizar por sublinha (sempre mostrar todas as sublinhas com 4 cards cada)
+        # Ordenar sublinhas numericamente pelo número extraído do nome
+        todas_sublinhas_ordenadas = sorted(
+            todas_sublinhas,
+            key=lambda s: _extrair_numero_sublinha(s.nome)
+        )
+        
         sublinhas_com_postos = []
-        numero_posto_global = 1
 
-        for sublinha in todas_sublinhas:
-            postos_da_sublinha = postos_por_sublinha.get(sublinha.sublinha_id, [])
-            postos_da_sublinha = postos_da_sublinha[:4]
+        for sublinha in todas_sublinhas_ordenadas:
+            # Pegar os postos da sublinha (limitado aos primeiros 4 postos, já ordenados)
+            postos_da_sublinha = postos_por_sublinha.get(sublinha.sublinha_id, [])[:4]
 
+            # Restaurar o nome original dos postos existentes
             for posto in postos_da_sublinha:
-                posto['posto'] = f'Posto {numero_posto_global}'
-                numero_posto_global += 1
+                if 'posto_original' in posto:
+                    posto['posto'] = posto['posto_original']
 
-            vazio_counter = 1
+            # Completar com postos vazios se necessário (mínimo 4 cards por sublinha)
+            contador_vazio = 1
             while len(postos_da_sublinha) < 4:
-                posto_vazio_id = (sublinha.sublinha_id * -1000) - vazio_counter
+                posto_vazio_id = (sublinha.sublinha_id * -1000) - contador_vazio
                 posto_vazio = _criar_posto_vazio(
                     sublinha_id=sublinha.sublinha_id,
-                    posto_nome=f'Posto {numero_posto_global}',
+                    posto_nome=f'Posto {contador_vazio}',
                 )
                 posto_vazio['posto_id'] = posto_vazio_id
                 posto_vazio['hostname'] = ''
                 postos_da_sublinha.append(posto_vazio)
-                numero_posto_global += 1
-                vazio_counter += 1
+                contador_vazio += 1
 
             sublinhas_com_postos.append({
                 'sublinha_id': sublinha.sublinha_id,

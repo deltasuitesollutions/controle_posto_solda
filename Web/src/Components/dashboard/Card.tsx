@@ -46,14 +46,18 @@ const Card = ({posto, mod, peca_nome, operador, habilitado, turno, operacao_nome
     }
   };
 
+  // Verificar se o posto está ativo (tem registro aberto)
+  const postoAtivo = registro_id !== undefined && registro_id !== null;
+
   return (
     <div className='bg-white rounded-lg shadow border border-gray-200'>
-      <div className='p-3' style={{ backgroundColor: 'var(--bg-azul)' }}>
-        <div className='flex items-center justify-between'>
-          <h3 className='text-white font-bold text-sm'>{posto}</h3>
+      {postoAtivo && (
+        <div className='p-3' style={{ backgroundColor: 'var(--bg-azul)' }}>
+          <div className='flex items-center justify-between'>
+            <h3 className='text-white font-bold text-sm'>{posto}</h3>
+          </div>
         </div>
-      </div>
-
+      )}
       <div className='p-3 space-y-2'>
         <div className='grid grid-cols-2 gap-2'>
           <div className='bg-blue-50 rounded p-2 border border-blue-200'>
