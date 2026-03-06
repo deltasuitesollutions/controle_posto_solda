@@ -1,6 +1,6 @@
 services:
   backend:
-    image: portal-st-backend:latest
+    image: controle_posto_solda-backend:latest
     build:
       context: .
       dockerfile: Server/Dockerfile
@@ -18,7 +18,7 @@ services:
       - app-network
 
   frontend:
-    image: portal-st-frontend:latest
+    image: controle_posto_solda-frontend:latest
     build:
       context: .
       dockerfile: Web/Dockerfile
@@ -34,4 +34,3 @@ services:
 networks:
   app-network:
     driver: bridge
-
