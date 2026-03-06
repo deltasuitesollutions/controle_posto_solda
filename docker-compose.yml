@@ -12,6 +12,13 @@ services:
       - ./postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
       - ./postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
       - ./database/init_database.sql:/docker-entrypoint-initdb.d/01-init_database.sql:ro
+      - ./database/migration_add_soft_delete.sql:/docker-entrypoint-initdb.d/02-migration_add_soft_delete.sql:ro
+      - ./database/fix_unique_constraint_produtos.sql:/docker-entrypoint-initdb.d/03-fix_unique_constraint_produtos.sql:ro
+      - ./database/add_data_criacao_produtos_modelos.sql:/docker-entrypoint-initdb.d/04-add_data_criacao_produtos_modelos.sql:ro
+      - ./database/add_funcionarios_turnos.sql:/docker-entrypoint-initdb.d/05-add_funcionarios_turnos.sql:ro
+      - ./database/add_turno_registros_producao.sql:/docker-entrypoint-initdb.d/06-add_turno_registros_producao.sql:ro
+      - ./database/add_dispositivo_nome_column.sql:/docker-entrypoint-initdb.d/07-add_dispositivo_nome_column.sql:ro
+      - ./database/fix_cancelamentos_fk.sql:/docker-entrypoint-initdb.d/08-fix_cancelamentos_fk.sql:ro
     command: >
       postgres
       -c config_file=/etc/postgresql/postgresql.conf
