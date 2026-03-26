@@ -8,6 +8,7 @@ import { registrosAPI } from '../api/api'
 import { postosAPI } from '../api/api'
 import { funcionariosAPI } from '../api/api'
 import { modelosAPI } from '../api/api'
+import { produtosAPI } from '../api/api'
 import * as XLSX from 'xlsx'
 
 interface Registro {
@@ -76,9 +77,9 @@ const Registros = () => {
     // Opções de filtros dinâmicas
     const [opcoesProcesso, setOpcoesProcesso] = useState<{ id: string; label: string }[]>([])
     const [opcoesTurno] = useState<{ id: string; label: string }[]>([
-        { id: 'matutino', label: 'Matutino' },
-        { id: 'vespertino', label: 'Vespertino' },
-        { id: 'noturno', label: 'Noturno' }
+        { id: 'Matutino', label: 'Matutino' },
+        { id: 'Vespertino', label: 'Vespertino' },
+        { id: 'Noturno', label: 'Noturno' }
     ])
     const [opcoesProduto, setOpcoesProduto] = useState<{ id: string; label: string }[]>([])
     const [opcoesMatricula, setOpcoesMatricula] = useState<{ id: string; label: string }[]>([])
@@ -90,9 +91,11 @@ const Registros = () => {
             clearTimeout(debounceTimerRef.current)
         }
         debounceTimerRef.current = setTimeout(() => {
+            const horarioValido = /^([01]\d|2[0-3]):([0-5]\d)$/.test(horarioInput)
             setFiltros(prev => {
-                if (prev.horario === horarioInput) return prev
-                return { ...prev, horario: horarioInput }
+                const proximoHorario = horarioValido ? horarioInput : ''
+                if (prev.horario === proximoHorario) return prev
+                return { ...prev, horario: proximoHorario }
             })
         }, 600)
         return () => {
@@ -115,9 +118,31 @@ const Registros = () => {
                 setOpcoesOperador(funcionarios.map((f: any) => ({ id: f.nome, label: f.nome })))
                 setOpcoesMatricula(funcionarios.map((f: any) => ({ id: f.matricula, label: f.matricula })))
 
-                // Carregar modelos (produtos)
+                // Carregar produtos para o filtro de Produto
+                const produtos = await produtosAPI.listar()
+                const produtosUnicos = Array.from(
+                    new Set(
+                        produtos
+                            .map((p: any) => p.nome)
+                            .filter((nome: string) => Boolean(nome))
+                    )
+                )
+                // Também inclui modelos, pois alguns registros antigos não têm produto vinculado
                 const modelos = await modelosAPI.listarTodos()
-                setOpcoesProduto(modelos.map((m: any) => ({ id: m.descricao || m.codigo, label: m.descricao || m.codigo })))
+                const modelosUnicos = modelos
+                    .map((m: any) => m.descricao || m.codigo)
+                    .filter((valor: string) => Boolean(valor))
+
+                const opcoesProdutoUnicas = Array.from(
+                    new Set([...produtosUnicos, ...modelosUnicos])
+                )
+
+                setOpcoesProduto(
+                    opcoesProdutoUnicas.map((valor: string) => ({
+                        id: valor,
+                        label: valor
+                    }))
+                )
             } catch (error) {
                 console.error('Erro ao carregar opções de filtros:', error)
             }
@@ -139,6 +164,7 @@ const Registros = () => {
 
                 if (filtros.data) params.data = filtros.data
                 if (filtros.processo.length > 0) params.posto = filtros.processo[0]
+                if (filtros.produto.length > 0) params.produto = filtros.produto
                 if (filtros.turno.length > 0) params.turno = filtros.turno
                 if (filtros.horario) params.hora_inicio = filtros.horario
 
@@ -191,14 +217,21 @@ const Registros = () => {
         buscar()
 
         return () => { cancelado = true }
-    }, [paginaAtual, itensPorPagina, filtros.data, filtros.processo, filtros.turno, filtros.horario, refetchTrigger])
+    }, [paginaAtual, itensPorPagina, filtros.data, filtros.processo, filtros.produto, filtros.turno, filtros.horario, refetchTrigger])
 
     // Filtrar registros localmente (filtros que não são suportados pelo backend) — memoizado
     const registrosFiltrados = useMemo(() => {
+        const normalizar = (valor?: string) => (valor || '').trim().toLowerCase()
+        const produtosSelecionados = new Set(filtros.produto.map(normalizar))
+        const matriculasSelecionadas = new Set(filtros.matricula.map(normalizar))
+        const operadoresSelecionados = new Set(filtros.operador.map(normalizar))
+
         return registros.filter(registro =>
-            (filtros.produto.length === 0 || filtros.produto.includes(registro.produto || '')) &&
-            (filtros.matricula.length === 0 || filtros.matricula.includes(registro.matricula || '')) &&
-            (filtros.operador.length === 0 || filtros.operador.includes(registro.operador || ''))
+            (produtosSelecionados.size === 0 ||
+                produtosSelecionados.has(normalizar(registro.produto)) ||
+                produtosSelecionados.has(normalizar(registro.modelo))) &&
+            (matriculasSelecionadas.size === 0 || matriculasSelecionadas.has(normalizar(registro.matricula))) &&
+            (operadoresSelecionados.size === 0 || operadoresSelecionados.has(normalizar(registro.operador)))
         )
     }, [registros, filtros.produto, filtros.matricula, filtros.operador])
 
@@ -407,10 +440,10 @@ const Registros = () => {
                             {/* Filtros no topo */}
                             <div className="p-6 border-b border-gray-200">
                                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
-                                    {/* PROCESSO */}
+                                    {/* POSTO */}
                                     <div>
                                         <label className="block text-xs font-medium text-gray-700 mb-1">
-                                            PROCESSO
+                                            POSTO
                                         </label>
                                         <button
                                             onClick={() => setModalAberto('processo')}
@@ -423,10 +456,10 @@ const Registros = () => {
                                         </button>
                                     </div>
 
-                                    {/* Horário */}
+                                    {/* HORÁRIO */}
                                     <div>
                                         <label className="block text-xs font-medium text-gray-700 mb-1">
-                                            Horário
+                                            HORÁRIO
                                         </label>
                                         <input
                                             type="text"
@@ -493,10 +526,10 @@ const Registros = () => {
                                         </div>
                                     </div>
 
-                                    {/* Produto */}
+                                    {/* PRODUTO */}
                                     <div>
                                         <label className="block text-xs font-medium text-gray-700 mb-1">
-                                            Produto
+                                            PRODUTO
                                         </label>
                                         <button
                                             onClick={() => setModalAberto('produto')}
@@ -785,7 +818,7 @@ const Registros = () => {
             {/* Modais de Filtro */}
             {modalAberto === 'processo' && (
                 <ModalFiltro
-                    titulo="Processo"
+                    titulo="Posto"
                     opcoes={opcoesProcesso}
                     valoresSelecionados={filtros.processo}
                     onConfirmar={(valores) => handleConfirmarFiltro('processo', valores)}

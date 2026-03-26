@@ -66,6 +66,15 @@ const Funcionarios = () => {
         setFuncionarioSelecionado(null)
     }
 
+    const fecharModalSucesso = () => {
+        setModalSucessoAberto(false)
+        setMensagemSucesso('')
+    }
+
+    const fecharModalErro = () => {
+        setModalErroAberto(false)
+    }
+
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             const activeElement = document.activeElement
@@ -247,7 +256,7 @@ const Funcionarios = () => {
             await funcionariosAPI.atualizar(funcionarioId, dadosAtualizacao)
             
             await carregarFuncionarios()
-            fecharModal()
+            setModalEditarAberto(false)
             setMensagemSucesso('Funcionário atualizado com sucesso!')
             setModalSucessoAberto(true)
         } catch (error: any) {
@@ -747,14 +756,14 @@ const Funcionarios = () => {
 
             <ModalSucesso
                 isOpen={modalSucessoAberto}
-                onClose={fecharModal}
+                onClose={fecharModalSucesso}
                 mensagem={mensagemSucesso}
                 titulo="Sucesso!"
             />
 
             <ModalErro
                 isOpen={modalErroAberto}
-                onClose={fecharModal}
+                onClose={fecharModalErro}
                 mensagem={mensagemErro}
                 titulo={tituloErro}
             />

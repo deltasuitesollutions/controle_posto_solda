@@ -378,6 +378,7 @@ export const registrosAPI = {
     data?: string
     posto?: string
     operacao?: string
+    produto?: string[]
     turno?: string[]
     hora_inicio?: string
     hora_fim?: string
@@ -388,6 +389,9 @@ export const registrosAPI = {
     if (params?.data) queryParams.append('data', params.data)
     if (params?.posto) queryParams.append('posto', params.posto)
     if (params?.operacao) queryParams.append('operacao', params.operacao)
+    if (params?.produto && params.produto.length > 0) {
+      queryParams.append('produto', params.produto.join(','))
+    }
     if (params?.turno && params.turno.length > 0) {
       queryParams.append('turno', params.turno.join(','))
     }

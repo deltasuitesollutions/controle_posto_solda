@@ -55,6 +55,7 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
     const [mensagemSucesso, setMensagemSucesso] = useState('')
     const [mensagemErro, setMensagemErro] = useState('')
     const [tituloErro, setTituloErro] = useState('Erro!')
+    const normalizarTagRfid = (valor: string) => valor.replace(/[\r\n\t\0]/g, '').trim()
 
     useEffect(() => {
         carregarOperacoes()
@@ -132,7 +133,9 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
             return
         }
 
-        if (!tagTemporaria.trim()) {
+        const tagNormalizada = normalizarTagRfid(tagTemporaria)
+
+        if (!tagNormalizada) {
             setTituloErro('Atenção!')
             setMensagemErro('Por favor, informe o código da tag temporária')
             setModalErroAberto(true)
@@ -143,7 +146,7 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
         try {
             const tagCriada = await tagsTemporariasAPI.criar({
                 funcionario_id: funcionarioEditando.id,
-                tag_id: tagTemporaria.trim(),
+                tag_id: tagNormalizada,
                 horas_duracao: 10
             })
             
@@ -157,9 +160,6 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
             
             // Recarregar as tags
             await carregarTagsTemporarias()
-            
-            setMensagemSucesso('Tag temporária cadastrada com sucesso! Ela será válida por 10 horas.')
-            setModalSucessoAberto(true)
         } catch (error: any) {
             console.error('Erro ao criar tag temporária:', error)
             const errorMessage = error?.message || 'Erro ao cadastrar tag temporária. Tente novamente.'
@@ -184,8 +184,6 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
             await carregarTagsTemporarias()
             setModalExcluirTagAberto(false)
             setTagParaExcluir(null)
-            setMensagemSucesso('Tag temporária excluída com sucesso!')
-            setModalSucessoAberto(true)
         } catch (error: any) {
             const errorMessage = error?.message || 'Erro ao excluir tag temporária. Tente novamente.'
             setTituloErro('Erro!')
@@ -323,7 +321,16 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
                                             className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
                                             placeholder="Código da tag temporária"
                                             value={tagTemporaria}
-                                            onChange={(e) => setTagTemporaria(e.target.value)}
+                                            onChange={(e) => setTagTemporaria(normalizarTagRfid(e.target.value))}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault()
+                                                    e.stopPropagation()
+                                                    if (!criandoTag) {
+                                                        handleCriarTagTemporaria()
+                                                    }
+                                                }
+                                            }}
                                         />
                                         <button
                                             type="button"
@@ -575,7 +582,6 @@ const ModalEditarFuncionario = ({ isOpen, onClose, onSave, funcionarioEditando }
                     <button
                         type="submit"
                         form="funcionario-form"
-                        onClick={handleSubmit}
                         className="flex items-center gap-2 px-5 py-2.5 text-white rounded-lg transition-all font-medium shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                         style={{ backgroundColor: 'var(--bg-azul)' }}
                         onMouseEnter={(e) => {
