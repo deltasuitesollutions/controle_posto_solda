@@ -9,6 +9,61 @@ from Server.models.peca import Peca
 from Server.models.database import DatabaseConnection
 from Server.services import dispositivo_raspberry_service
 
+def _normalizar_texto(valor: Optional[str]) -> str:
+    return (valor or '').strip().lower()
+
+def _resolver_pecas_por_entrada(pecas_entrada: Optional[List[str]]) -> List[Peca]:
+    """
+    Resolve itens de peça recebidos do frontend aceitando:
+    - "nome - codigo"
+    - apenas "nome"
+    - apenas "codigo"
+    Retorna objetos Peca sem duplicidade.
+    """
+    if not pecas_entrada:
+        return []
+
+    todas_pecas = Peca.listar_todas()
+    pecas_por_id: Dict[int, Peca] = {}
+
+    for item in pecas_entrada:
+        valor = (item or '').strip()
+        if not valor:
+            continue
+
+        nome_parte = ''
+        codigo_parte = ''
+        if ' - ' in valor:
+            nome_parte, codigo_parte = [parte.strip() for parte in valor.split(' - ', 1)]
+        else:
+            # quando vier apenas um token, tentamos casar por nome ou codigo
+            nome_parte = valor
+            codigo_parte = valor
+
+        nome_norm = _normalizar_texto(nome_parte)
+        codigo_norm = _normalizar_texto(codigo_parte)
+        valor_norm = _normalizar_texto(valor)
+
+        peca_encontrada = None
+        for p in todas_pecas:
+            p_nome = _normalizar_texto(p.nome)
+            p_codigo = _normalizar_texto(p.codigo)
+
+            # Prioriza match combinado quando vier "nome - codigo"
+            if ' - ' in valor and nome_norm and codigo_norm and p_nome == nome_norm and p_codigo == codigo_norm:
+                peca_encontrada = p
+                break
+
+            # Fallback: match por nome, codigo ou valor integral
+            if p_nome in {nome_norm, valor_norm} or p_codigo in {codigo_norm, valor_norm}:
+                peca_encontrada = p
+                break
+
+        if peca_encontrada and peca_encontrada.id is not None:
+            pecas_por_id[peca_encontrada.id] = peca_encontrada
+
+    return list(pecas_por_id.values())
+
 # Busca informações do dispositivo Raspberry baseado no toten_id
 def _buscar_info_dispositivo_por_toten(toten_id: int) -> Dict[str, Any]:
     """
@@ -37,82 +92,103 @@ def _buscar_info_dispositivo_por_toten(toten_id: int) -> Dict[str, Any]:
 # LISTAR
 def listar_operacoes() -> List[Dict[str, Any]]:
     try:
-        operacoes = Operacao.listar_todas()
-        operacoes_agrupadas = {}
-        
-        for operacao in operacoes:
-            produto = Produto.buscarId(operacao.produto_id) if operacao.produto_id else None
-            modelo = Modelo.buscar_por_id(operacao.modelo_id) if operacao.modelo_id else None
-            sublinha = Sublinha.buscar_por_id(operacao.sublinha_id) if operacao.sublinha_id else None
-            linha = None
-            if sublinha:
-                linha = Linha.buscar_por_id(sublinha.linha_id)
-            posto = Posto.buscar_por_id(operacao.posto_id) if operacao.posto_id else None
-            nome_operacao = operacao.nome or operacao.codigo_operacao
-            chave = f"{nome_operacao}_{produto.id if produto else ''}_{modelo.id if modelo else ''}_{sublinha.sublinha_id if sublinha else ''}_{posto.posto_id if posto else ''}"
-            
-            if chave not in operacoes_agrupadas:
-                query_totens = """
-                    SELECT DISTINCT toten_nome 
-                    FROM operacao_totens 
-                    WHERE operacao_id = %s
-                """
-                totens_rows = DatabaseConnection.execute_query(query_totens, (operacao.operacao_id,), fetch_all=True)
-                totens = [row[0] for row in totens_rows] if totens_rows else []
-                if not totens and posto:
-                    totens = [f'ID-{posto.toten_id}']
-                
-                query_pecas = """
-                    SELECT p.peca_id, p.codigo, p.nome
-                    FROM operacao_pecas op
-                    INNER JOIN pecas p ON op.peca_id = p.peca_id
-                    WHERE op.operacao_id = %s
-                """
-                pecas_rows = DatabaseConnection.execute_query(query_pecas, (operacao.operacao_id,), fetch_all=True)
-                pecas_relacionadas = [Peca.buscar_por_id(row[0]) for row in pecas_rows] if pecas_rows else []
-                pecas_codigos = [p.codigo for p in pecas_relacionadas if p]
-                pecas_nomes = [p.nome for p in pecas_relacionadas if p]
-                
-                if not pecas_codigos and modelo:
-                    pecas_modelo = Peca.buscar_por_modelo_id(modelo.id)
-                    pecas_codigos = list(set([p.codigo for p in pecas_modelo]))
-                    pecas_nomes = list(set([p.nome for p in pecas_modelo]))
-                
-                # Usar codigo_operacao da própria tabela operacoes
-                codigos_list = [operacao.codigo_operacao] if operacao.codigo_operacao else []
-                
-                if not codigos_list and pecas_codigos:
-                    codigos_list = [pecas_codigos[0]]
-                
-                # Buscar informações do dispositivo se houver posto
-                serial = ''
-                nome = ''
-                dispositivo_id = None
-                if posto:
-                    info_dispositivo = _buscar_info_dispositivo_por_toten(posto.toten_id)
-                    serial = info_dispositivo['serial']
-                    nome = info_dispositivo['nome']
-                    dispositivo_id = info_dispositivo['dispositivo_id']
-                
-                operacoes_agrupadas[chave] = {
-                    'id': str(operacao.operacao_id),  
-                    'operacao': operacao.nome or operacao.codigo_operacao,  
-                    'produto': produto.nome if produto else '',
-                    'modelo': modelo.descricao if modelo else '',
-                    'linha': linha.nome if linha else '',
-                    'posto': posto.nome if posto else '',
-                    'totens': totens,
-                    'pecas': pecas_codigos,
-                    'pecas_nomes': pecas_nomes,  
-                    'codigos': codigos_list,
-                    'serial': serial,
-                    'hostname': nome,
-                    'dispositivo_id': dispositivo_id
-                }
-        
-        resultado = list(operacoes_agrupadas.values())
-        resultado.sort(key=lambda x: x.get('operacao', ''))
-        
+        # Query única para evitar N+1 (produto/modelo/linha/posto/totens/pecas/dispositivo)
+        query = """
+            SELECT
+                o.operacao_id,
+                COALESCE(o.nome, o.codigo_operacao) AS operacao_nome,
+                o.codigo_operacao,
+                COALESCE(pr.nome, '') AS produto_nome,
+                COALESCE(m.nome, '') AS modelo_nome,
+                COALESCE(l.nome, '') AS linha_nome,
+                COALESCE(p.nome, '') AS posto_nome,
+                p.toten_id,
+                dr.id AS dispositivo_id,
+                COALESCE(dr.serial, '') AS dispositivo_serial,
+                COALESCE(dr.nome, '') AS dispositivo_nome,
+                COALESCE(
+                    (SELECT array_agg(DISTINCT ot.toten_nome)
+                     FROM operacao_totens ot
+                     WHERE ot.operacao_id = o.operacao_id),
+                    ARRAY[]::TEXT[]
+                ) AS totens,
+                COALESCE(
+                    (SELECT array_agg(DISTINCT pe.codigo)
+                     FROM operacao_pecas op2
+                     JOIN pecas pe ON pe.peca_id = op2.peca_id
+                     WHERE op2.operacao_id = o.operacao_id),
+                    ARRAY[]::TEXT[]
+                ) AS pecas_codigos,
+                COALESCE(
+                    (SELECT array_agg(DISTINCT pe.nome)
+                     FROM operacao_pecas op2
+                     JOIN pecas pe ON pe.peca_id = op2.peca_id
+                     WHERE op2.operacao_id = o.operacao_id),
+                    ARRAY[]::TEXT[]
+                ) AS pecas_nomes,
+                COALESCE(
+                    (SELECT array_agg(DISTINCT pe2.codigo)
+                     FROM pecas pe2
+                     INNER JOIN modelo_pecas mp2 ON mp2.peca_id = pe2.peca_id
+                     WHERE mp2.modelo_id = o.modelo_id),
+                    ARRAY[]::TEXT[]
+                ) AS pecas_modelo_codigos,
+                COALESCE(
+                    (SELECT array_agg(DISTINCT pe2.nome)
+                     FROM pecas pe2
+                     INNER JOIN modelo_pecas mp2 ON mp2.peca_id = pe2.peca_id
+                     WHERE mp2.modelo_id = o.modelo_id),
+                    ARRAY[]::TEXT[]
+                ) AS pecas_modelo_nomes
+            FROM operacoes o
+            LEFT JOIN produtos pr ON pr.produto_id = o.produto_id
+            LEFT JOIN modelos m ON m.modelo_id = o.modelo_id
+            LEFT JOIN sublinhas s ON s.sublinha_id = o.sublinha_id
+            LEFT JOIN linhas l ON l.linha_id = s.linha_id
+            LEFT JOIN postos p ON p.posto_id = o.posto_id
+            LEFT JOIN dispositivos_raspberry dr ON dr.id = p.toten_id
+            ORDER BY COALESCE(o.nome, o.codigo_operacao), o.operacao_id DESC
+        """
+
+        rows = DatabaseConnection.execute_query(query, fetch_all=True)
+        if not rows:
+            return []
+
+        resultado: List[Dict[str, Any]] = []
+        for row in rows:
+            totens = row[11] if row[11] else []
+            pecas_codigos = row[12] if row[12] else []
+            pecas_nomes = row[13] if row[13] else []
+            pecas_modelo_codigos = row[14] if row[14] else []
+            pecas_modelo_nomes = row[15] if row[15] else []
+
+            if not pecas_codigos:
+                pecas_codigos = pecas_modelo_codigos
+            if not pecas_nomes:
+                pecas_nomes = pecas_modelo_nomes
+
+            if not totens and row[7]:
+                totens = [f'ID-{row[7]}']
+
+            codigo_operacao = row[2] or ''
+            codigos_list = [codigo_operacao] if codigo_operacao else (pecas_codigos[:1] if pecas_codigos else [])
+
+            resultado.append({
+                'id': str(row[0]),
+                'operacao': row[1] or codigo_operacao,
+                'produto': row[3],
+                'modelo': row[4],
+                'linha': row[5],
+                'posto': row[6],
+                'totens': totens,
+                'pecas': pecas_codigos,
+                'pecas_nomes': pecas_nomes,
+                'codigos': codigos_list,
+                'serial': row[9] or '',
+                'hostname': row[10] or '',
+                'dispositivo_id': row[8]
+            })
+
         return resultado
     except Exception as erro:
         print(f'Erro ao listar operações: {erro}')
@@ -252,16 +328,7 @@ def criar_operacao(
                 """
                 DatabaseConnection.execute_query(query_toten, (nova_operacao.operacao_id, toten_nome))
         
-        todas_pecas = Peca.listar_todas()
-        pecas_encontradas = []
-        if pecas and len(pecas) > 0:
-            for item_peca in pecas:
-                # Suporte ao formato "nome - codigo" ou apenas "nome"
-                nome_peca = item_peca.split(' - ')[0].strip() if ' - ' in item_peca else item_peca.strip()
-                for p in todas_pecas:
-                    if p.nome == nome_peca:
-                        pecas_encontradas.append(p)
-                        break
+        pecas_encontradas = _resolver_pecas_por_entrada(pecas)
         
         if not pecas_encontradas and modelo_obj:
             pecas_encontradas = Peca.buscar_por_modelo_id(modelo_obj.id)
@@ -357,18 +424,14 @@ def atualizar_operacao(
             query_delete_pecas = "DELETE FROM operacao_pecas WHERE operacao_id = %s"
             DatabaseConnection.execute_query(query_delete_pecas, (operacao_id,))
             if len(pecas) > 0:
-                todas_pecas = Peca.listar_todas()
-                for item_peca in pecas:
-                    nome_peca = item_peca.split(' - ')[0].strip() if ' - ' in item_peca else item_peca.strip()
-                    for p in todas_pecas:
-                        if p.nome == nome_peca:
-                            query_insert_peca = """
-                                INSERT INTO operacao_pecas (operacao_id, peca_id)
-                                VALUES (%s, %s)
-                                ON CONFLICT (operacao_id, peca_id) DO NOTHING
-                            """
-                            DatabaseConnection.execute_query(query_insert_peca, (operacao_id, p.id))
-                            break
+                pecas_encontradas = _resolver_pecas_por_entrada(pecas)
+                for p in pecas_encontradas:
+                    query_insert_peca = """
+                        INSERT INTO operacao_pecas (operacao_id, peca_id)
+                        VALUES (%s, %s)
+                        ON CONFLICT (operacao_id, peca_id) DO NOTHING
+                    """
+                    DatabaseConnection.execute_query(query_insert_peca, (operacao_id, p.id))
         
         
         return {

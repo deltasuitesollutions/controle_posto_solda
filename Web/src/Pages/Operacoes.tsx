@@ -91,6 +91,7 @@ const Operacoes = () => {
     
     // Ref para controlar se estamos carregando dados de edição (evita limpar peças no useEffect)
     const isLoadingEditData = useRef(false)
+    const previousProdutoRef = useRef('')
 
     // Dados para os dropdowns
     const [produtos, setProdutos] = useState<Produto[]>([])
@@ -102,14 +103,19 @@ const Operacoes = () => {
 
     // Carregar dados ao montar o componente
     useEffect(() => {
-        carregarDadosDropdowns()
+        if (!produtos.length || !todosModelos.length || !postos.length || !linhasComSublinhas.length) {
+            carregarDadosDropdowns()
+        }
         if (abaAtiva === 'listar') {
             carregarOperacoes()
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [abaAtiva])
 
     // Filtrar modelos quando produto mudar
     useEffect(() => {
+        const produtoAlterou = previousProdutoRef.current !== produto
+
         if (produto) {
             // Encontrar o produto selecionado pelo nome
             const produtoSelecionado = produtos.find(p => p.nome === produto)
@@ -120,16 +126,18 @@ const Operacoes = () => {
             } else {
                 setModelos([])
             }
-            // Limpar modelo selecionado quando produto mudar (exceto se estiver carregando dados de edição)
-            if (!isLoadingEditData.current) {
+            // Limpar modelo somente quando o produto realmente mudou
+            if (produtoAlterou && !isLoadingEditData.current) {
                 setModelo('')
             }
         } else {
             setModelos([])
-            if (!isLoadingEditData.current) {
+            if (produtoAlterou && !isLoadingEditData.current) {
                 setModelo('')
             }
         }
+
+        previousProdutoRef.current = produto
     }, [produto, produtos, todosModelos])
 
     // Carregar peças quando modelo mudar
@@ -255,15 +263,17 @@ const Operacoes = () => {
         }
     }
 
-    const carregarPecasPorModelo = async () => {
+    const carregarPecasPorModelo = async (modeloNome?: string) => {
         try {
-            if (!modelo) {
+            const modeloParaBuscar = modeloNome ?? modelo
+
+            if (!modeloParaBuscar) {
                 setPecasDisponiveis([])
                 return
             }
 
             // Encontrar o modelo selecionado (buscar em todosModelos para garantir que encontre mesmo se não estiver filtrado)
-            const modeloSelecionado = todosModelos.find(m => m.nome === modelo) || modelos.find(m => m.nome === modelo)
+            const modeloSelecionado = todosModelos.find(m => m.nome === modeloParaBuscar) || modelos.find(m => m.nome === modeloParaBuscar)
             if (!modeloSelecionado) {
                 setPecasDisponiveis([])
                 return
@@ -288,18 +298,22 @@ const Operacoes = () => {
             setCarregando(true)
             setErro(null)
             const dados = await operacoesAPI.listarTodos()
-            setOperacoes(dados.map((op: any) => ({
-                id: op.id,
-                operacao: op.operacao,
-                produto: op.produto,
-                modelo: op.modelo,
-                linha: op.linha,
-                posto: op.posto,
-                toten: op.toten || op.totens?.[0] || '',
-                pecas: op.pecas || [],
-                serial: op.serial || '',
-                nome: op.nome || ''
-            })))
+            const operacoesOrdenadas = dados
+                .map((op: any) => ({
+                    id: op.id,
+                    operacao: op.operacao,
+                    produto: op.produto,
+                    modelo: op.modelo,
+                    linha: op.linha,
+                    posto: op.posto,
+                    toten: op.toten || op.totens?.[0] || '',
+                    pecas: op.pecas || [],
+                    serial: op.serial || '',
+                    nome: op.nome || ''
+                }))
+                .sort((a: any, b: any) => Number(b.id) - Number(a.id))
+
+            setOperacoes(operacoesOrdenadas)
         } catch (error) {
             console.error('Erro ao carregar operações:', error)
             setErro(error instanceof Error ? error.message : 'Erro ao carregar operações')
@@ -435,6 +449,11 @@ const Operacoes = () => {
     const handleEditarOperacao = async (op: Operacao) => {
         // Marcar que estamos carregando dados de edição (evita limpar peças no useEffect)
         isLoadingEditData.current = true
+
+        // Garantir que os dados-base dos selects estejam carregados para o modo edição
+        if (!produtos.length || !todosModelos.length || !postos.length) {
+            await carregarDadosDropdowns()
+        }
         
         // Garantir que as linhas com sublinhas estejam carregadas
         if (linhasComSublinhas.length === 0) {
@@ -443,6 +462,16 @@ const Operacoes = () => {
         
         setOperacao(op.operacao)
         setProduto(op.produto)
+
+        // Deixar os modelos do produto já filtrados antes de atribuir o valor editado
+        const produtoSelecionado = produtos.find(p => p.nome === op.produto)
+        if (produtoSelecionado) {
+            const modelosFiltrados = todosModelos.filter(m => m.produto_id === produtoSelecionado.id)
+            setModelos(modelosFiltrados)
+        } else {
+            setModelos([])
+        }
+
         setModelo(op.modelo)
         
         // Encontrar o display correspondente ao nome da linha salvo
@@ -469,16 +498,11 @@ const Operacoes = () => {
         
         // Carregar peças do modelo se houver modelo selecionado
         if (op.modelo) {
-            const modeloSelecionado = todosModelos.find(m => m.nome === op.modelo)
-            if (modeloSelecionado) {
-                await carregarPecasPorModelo()
-            }
+            await carregarPecasPorModelo(op.modelo)
         }
         
-        // Resetar a flag após um breve delay para garantir que os useEffects já executaram
-        setTimeout(() => {
-            isLoadingEditData.current = false
-        }, 100)
+        // Liberar limpeza automática somente após terminar de preencher os campos de edição
+        isLoadingEditData.current = false
     }
 
     const indiceInicio = (paginaAtual - 1) * itensPorPagina
@@ -702,6 +726,15 @@ const Operacoes = () => {
                                         </div>
 
                                         <div className="flex justify-end gap-3 mt-6">
+                                            {operacaoEditandoId && (
+                                                <button
+                                                    type="button"
+                                                    onClick={limparFormulario}
+                                                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+                                                >
+                                                    Cancelar edição
+                                                </button>
+                                            )}
                                             <button
                                                 type="submit"
                                                 className="px-4 py-2 text-white rounded-md disabled:opacity-50"
