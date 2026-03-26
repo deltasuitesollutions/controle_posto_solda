@@ -11,6 +11,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
       - ./postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      # Scripts de 01 a 08 para inicialização do banco no Master
       - ./database/init_database.sql:/docker-entrypoint-initdb.d/01-init_database.sql:ro
       - ./database/migration_add_soft_delete.sql:/docker-entrypoint-initdb.d/02-migration_add_soft_delete.sql:ro
       - ./database/fix_unique_constraint_produtos.sql:/docker-entrypoint-initdb.d/03-fix_unique_constraint_produtos.sql:ro
@@ -34,6 +35,7 @@ services:
       - app-network
 
   backend:
+    image: controle_posto_solda-backend:latest
     build:
       context: .
       dockerfile: Server/Dockerfile
@@ -54,6 +56,7 @@ services:
       - app-network
 
   frontend:
+    image: controle_posto_solda-frontend:latest
     build:
       context: .
       dockerfile: Web/Dockerfile
