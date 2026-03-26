@@ -135,6 +135,7 @@ def _construir_filtros(
     posto: Optional[str] = None,
     operacao: Optional[str] = None,
     data: Optional[str] = None,
+    produto: Optional[List[str]] = None,
     turno: Optional[List[str]] = None,
     hora_inicio: Optional[str] = None,
     hora_fim: Optional[str] = None
@@ -163,16 +164,40 @@ def _construir_filtros(
     if data:
         where_conditions.append("r.data_inicio = %s")
         params.append(data)
+
+    # Filtro por produto/modelo (aceita os nomes exibidos na coluna Produto)
+    if produto and len(produto) > 0:
+        produtos_normalizados = [str(p).strip().lower() for p in produto if str(p).strip()]
+        if produtos_normalizados:
+            placeholders = ','.join(['%s'] * len(produtos_normalizados))
+            where_conditions.append(f"""(
+                EXISTS (
+                    SELECT 1
+                    FROM operacoes o2
+                    LEFT JOIN produtos pr2 ON o2.produto_id = pr2.produto_id
+                    WHERE o2.operacao_id = r.operacao_id
+                    AND LOWER(COALESCE(pr2.nome, '')) IN ({placeholders})
+                )
+                OR EXISTS (
+                    SELECT 1
+                    FROM modelos m2
+                    WHERE m2.modelo_id = r.modelo_id
+                    AND LOWER(COALESCE(m2.nome, '')) IN ({placeholders})
+                )
+            )""")
+            params.extend(produtos_normalizados)
+            params.extend(produtos_normalizados)
     
     # Filtro por turno (através do funcionário usando a tabela funcionarios_turnos)
     if turno and len(turno) > 0:
-        placeholders = ','.join(['%s'] * len(turno))
+        turnos_normalizados = [str(t).strip().lower() for t in turno if str(t).strip()]
+        placeholders = ','.join(['%s'] * len(turnos_normalizados))
         where_conditions.append(f"""EXISTS (
             SELECT 1 FROM funcionarios_turnos ft 
             WHERE ft.funcionario_id = r.funcionario_id 
-            AND ft.turno IN ({placeholders})
+            AND LOWER(ft.turno) IN ({placeholders})
         )""")
-        params.extend(turno)
+        params.extend(turnos_normalizados)
     
     # Filtro por hora de início
     if hora_inicio:
@@ -439,6 +464,7 @@ def listar_registros(
     data: Optional[str] = None, 
     posto: Optional[str] = None, 
     operacao: Optional[str] = None,
+    produto: Optional[List[str]] = None,
     turno: Optional[List[str]] = None,
     hora_inicio: Optional[str] = None,
     hora_fim: Optional[str] = None
@@ -459,7 +485,7 @@ def listar_registros(
         
         # Construir filtros
         where_clause, params = _construir_filtros(
-            posto, operacao, data, turno, hora_inicio, hora_fim
+            posto, operacao, data, produto, turno, hora_inicio, hora_fim
         )
         
         # Contar registros

@@ -14,6 +14,7 @@ def listar_registros() -> Union[Response, Tuple[Response, int]]:
         data_filtro = request.args.get('data')
         posto_filtro = request.args.get('posto')
         operacao_filtro = request.args.get('operacao')
+        produto_filtro = request.args.get('produto')
         turno_filtro = request.args.get('turno')
         hora_inicio_filtro = request.args.get('hora_inicio')
         hora_fim_filtro = request.args.get('hora_fim')
@@ -24,6 +25,13 @@ def listar_registros() -> Union[Response, Tuple[Response, int]]:
                 turnos_list = [t.strip() for t in turno_filtro.split(',') if t.strip()]
             elif isinstance(turno_filtro, list):
                 turnos_list = turno_filtro
+
+        produtos_list = None
+        if produto_filtro:
+            if isinstance(produto_filtro, str):
+                produtos_list = [p.strip() for p in produto_filtro.split(',') if p.strip()]
+            elif isinstance(produto_filtro, list):
+                produtos_list = produto_filtro
         
         resultado = registro_service.listar_registros(
             limit=limit,
@@ -31,6 +39,7 @@ def listar_registros() -> Union[Response, Tuple[Response, int]]:
             data=data_filtro,
             posto=posto_filtro,
             operacao=operacao_filtro,
+            produto=produtos_list,
             turno=turnos_list,
             hora_inicio=hora_inicio_filtro,
             hora_fim=hora_fim_filtro
