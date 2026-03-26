@@ -72,8 +72,7 @@ const MenuLateral = () => {
             { to: '/dispositivos-raspberry', title: 'Dispositivos Raspberry', icon: 'bi-cpu', label: 'Dispositivos Raspberry' },
             { to: '/postos', title: 'Postos', icon: 'bi-pin-map-fill', label: 'Cadastro de Postos' },
             { to: '/operacoes', title: 'Operacoes', icon: 'bi-gear', label: 'Cadastro de Operações' },
-            { to: '/usuarios', title: 'Usuarios', icon: 'bi-person-check-fill', label: 'Cadastro de Usuários' },
-            { to: '/operacoesCanceladas', title: 'Operações Canceladas', icon: 'bi-shield-check', label: 'Operações do dia' }
+            { to: '/usuarios', title: 'Usuarios', icon: 'bi-person-check-fill', label: 'Cadastro de Usuários' }
         );
     } else if (isOperador) {
         // Rotas IHM apenas para operadores - apenas leitor (fluxo sequencial)
@@ -91,8 +90,7 @@ const MenuLateral = () => {
             { to: '/linhas', title: 'Linhas', icon: 'bi-layers', label: 'Cadastro de Linhas' },
             { to: '/dispositivos-raspberry', title: 'Dispositivos Raspberry', icon: 'bi-cpu', label: 'Dispositivos Raspberry' },
             { to: '/postos', title: 'Postos', icon: 'bi-pin-map-fill', label: 'Cadastro de Postos' },
-            { to: '/operacoes', title: 'Operacoes', icon: 'bi-gear', label: 'Cadastro de Operações' },
-            { to: '/operacoesCanceladas', title: 'Operações Canceladas', icon: 'bi-shield-check', label: 'Operações do dia' }
+            { to: '/operacoes', title: 'Operacoes', icon: 'bi-gear', label: 'Cadastro de Operações' }
         );
     }
 

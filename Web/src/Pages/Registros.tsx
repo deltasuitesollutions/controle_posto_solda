@@ -188,7 +188,7 @@ const Registros = () => {
                     produto: reg.produto?.nome || reg.modelo?.descricao || reg.modelo?.codigo || '',
                     modelo: reg.modelo?.descricao || reg.modelo?.codigo || '',
                     modelo_codigo: reg.modelo?.codigo || '',
-                    quantidade: reg.quantidade || 0,
+                    quantidade: reg.quantidade ?? 0,
                     turno: reg.funcionario?.turno || '',
                     operacao: reg.operacao?.nome || reg.operacao?.codigo || '-',
                     comentarios: reg.comentarios || '-',
@@ -333,7 +333,7 @@ const Registros = () => {
             reg.modelo || '',
             reg.peca || '',
             reg.codigo_producao || '',
-            String(reg.quantidade || ''),
+            String(reg.quantidade ?? ''),
             reg.data_inicio ? new Date(reg.data_inicio).toLocaleDateString('pt-BR') : '',
             reg.hora_inicio || reg.hora || '',
             reg.hora_fim || '',
@@ -698,7 +698,7 @@ const Registros = () => {
                                                             {registro.codigo_producao || '-'}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {registro.quantidade || '-'}
+                                                            {registro.quantidade ?? '-'}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                             {registro.data_inicio ? (() => {

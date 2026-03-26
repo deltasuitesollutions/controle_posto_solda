@@ -26,20 +26,6 @@ interface Sublinha {
   postos: CardProps[];
 }
 
-const MetricCard = ({ titulo, valor, icone, cor }: { titulo: string; valor: string | number; icone: string; cor: string }) => {
-  return (
-    <div className="rounded-lg p-3 shadow" style={{ backgroundColor: cor }}>
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-white text-xs mb-1">{titulo}</p>
-          <p className="text-white text-xl font-bold">{valor}</p>
-        </div>
-        <i className={`${icone} text-white text-lg`}></i>
-      </div>
-    </div>
-  );
-};
-
 const Dashboard = () => {
   const processos = [
     { id: 'sub_linha_chassi', nome: 'SUB LINHA CHASSI' },
@@ -48,12 +34,6 @@ const Dashboard = () => {
   const [processoSelecionado, setProcessoSelecionado] = useState('sub_linha_chassi');
   const [selectAberto, setSelectAberto] = useState(false);
   const [sublinhas, setSublinhas] = useState<Sublinha[]>([]);
-  const [metricas, setMetricas] = useState({
-    postosAtivos: 0,
-    totalPostos: 0,
-    producaoHoje: 0,
-    operadoresAtivos: 0
-  });
   const [carregando, setCarregando] = useState(true);
   const socketRef = useRef<Socket | null>(null);
   const dadosCarregados = useRef(false);
@@ -90,9 +70,6 @@ const Dashboard = () => {
     socket.on('dashboard_update', (dados: any) => {
       try {
         if (dados && typeof dados === 'object') {
-          if (dados.metricas) {
-            setMetricas(dados.metricas);
-          }
           if (dados.sublinhas && Array.isArray(dados.sublinhas)) {
             setSublinhas(dados.sublinhas);
           }
@@ -120,11 +97,7 @@ const Dashboard = () => {
   const carregarDadosDashboard = async () => {
     try {
       const dados = await dashboardAPI.obterDados();
-      
-      if (dados.metricas) {
-        setMetricas(dados.metricas);
-      }
-      
+
       if (dados.sublinhas) {
         setSublinhas(dados.sublinhas);
       }
@@ -142,11 +115,7 @@ const Dashboard = () => {
   const atualizarDadosSilencioso = async () => {
     try {
       const dados = await dashboardAPI.obterDados();
-      
-      if (dados.metricas) {
-        setMetricas(dados.metricas);
-      }
-      
+
       if (dados.sublinhas) {
         setSublinhas(dados.sublinhas);
       }
@@ -181,9 +150,9 @@ const Dashboard = () => {
         <MenuLateral />
         
         <main className="flex-1 px-10 py-4 ml-20 mt-24"> 
-          <div className="grid grid-cols-4 gap-3 mb-6">
+          <div className="grid grid-cols-1 gap-3 mb-6 max-w-sm">
             {/* Select de Processo */}
-            <div className="col-span-1 relative select-processo">
+            <div className="relative select-processo">
               <label className="block mb-2 text-sm font-medium text-gray-700 uppercase">
                 Seleção do Processo
               </label>
@@ -230,18 +199,6 @@ const Dashboard = () => {
                 </div>
               )}
             </div>
-            <MetricCard
-              titulo="Produção Hoje"
-              valor={metricas.producaoHoje}
-              icone="bi bi-box-seam"
-              cor="var(--bg-laranja)"
-            />
-            <MetricCard
-              titulo="Operadores"
-              valor={metricas.operadoresAtivos}
-              icone="bi bi-people"
-              cor="var(--bg-azul)"
-            />
           </div>
 
           {carregando ? (

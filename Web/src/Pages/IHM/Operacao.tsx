@@ -126,7 +126,7 @@ const Operacao = () => {
             setPostoAtual(dados.posto || op.posto);
             setPecasDisponiveis(op.pecas);
             
-            // Restaurar peça e código salvos, ou usar padrão
+            // Restaurar peça e código salvos quando existirem.
             if (dados.peca) {
               setPeca(dados.peca);
             } else if (op.pecas.length > 0) {
@@ -226,7 +226,7 @@ const Operacao = () => {
 
   const validarFormulario = (): boolean => {
     const faltaOperacao = !operacao;
-    const faltaPeca = pecasDisponiveis.length > 1 && !peca;
+    const faltaPeca = false;
     
     setErroOperacao(faltaOperacao);
     setErroPeca(faltaPeca);
@@ -282,7 +282,8 @@ const Operacao = () => {
         modeloDescricao,
         peca,
         codigo,
-        produto
+        produto,
+        pecasDisponiveis
       }));
       
       setCarregando(false);

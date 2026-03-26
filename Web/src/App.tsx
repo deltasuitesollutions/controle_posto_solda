@@ -13,7 +13,6 @@ import Linhas from "./Pages/Linhas";
 import Postos from "./Pages/Postos";
 import Operacoes from "./Pages/Operacoes";
 import Usuarios from "./Pages/Usuarios";
-import OperacoesCanceladas from "./Pages/OperacoesCanceladas";
 import CadastroProdutoModelo from "./Pages/CadastroProdutoModelo";
 import ListagemPecas from "./Pages/ListagemPecas";
 import ListagemProdutosModelos from "./Pages/ListagemProdutosModelos";
@@ -109,14 +108,6 @@ function App() {
             <Usuarios />
           </ProtectedRoute>
         } 
-      />
-      <Route 
-        path="/operacoesCanceladas" 
-        element={
-          <ProtectedRoute allowedRoles={['admin', 'master']}>
-            <OperacoesCanceladas />
-          </ProtectedRoute>
-        }
       />
       <Route 
         path="/dispositivos-raspberry" 

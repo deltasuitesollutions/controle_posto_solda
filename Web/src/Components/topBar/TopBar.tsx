@@ -9,20 +9,27 @@ const TopBar = () => {
     const getPageName = () => {
         const routeMap: { [key: string]: string } = {
             '/': 'Dashboard',
-            '/leitor': 'Leitor',
+            '/login': 'Login',
+            '/admin': 'Login Admin',
+            '/cadastro-usuario': 'Cadastro de Usuario',
             '/funcionarios': 'Funcionários',
+            '/cadastro-produto-modelo': 'Cadastro Produto/Modelo',
+            '/listagem-pecas': 'Listagem de Pecas',
             '/modelos': 'Modelos',
             '/registros': 'Registros',
             '/ihm/leitor': 'Leitor IHM',
             '/ihm/operacao': 'Operação IHM',
+            '/ihm/leitor-finalizar': 'Leitor Finalizar IHM',
+            '/ihm/finalizar-producao': 'Finalizar Producao IHM',
             '/produtos': 'Produtos',
             '/linhas': 'Linhas',
             '/postos': 'Postos',
             '/operacoes': 'Operações',
             '/usuarios': 'Usuários',
-            '/listagem-produtos-modelos': 'Produtos/Modelos'
+            '/listagem-produtos-modelos': 'Produtos/Modelos',
+            '/dispositivos-raspberry': 'Dispositivos Raspberry'
         };
-        return routeMap[location.pathname] || 'Dashboard';
+        return routeMap[location.pathname] || 'Pagina';
     };
 
     const handleToggleMenu = () => {
